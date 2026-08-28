@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import TablaProductos from '../componentes/TablaProductos.jsx';
 import Aviso from '../componentes/Aviso.astro';
+import Cifras from '../componentes/Cifras.astro';
 import Faq from '../componentes/Faq.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
@@ -118,13 +119,8 @@ const schema = [
 
   <h2 id="tabla" class="titulo-bloque">Comparativa completa</h2>
   <div class="aparece d3 tabla-categoria">
-    <p class="resumen">
-      <span><b>{productos.length}</b> productos</span>
-      <span>·</span>
-      <span>de <b>{barato != null ? eur(barato, dec) : '—'}</b> a <b>{caro != null ? eur(caro, dec) : '—'}</b> por {unidad}</span>
-      <span>·</span>
-      <span><b>{verificados}</b> con nivel 4</span>
-    </p>
+    <Cifras n={productos.length} min={barato} max={caro} unidad={unidad} dec={dec}
+            nivel4={verificados} />
     <TablaProductos productos={productos.map(paraTabla)} client:visible />
   </div>
 

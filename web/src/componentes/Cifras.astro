@@ -1,0 +1,35 @@
+---
+// Las tres cifras que describen una tabla entera: cuantos productos, entre que precios
+// y cuantos estan verificados de verdad.
+//
+// Antes era una linea de 11 px en gris, del mismo cuerpo que un pie de foto, encima de
+// una tabla de 200 filas: el dato que resume la pagina se leia como una nota al margen.
+// Aqui va al cuerpo de un titular, que es como este sistema trata ya cualquier numero
+// que importe (la media de resenas, el nombre de la cuenta, el indice de los bloques).
+//
+// Los separadores son VERTICALES a proposito. Entre el titulo de seccion y la primera
+// fila de la tabla ya habia demasiadas rayas horizontales apiladas; un filete vertical
+// separa igual de bien, es lo que hace un diario entre columnas, y no anade ni una mas
+// a la pila.
+import { eur } from '../datos/util.js';
+
+const { n, min, max, unidad, dec = 2, nivel4 } = Astro.props;
+---
+<div class="cifras">
+  <div class="cifra-celda">
+    <p class="cifra-dato">{n}</p>
+    <p class="cifra-pie">productos comparados</p>
+  </div>
+  <div class="cifra-celda">
+    <p class="cifra-dato horquilla-dato">
+      {min != null ? eur(min, dec) : '—'}<span class="a">a</span>{max != null ? eur(max, dec) : '—'}
+    </p>
+    <p class="cifra-pie">por {unidad}</p>
+  </div>
+  <div class="cifra-celda">
+    {/* Un cero aqui es un dato, no un hueco: dice que en esta categoria nadie tiene una
+        certificacion comprobada contra la fuente. Por eso se pinta igual de grande. */}
+    <p class={`cifra-dato ${nivel4 > 0 ? 'con-nivel' : ''}`}>{nivel4}</p>
+    <p class="cifra-pie">con nivel 4 verificado</p>
+  </div>
+</div>

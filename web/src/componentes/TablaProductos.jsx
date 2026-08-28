@@ -132,6 +132,14 @@ export default function TablaProductos({ productos }) {
             {Object.entries(ORDENES).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
           </select>
         </label>
+        {filtrando && (
+          <div className="campo linea">
+            <span>&nbsp;</span>
+            <div className="grupo-chips">
+              <button type="button" className="chip" onClick={limpiar}>limpiar filtros</button>
+            </div>
+          </div>
+        )}
         {hayVerificacion && (
           <div className="campo linea">
             <span>Verificacion minima</span>
@@ -148,13 +156,6 @@ export default function TablaProductos({ productos }) {
           </div>
         )}
       </div>
-
-      <p className="contador">
-        <b>{visibles.length}</b> de {productos.length} productos
-        {filtrando && (
-          <button type="button" className="chip" onClick={limpiar}>limpiar filtros</button>
-        )}
-      </p>
 
       <div className="tabla-marco">
         <div className="tabla-scroll">
@@ -257,6 +258,17 @@ export default function TablaProductos({ productos }) {
         )}
         {visibles.length === 0 && <p className="vacio">Ningun producto cumple esos filtros.</p>}
       </div>
+
+      {/* El recuento va DEBAJO, como el pie de una tabla impresa: arriba repetia la
+          cifra que ya da el bloque de cifras de la cabecera, y decia dos veces lo
+          mismo con dos tipografias distintas. Aqui cierra lo que se acaba de leer. */}
+      {visibles.length > 0 && (
+        <p className="pie-tabla" aria-live="polite">
+          {visibles.length === productos.length
+            ? <><b>{productos.length}</b> productos en esta tabla</>
+            : <><b>{visibles.length}</b> de {productos.length} productos con los filtros puestos</>}
+        </p>
+      )}
 
       {elegidos.length > 0 && (
         <div className="barra-comparar">

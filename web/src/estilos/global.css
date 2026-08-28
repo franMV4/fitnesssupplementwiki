@@ -1947,3 +1947,54 @@ table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
 /* El pie va DENTRO de la columna del formulario y centrado con el. Fuera de ella se
    iba al ancho del envoltorio y quedaba colgando a la izquierda de una caja centrada. */
 .pie-acceso { margin: var(--e4) 0 0; text-align: center; text-wrap: balance; }
+
+/* --- 26. Bloque de cifras de una tabla ------------------------------------ */
+/* Las tres cifras que resumen una categoria (componentes/Cifras.astro). Antes eran una
+   linea de 11 px en gris encima de 200 filas; el dato que describe la pagina entera se
+   leia como un pie de foto. Ahora van al cuerpo de un titular, que es como este sistema
+   trata cualquier numero que importe.
+   Los filetes son VERTICALES: entre el titulo de seccion y la primera fila ya sobraban
+   rayas horizontales, y un diario separa columnas exactamente asi. */
+.cifras {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  margin: var(--e4) 0 var(--e5);
+}
+.cifra-celda { padding-left: var(--e4); border-left: 2px solid var(--regla-2); }
+.cifra-celda:first-child { padding-left: 0; border-left: 0; }
+.cifra-dato {
+  font-family: var(--display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(1.9rem, 4.2vw, 2.9rem); line-height: .85; letter-spacing: .01em;
+  color: var(--tinta); margin: 0 0 var(--e2);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* La horquilla lleva dos numeros en la misma celda: baja de cuerpo para que quepan en
+   una linea, y la "a" que los une se queda en el tono de los rotulos para que la lectura
+   salte de cifra a cifra. */
+.horquilla-dato { font-size: clamp(1.2rem, 2.5vw, 1.75rem); }
+.horquilla-dato .a {
+  font-family: var(--mono); font-size: .55em; font-weight: 400;
+  color: var(--tinta-3); text-transform: lowercase; padding: 0 .4em;
+}
+/* El unico numero de los tres que puede llevar la tinta de senal, y solo cuando NO es
+   cero: en naranja, un cero cantaria como un logro. */
+.cifra-dato.con-nivel { color: var(--senal-txt); }
+.cifra-pie {
+  font-family: var(--mono); font-size: var(--rotulo-tam); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--tinta-3); margin: 0; text-wrap: balance;
+}
+
+/* El recuento, ahora al pie de la tabla. */
+.pie-tabla {
+  font-family: var(--mono); font-size: .78rem; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--tinta-3);
+  margin: var(--e3) 0 0; font-variant-numeric: tabular-nums;
+}
+.pie-tabla b { color: var(--tinta); font-weight: 700; }
+
+@media (max-width: 46rem) {
+  /* En movil, la horquilla necesita la fila entera: tres columnas dejaban "0,025 € a
+     0,739 €" partido en tres lineas. */
+  .cifras { grid-template-columns: 1fr 1fr; gap: var(--e4) 0; }
+  .cifra-celda:nth-child(2) { grid-column: 1 / -1; padding-left: 0; border-left: 0; }
+  .cifra-celda:nth-child(3) { padding-left: var(--e4); }
+}
