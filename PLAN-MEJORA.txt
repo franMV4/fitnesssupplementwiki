@@ -1,8 +1,77 @@
 ================================================================================
 PLAN DE MEJORA - FitnessSupplementWiki
 Auditoria tecnica, de producto y de crecimiento
-Fecha: 28/08/2026
+Fecha de la auditoria: 28/08/2026
+Fecha de ejecucion:    28/08/2026  (ver ESTADO DE EJECUCION, justo debajo)
 Auditado: repositorio completo (pipeline Python + web Astro + API Cloudflare)
+================================================================================
+
+ESTADO DE EJECUCION (28/08/2026)
+--------------------------------------------------------------------------------
+HECHO Y VERIFICADO (build de 2.983 paginas, seo_check limpio, 63 asserts de
+Python y 15 de JavaScript en verde):
+
+  1.2  Primer commit del repositorio (be88136). Ya hay historia y copia.
+  1.8  Aviso en la web cuando los precios pasan de 10 dias sin refrescarse.
+  3.1  Tabla precio_historico + volcado diario. Primera foto ya guardada:
+       3.139 precios del 28/08/2026. A partir de aqui, el activo crece solo.
+  3.2  marca_canonica rechaza lo que no puede ser una marca. 377 filas
+       normalizadas. OJO: esto SUBE los "Desconocida" de 527 a 763, y esta bien;
+       ver la correccion al hallazgo B2 mas abajo.
+  3.3  Emparejamiento del mismo bote entre tiendas, relajado y funcionando:
+       29 fichas dicen ya "el mismo envase esta mas barato en X, te ahorras Y".
+  3.4  Tabla "donde comprarlo" + AggregateOffer vivos con esas coincidencias.
+  3.5  Informed Sport / Choice recruzados: 35 certificaciones de nivel 4 en BD.
+  4.1  Props de la isla de React: de 605 KB a 196 KB por pagina (-68 %); la
+       pagina mas pesada baja de 920 KB a 517 KB.
+  4.2  referrerpolicy="no-referrer" en las fotos servidas por las tiendas.
+  4.4  "Al mes (1 servicio/dia)" en 1.607 fichas y en /comparar.
+  4.6  Nube precio/calidad por categoria, SVG dibujado en el build, sin JS.
+  5.2  La seleccion del lector se guarda en su navegador (localStorage).
+  5.3  /comparar: hasta 4 productos enfrentados, agrupados por categoria.
+  5.4  Grafica de precios en la ficha (se enciende sola al haber 2 lecturas).
+  A4   Aviso de fallo del robot: no hay nada que construir, GitHub ya manda el
+       correo y la web avisa sola (1.8). Documentado en el workflow.
+  C5   Content-Security-Policy en public/_headers.
+  H4   Borrado de cuenta (RGPD art. 17): endpoint /api/borrarme y boton en la
+       cuenta. Borra usuario, resenas y fotos de R2, y cierra la sesion.
+  I2   Filtrado y orden de la tabla extraidos a util.js y con 7 pruebas nuevas.
+  I3   node --test entra en el robot diario.
+  I4   AGENTS.md y README al dia (el UA ya no dice "ejemplo.es").
+  ---  /legal reescrito. Decia que no habia registro ni almacenamiento local, y
+       hay los dos desde que existen las cuentas. Eso no era una mejora
+       pendiente: era una pagina legal que no decia la verdad.
+
+NO HECHO, Y POR QUE:
+
+  F1 (publicar), F2 (afiliacion), 3.6 (curar Creapure), H1 (verificar los DOI)
+       Necesitan tus cuentas, tu tarjeta o tu criterio. Estan en la lista final
+       de "lo que tienes que hacer tu".
+  4.3  Miniaturas propias en R2: el codigo no sirve de nada hasta que el bucket
+       exista en tu cuenta. Mitigado mientras tanto con 4.2.
+  5.1  Alerta de precio por correo: necesita la web desplegada y un emisor de
+       correo. Su requisito de datos (3.1) ya esta hecho, que era lo urgente.
+  7.x  Paginas de marca, OG por categoria, boletin, display: el propio plan dice
+       que no se tocan hasta que haya trafico. Se respeta.
+
+CORRECCION AL HALLAZGO B2 (la unica estimacion del plan que estaba mal):
+  El plan calculaba recuperar entre el 60 y el 80 % de las 527 marcas perdidas
+  de Amazon. Es imposible: se comprobo en el HTML cacheado de Amazon y la marca
+  NO viaja en el bloque del resultado de busqueda, y en esos titulos concretos
+  tampoco aparece escrita (empiezan por el producto: "Zinc 25mg | 1 Ano de
+  Suministro..."). Sacarla exigiria una peticion por ficha, 527 al dia, que va
+  contra la regla de scraping educado del proyecto.
+  Lo que si se ha hecho es lo contrario y mas util: dejar de INVENTARLAS. Habia
+  161 marcas falsas ("Citrato de", "Extracto de", "Aceite de Krill", "L") en 251
+  productos, y esas ya no se publican. Por eso los "Desconocida" suben: la web
+  ahora dice que no lo sabe en vez de decir que la marca es "Citrato de".
+
+CORRECCION AL HALLAZGO B1:
+  El comentario del codigo decia "hoy no salta nunca" y el plan lo dio por bueno.
+  Al medirlo, la regla estricta ya emparejaba 19 grupos de 2 tiendas. Relajarla
+  (marca sin mayusculas, 5 % de holgura en gramaje, sin exigir la forma quimica)
+  los sube a 24 grupos y 29 fichas que enseñan el ahorro.
+
 ================================================================================
 
 0. COMO LEER ESTE DOCUMENTO
