@@ -1,0 +1,52 @@
+---
+import Base from '../layouts/Base.astro';
+import Acceso from '../componentes/Acceso.jsx';
+
+// Pagina de registro. Es la de /entrar con la otra pestana abierta: el componente es el
+// mismo y quien la abre por error cambia sin recargar.
+//
+// `?volver=/producto/x` trae de vuelta a donde se pulso el icono de la cabecera. Lo que
+// llegue por ahi lo filtra `seguro()` en la API: solo rutas de esta web.
+const volver = Astro.url.searchParams.get('volver') ?? '/';
+---
+<Base titulo="Crear cuenta | FitnessSupplementWiki"
+      descripcion="Crea una cuenta para puntuar productos y dejar tu resena."
+      noindex>
+  <div class="pagina-acceso">
+    <div class="acceso-doble">
+      <div class="acceso-titular aparece">
+        <p class="antetitulo">Alta de lector &middot; Un minuto</p>
+        <h1>Crear cuenta</h1>
+        <p class="entradilla">
+          Correo, un nombre publico y una contrasena. Nada mas: ni telefono, ni direccion,
+          ni tarjeta, porque esta web no vende nada.
+        </p>
+      </div>
+
+      <ol class="sumario-acceso aparece d2">
+        <li>
+          <span class="n">01</span>
+          <div><b>Se publica</b><p>Solo tu nombre publico y lo que escribas.</p></div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div><b>No se publica</b><p>El correo no sale en ningun sitio y no recibiras boletines.</p></div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div><b>La contrasena</b><p>Se guarda cifrada. Nadie, tampoco quien lleva esta web, puede leerla.</p></div>
+        </li>
+      </ol>
+
+      <div class="acceso-ficha aparece d1">
+        <p class="sello-acceso">Sin coste<br />y sin correos</p>
+        <Acceso client:load modo="registro" volver={volver} />
+      </div>
+    </div>
+
+    <p class="sutil">
+      Si ya tienes cuenta, <a href={`/entrar?volver=${encodeURIComponent(volver)}`}>entra por aqui</a>.
+      Como se tratan tus datos esta en el <a href="/legal">aviso legal</a>.
+    </p>
+  </div>
+</Base>

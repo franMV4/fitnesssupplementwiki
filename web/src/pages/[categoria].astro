@@ -1,0 +1,193 @@
+---
+import Base from '../layouts/Base.astro';
+import TablaProductos from '../componentes/TablaProductos.jsx';
+import Aviso from '../componentes/Aviso.astro';
+import Dispersion from '../componentes/Dispersion.astro';
+import Faq from '../componentes/Faq.astro';
+import datos from '../datos/dataset.json';
+import { EVIDENCIA } from '../datos/evidencia.js';
+import { abs } from '../sitio.js';
+import { eur, paraTabla, UNIDAD } from '../datos/util.js';
+import {
+  descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
+  respuestaCategoria, tituloCategoria,
+} from '../datos/seo.js';
+import { comparativasDe, mejoresDe } from '../datos/landings.js';
+
+export function getStaticPaths() {
+  return datos.categorias.map((c) => ({
+    params: { categoria: c.slug },
+    props: { cat: c, productos: datos.productos.filter((p) => p.categoria === c.slug) },
+  }));
+}
+
+const { cat, productos } = Astro.props;
+const nombre = cat.nombre;
+const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+const conDosis = cat.con_dosis;
+const verificados = productos.filter((p) => p.nivel_verificacion === 4).length;
+const tiendas = new Set(productos.map((p) => p.tienda)).size;
+const precios = productos.map((p) => p.precio_referencia).filter((n) => n != null);
+const barato = precios.length ? Math.min(...precios) : null;
+const caro = precios.length ? Math.max(...precios) : null;
+const dec = unidad === 'kg' ? 2 : 3;
+
+// El H1 lleva delante la palabra clave del producto y detras las dos por las que se
+// busca esta web (precio por unidad y certificacion): "La mejor creatina de 2026:
+// comparativa por precio por kg y certificacion". La consulta declarada en categorias.py
+// ("que creatina comprar") no se pierde: sigue siendo la primera pregunta del FAQ de esta
+// misma pagina, que es donde Google la lee para el fragmento destacado.
+const consulta = cat.consultas?.mejor;
+const h1 = h1Categoria(cat, datos.generado);
+// Landings de intencion de esta categoria (datos/landings.js).
+const selecciones = mejoresDe(cat.slug);
+const versus = comparativasDe(cat.slug);
+const respuesta = respuestaCategoria(cat, productos, datos.generado);
+const faqs = faqsCategoria(cat, productos, datos.dosis_referencia, datos.generado);
+const otras = datos.categorias.filter((c) => c.slug !== cat.slug);
+const canonica = abs(`/${cat.slug}`);
+// La guia de la categoria, si esta escrita. Esta pagina compara precios; la guia explica
+// que hace el ingrediente y con que fuente. Se enlazan entre si y no compiten: una responde
+// "cual compro" y la otra "para que sirve".
+const guia = EVIDENCIA[cat.slug];
+
+// Los diez primeros con su oferta. Mas no aporta: nadie lee una ItemList de 118.
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: tituloCategoria(cat, datos.generado),
+    description: descripcionCategoria(cat, productos, datos.generado),
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: nombre, item: canonica },
+    ],
+  },
+  listaLd(`${nombre}: ranking por precio por ${unidad} y certificacion`, productos),
+];
+---
+<Base ancho="completo"
+      titulo={tituloCategoria(cat, datos.generado)}
+      descripcion={descripcionCategoria(cat, productos, datos.generado)}
+      schema={schema}>
+
+  <p class="migas"><a href="/">Inicio</a> / {nombre}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {consulta ? consulta.charAt(0).toUpperCase() + consulta.slice(1) : nombre} · datos del{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{h1}</h1>
+    {respuesta && (
+      <p class="respuesta aparece d2">
+        <b>La respuesta corta.</b> {respuesta}
+      </p>
+    )}
+    <p class="entradilla aparece d2">
+      {productos.length} productos de {tiendas} {tiendas === 1 ? 'tienda' : 'tiendas'},
+      ordenados por score: mitad precio por {unidad}, mitad calidad verificable. {verificados === 0
+        ? 'Ninguno tiene ahora mismo una certificacion verificada contra la fuente oficial (nivel 4).'
+        : `${verificados} tienen certificacion verificada contra fuente oficial (nivel 4).`}
+    </p>
+    {guia && (
+      <p class="entradilla aparece d3">
+        <a href={`/guia/${cat.slug}`}>{guia.h1}</a> — la otra mitad: que hace el ingrediente,
+        en que dosis y con que evidencia detras. Aqui solo estan los precios.
+      </p>
+    )}
+  </section>
+
+  <Aviso />
+
+  {!conDosis && (
+    <p class="nota">
+      <strong>De la formula de esta categoria no se afirma nada.</strong> Ninguna de estas
+      tiendas publica cuanto activo lleva cada dosis, asi que el score sale del precio por
+      {' '}{unidad} y del nivel de verificacion, y nadie aparece aqui como bien o mal
+      dosificado: no tenemos el dato y no nos lo inventamos.
+    </p>
+  )}
+
+  {/* La nube antes de la tabla: se ve de un vistazo si en esta categoria pagar mas
+      compra algo o no, que es la pregunta de la que cuelga todo lo demas. */}
+  <Dispersion productos={productos} unidad={unidad} lider={productos[0]} />
+
+  <h2 id="tabla" class="titulo-bloque">Comparativa completa</h2>
+  <div class="aparece d3 tabla-categoria">
+    <p class="resumen">
+      <span><b>{productos.length}</b> productos</span>
+      <span>·</span>
+      <span>de <b>{barato != null ? eur(barato, dec) : '—'}</b> a <b>{caro != null ? eur(caro, dec) : '—'}</b> por {unidad}</span>
+      <span>·</span>
+      <span><b>{verificados}</b> con nivel 4</span>
+    </p>
+    <TablaProductos productos={productos.map(paraTabla)} client:visible />
+  </div>
+
+  <p class="nota">
+    <strong>Que estas mirando.</strong> El score es mitad precio por {unidad} frente al mas
+    barato de la categoria y mitad calidad: nivel de verificacion, forma quimica del activo y,
+    donde la tienda publica las dosis, si la formula llega a la dosis efectiva. Cada producto
+    explica su nota linea a linea en su ficha. <a href="/metodologia#formula">Como se calcula</a>.
+  </p>
+
+  <Faq faqs={faqs} titulo={`Preguntas sobre ${cat.termino}`} />
+
+  {(selecciones.length > 0 || versus.length > 0) && (
+    <section class="seccion">
+      <div class="cabecera-seccion">
+        <h2>Preguntas mas concretas sobre {cat.termino}</h2>
+        <p class="apunte">La misma tabla, filtrada</p>
+      </div>
+      <div class="lista-categorias">
+        {selecciones.map((l) => (
+          <a class="fila-categoria" href={`/mejores/${l.slug}`}>
+            <span class="nombre">{l.h1.split(':')[0]}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{l.productos.length} prod.</span>
+          </a>
+        ))}
+        {versus.map((l) => (
+          <a class="fila-categoria" href={`/comparativa/${l.slug}`}>
+            <span class="nombre">{l.na} o {l.nb} en {cat.termino}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{l.productos.length} prod.</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Otras comparativas</h2>
+      <p class="apunte">Mismo metodo, otra categoria</p>
+    </div>
+    <div class="lista-categorias">
+      {otras.map((c) => (
+        <a class="fila-categoria" href={`/${c.slug}`}>
+          <span class="nombre">{c.consultas?.mejor
+            ? c.consultas.mejor.charAt(0).toUpperCase() + c.consultas.mejor.slice(1)
+            : c.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{c.productos} prod.</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <p class="nota">
+    <strong>Los datos, en crudo.</strong> Este ranking tambien esta en
+    {' '}<a href={`/datos/${cat.slug}.json`}>JSON</a>, con la fecha de recogida y el enlace a
+    cada ficha. Se puede citar y reutilizar diciendo de donde sale y de que dia son los precios.
+  </p>
+</Base>

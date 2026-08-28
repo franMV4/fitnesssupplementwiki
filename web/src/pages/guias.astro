@@ -1,0 +1,87 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+import { EVIDENCIA } from '../datos/evidencia.js';
+import { porFamilia } from '../datos/familias.js';
+import { abs } from '../sitio.js';
+
+// El indice del sitio en una pagina. Existe porque el pie tenia sesenta enlaces
+// (treinta categorias mas treinta guias) y un pie que hay que leer no lo lee nadie:
+// alli quedan dos botones y todo el mapa esta aqui, agrupado por estante.
+const categorias = porFamilia(datos.categorias);
+const guias = porFamilia(datos.categorias, (c) => EVIDENCIA[c.slug]);
+const nGuias = guias.reduce((n, g) => n + g.cats.length, 0);
+const total = datos.productos.length;
+const unidad = (c) => (c.unidad_precio === 'capsula' ? 'capsula' : 'kg');
+
+const schema = [{
+  '@type': 'CollectionPage',
+  '@id': `${abs('/guias')}#pagina`,
+  name: 'Categorias y guias',
+  url: abs('/guias'),
+  isPartOf: { '@id': abs('/#sitio') },
+}];
+---
+<Base ancho="completo" schema={schema}
+      titulo="Todas las categorias y guias de suplementos"
+      descripcion={`El indice completo: ${datos.categorias.length} categorias comparadas por precio real y ${nGuias} guias de para que sirve cada suplemento, con dosis y fuentes.`}>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Indice del sitio</p>
+    <h1 class="aparece d1">Categorias y guias</h1>
+    <p class="entradilla aparece d2">
+      Dos maneras de entrar. La <a href="#categorias">categoria</a> responde que comprar:
+      su tabla ordenada por precio por kilo o por capsula. La <a href="#guias">guia</a>{' '}
+      responde si te hace falta: que hace el ingrediente, cuanto y con que fuente detras.
+    </p>
+  </section>
+
+  <section id="categorias" class="seccion-doc">
+    <h2><span class="num">01</span> Categorias</h2>
+    <p class="sutil">
+      {datos.categorias.length} categorias, {total} productos comparados. Al lado de cada una,
+      cuantos productos tiene y en que unidad se compara.
+    </p>
+    <div class="estantes">
+      {categorias.map((g) => (
+        <div class="estante">
+          <p class="rotulo">{g.nombre}</p>
+          <ul>
+            {g.cats.map((c) => (
+              <li>
+                <a class="fila-indice" href={`/${c.slug}`}>
+                  <span class="nombre">{c.nombre}</span>
+                  <span class="cuenta">{c.productos} · €/{unidad(c)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="guias" class="seccion-doc">
+    <h2><span class="num">02</span> Guias: para que sirve cada uno</h2>
+    <p class="sutil">
+      {nGuias} guias. Ni un precio dentro: lo que cambia cada semana esta en la categoria,
+      y aqui solo hay lo que sigue siendo verdad dentro de un ano.
+    </p>
+    <div class="estantes">
+      {guias.map((g) => (
+        <div class="estante">
+          <p class="rotulo">{g.nombre}</p>
+          <ul>
+            {g.cats.map((c) => (
+              <li>
+                <a class="fila-indice" href={`/guia/${c.slug}`}>
+                  <span class="nombre">{c.nombre}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>

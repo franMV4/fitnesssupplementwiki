@@ -1,0 +1,31 @@
+__pycache__/
+node_modules/
+dist/
+.astro/
+
+# Config local de herramientas. Hoy solo tiene el puerto del servidor de desarrollo, pero
+# es la carpeta donde acaban los ajustes locales, y esos no son del proyecto ni de nadie mas.
+.claude/
+
+# La cache HTTP del scraper: 385 MB de paginas descargadas con TTL de 6 horas. Es
+# regenerable y enorme, asi que NO va al repositorio. Sin esta linea, un `git add .`
+# intenta subir 385 MB y GitHub rechaza el push (limite de 100 MB por fichero).
+data/cache/
+
+# La base de datos SI va al repositorio, y a proposito. Es el estado que tiene que
+# sobrevivir de una pasada a la siguiente:
+#   - las verificaciones de nivel 4 curadas a mano (`verificar.py qs`), que nadie puede
+#     volver a deducir solas;
+#   - el catalogo previo, del que depende que una pasada parcial (Prozis devolviendo 429
+#     a media categoria) NO borre productos: sin BD anterior, "no lo he mirado" y "la
+#     tienda ha dejado de venderlo" serian lo mismo.
+# Por eso se niega el patron de abajo para ese fichero concreto.
+# ponytail: 712 KB de binario por commit diario. A ~260 MB/ano de packfile aguanta anos;
+# si algun dia molesta, el salto es sacar la BD a R2 o a una release, no a Postgres.
+*.sqlite
+*.sqlite-journal
+!data/suplementos.sqlite
+
+# Secretos locales de Cloudflare y estado de wrangler
+.dev.vars
+.wrangler/

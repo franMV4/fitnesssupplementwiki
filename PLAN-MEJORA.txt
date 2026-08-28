@@ -1,0 +1,849 @@
+================================================================================
+PLAN DE MEJORA - FitnessSupplementWiki
+Auditoria tecnica, de producto y de crecimiento
+Fecha: 28/08/2026
+Auditado: repositorio completo (pipeline Python + web Astro + API Cloudflare)
+================================================================================
+
+0. COMO LEER ESTE DOCUMENTO
+--------------------------------------------------------------------------------
+Cada hallazgo lleva tres cosas: EVIDENCIA (dato medido, no impresion), IMPACTO
+(que cuesta dejarlo asi) y ARREGLO (la solucion mas barata que funciona). Los
+arreglos estan ordenados en el punto 5 por fases, y en el punto 6 hay una tabla
+de impacto/esfuerzo para decidir por donde empezar si solo hay un fin de semana.
+
+Convenciones:
+  [P0] Bloqueante: sin esto, el resto del plan no sirve para nada.
+  [P1] Alto impacto, hacer en el primer mes.
+  [P2] Mejora clara, hacer cuando P0 y P1 esten cerrados.
+  [P3] Opcional / solo si hay trafico que lo justifique.
+
+
+1. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+El proyecto esta MUY por encima de la media tecnica de una web de afiliacion:
+metodologia publica y auditable, 60 comprobaciones automaticas que pasan, SEO
+validado sobre las 2.996 paginas construidas, sistema de diseno propio y
+coherente, y unas invariantes editoriales (la afiliacion no mueve el ranking,
+nivel 4 solo contra la fuente) que son exactamente lo que Google premia en YMYL.
+
+El problema no es como esta construido. El problema es que NO EXISTE PARA NADIE:
+
+  - El repositorio git no tiene NI UN COMMIT. El robot diario de GitHub Actions,
+    escrito y correcto, no se ha ejecutado nunca.
+  - El sitio no esta desplegado (database_id de D1 es un texto de relleno,
+    el token de analitica esta vacio).
+  - Los nueve programas de afiliado estan a null: 0 productos con enlace de
+    afiliado. Ingreso potencial actual: 0 EUR, aunque entrara trafico.
+
+En paralelo hay un problema de PRODUCTO que se veria en cuanto llegara el primer
+visitante: la web se llama "comparador" pero hoy no puede comparar el mismo bote
+entre tiendas (la funcion existe y nunca dispara), el 96,8 % del catalogo esta
+en nivel 1 (sin certificacion) y el 65 % de los productos vienen de Amazon, de
+los cuales 527 ni siquiera tienen marca identificada.
+
+Orden correcto de trabajo, y no es negociable:
+    1) PUBLICAR (F1)  -> 1 fin de semana
+    2) MONETIZAR (F2) -> 3-4 horas + esperas de aprobacion
+    3) ARREGLAR DATOS (F3) -> ahi esta el salto de calidad real
+    4) CRECER (F5-F6)
+Construir mas funciones antes del paso 1 es tiempo tirado.
+
+
+2. FOTO DEL ESTADO ACTUAL (todo medido hoy)
+--------------------------------------------------------------------------------
+CATALOGO
+  Productos ................................ 2.679
+  Categorias ............................... 30
+  Tiendas con datos ........................ 8 (MASmusculo bloqueada)
+  Marcas distintas ......................... 754
+  Reparto por tienda ....................... Amazon 1.747 (65,2 %), Zumub 247,
+                                             Myprotein 197, HSN 196, Prozis 100,
+                                             Nutritienda 79, LifePro 62,
+                                             iO.GENIX 51
+  Nivel de verificacion .................... N1 2.592 (96,8 %) | N2 35 |
+                                             N3 22 | N4 30 (1,1 %)
+  Productos con sello ...................... 62 (2,3 %)
+  Con coste por dosis efectiva ............. 1.306 (48,8 %)
+  Sin marca identificada ................... 527 (19,7 %), TODOS de Amazon
+  Score: mediana 44,4 / media 46,5
+  Enlaces de afiliado activos .............. 0
+
+WEB CONSTRUIDA
+  Paginas HTML ............................. 2.996
+  Ficheros en dist ......................... 3.055 (limite Pages 20.000: OK)
+  Peso de dist ............................. 136 MB
+  Pagina mas pesada (/proteina-whey) ....... 920 KB en crudo / 62 KB gzip
+  Nodos DOM en esa pagina .................. 6.223
+  Imagenes en esa pagina ................... 223, de ellas 222 de terceros,
+                                             repartidas en 8 dominios externos
+  JS de React (cliente) .................... 184 KB / 57 KB gzip
+  Indice de busqueda ....................... 693 KB / 165 KB gzip
+
+CALIDAD
+  tests.py ................................. 60 comprobaciones, todas pasan
+  seo_check.py ............................. 2.996 paginas, "SEO OK"
+  Cobertura de front y API ................. 0 pruebas de UI; api.test.mjs existe
+                                             pero no lo lanza ningun CI
+
+DESPLIEGUE
+  Commits en git ........................... 0
+  Workflow diario ejecutado ................ nunca
+  Dominio dado de alta ..................... no consta
+  Analitica ................................ desactivada
+
+
+3. LO QUE ESTA BIEN Y NO HAY QUE TOCAR
+--------------------------------------------------------------------------------
+Esto se dice primero para que ninguna "mejora" posterior lo rompa:
+
+  - Separacion scoring / afiliacion, con prueba automatica que lo verifica.
+    Es el activo diferencial del proyecto. No tocar jamas.
+  - El guardarrail de nivel 4 vive en el esquema SQL, no en la buena voluntad
+    de quien inserta. Correcto.
+  - Copy generado desde el dataset (seo.js): no hay textos que envejezcan.
+  - Las 30 guias de evidencia con fuentes citadas y dateModified propio: es el
+    unico contenido del sitio que no caduca con los precios. Es el motor SEO
+    a medio plazo.
+  - Fuentes autoalojadas en lugar de Google Fonts (rendimiento + privacidad).
+  - Nada de aggregateRating inventado. Esa decision evita una penalizacion
+    manual que habria costado el dominio entero.
+  - El sistema de diseno "Rotativa": contrastes calculados a mano contra AA,
+    prefers-reduced-motion, focus-visible, tema claro/oscuro sin parpadeo.
+  - Scraper educado: robots.txt, delay por host, cache, UA identificable con
+    contacto real. Es lo que impide que las tiendas bloqueen el proyecto.
+  - AGENTS.md y PUBLICAR.md: documentacion de verdad, con el "por que" de cada
+    decision. Vale mas que el codigo.
+
+
+4. DIAGNOSTICO POR AREAS
+--------------------------------------------------------------------------------
+
+--- AREA A. PUBLICACION Y OPERACION ---
+
+A1. [P0] El repositorio no tiene ningun commit.
+    EVIDENCIA: `git log` -> "your current branch 'master' does not have any
+    commits yet". La rama master existe, el arbol de trabajo esta lleno, pero
+    no hay historia.
+    IMPACTO: nada de lo automatizado puede funcionar. El workflow
+    .github/workflows/actualizar.yml (correcto y bien pensado) necesita un
+    repositorio remoto con historia para ejecutarse. Cloudflare Pages, en el
+    modo git, necesita lo mismo. Y sin commits no hay copia de seguridad: un
+    fallo de disco hoy borra tres semanas de trabajo.
+    ARREGLO: commit inicial + repositorio privado en GitHub. 20 minutos.
+    CUIDADO: data/cache/ pesa 974 MB y esta correctamente ignorado; verificar
+    el .gitignore ANTES del primer `git add`.
+
+A2. [P0] El sitio no esta desplegado.
+    EVIDENCIA: wrangler.toml linea 10, database_id =
+    "PON-AQUI-EL-ID-QUE-TE-DA-CLOUDFLARE". SITIO.analitica = ''.
+    IMPACTO: cero trafico posible, cero datos con los que decidir nada. Todas
+    las decisiones de producto de este plan son especulacion hasta que haya
+    un Search Console con impresiones reales.
+    ARREGLO: PUBLICAR.md ya tiene el manual paso a paso. Ejecutarlo.
+    Orden sugerido: despliegue manual (paso 3) -> dominio (paso 4) ->
+    Search Console (paso 5) -> Actions + Pages por git (paso 8) ->
+    D1/R2 para cuentas (paso 9).
+    NOTA: el paso 9 (cuentas y resenas) puede esperar. Publicar el sitio
+    estatico no depende de el, y la API sin usuarios no aporta nada todavia.
+
+A3. [P1] La base de datos SQLite se confirma en cada pasada diaria.
+    EVIDENCIA: .gitignore la excluye del patron *.sqlite a proposito; el
+    comentario habla de 712 KB pero hoy pesa 2,7 MB.
+    IMPACTO: ~1 GB de packfile al ano, creciendo. No es urgente (GitHub
+    aguanta), pero conviene saberlo antes de que el clon tarde minutos.
+    ARREGLO: dejarlo como esta un ano. Si molesta, subir la BD a R2 al final
+    del workflow en vez de confirmarla. NO migrar a Postgres: seria cambiar un
+    problema que no duele por una factura mensual.
+
+A4. [P2] No hay alerta cuando el robot diario falla.
+    EVIDENCIA: el workflow corta si tests.py o seo_check.py fallan, que es lo
+    correcto, pero nadie se entera salvo que se mire la pestana Actions.
+    IMPACTO: la web se queda con los precios de hace tres semanas y el sitio
+    pierde credibilidad en silencio (la fecha de edicion sale en cada pagina).
+    ARREGLO: `if: failure()` con un paso que mande un correo. Cinco lineas.
+
+A5. [P2] La antiguedad del dato no se vigila desde la propia web.
+    IMPACTO: si el robot deja de correr, la fecha en portada envejece sin que
+    nadie lo note.
+    ARREGLO: en Base.astro, si datos.generado tiene mas de 10 dias, pintar un
+    aviso discreto ("estos precios tienen X dias"). Es honesto y ademas avisa
+    al dueno. Tres lineas en el layout.
+
+
+--- AREA B. DATOS Y CATALOGO (aqui esta el verdadero techo del producto) ---
+
+B1. [P1] La comparacion del mismo producto entre tiendas no dispara nunca.
+    EVIDENCIA: pages/producto/[slug].astro linea 27, `enOtrasTiendas` exige
+    misma marca + gramaje + unidades + forma + otra tienda. El propio codigo lo
+    documenta: "hoy no salta nunca". El AggregateOffer JSON-LD tampoco se emite.
+    IMPACTO: es EL agujero de producto. Una web llamada "comparador" que no
+    puede decir "este mismo bote esta 8 EUR mas barato en X" esta compitiendo
+    con Idealo/Google Shopping sin su funcion principal. Ademas, sin
+    AggregateOffer, Google no ensena rango de precios en el resultado.
+    CAUSA RAIZ: 5 de 8 tiendas venden marca propia (HSN, Myprotein, Prozis,
+    LifePro, iO.GENIX), y donde SI hay marcas de terceros (Amazon, Zumub,
+    Nutritienda) el 30 % de los productos de Amazon no tienen marca extraida.
+    ARREGLO (por orden de coste):
+      1. Extraer la marca de los titulos de Amazon (B2). Solo con eso ya
+         aparecen coincidencias reales con Zumub y Nutritienda.
+      2. Relajar el emparejamiento: normalizar nombre (minusculas, sin sabor,
+         sin gramaje) y comparar por marca + categoria + gramaje +-5 %. El
+         filtro estricto actual existe por una razon buena (evito falsos
+         positivos horrorosos), asi que la relajacion tiene que venir con
+         pruebas nuevas en tests.py que fijen los casos que ya fallaron
+         (creatina HSN Raw vs glutamina Kyowa).
+      3. Cuando haya coincidencias: activar la tabla "donde comprarlo" y el
+         AggregateOffer, y anadir a la ficha la frase "el mas barato ahora es
+         X, ahorras Y EUR".
+
+B2. [P1] 527 productos (19,7 %) sin marca, todos de Amazon.
+    EVIDENCIA: marca == "Desconocida" en 527 filas, tienda == amazon en las 527.
+    IMPACTO: sin marca no hay emparejamiento entre tiendas (B1), no hay pagina
+    de marca (funcion nueva F4-3), el JSON-LD publica brand:"Desconocida" (mal
+    para Google) y la ficha se lee peor.
+    ARREGLO: en scraper/tiendas/amazon.py, sacar la marca del titulo cruzando
+    contra la lista de las 754 marcas ya conocidas del dataset (la primera
+    coincidencia por palabra completa, no por substring). Es un diccionario y
+    un bucle; no hace falta NLP. Lo que no case, se queda como esta.
+    GANANCIA ESTIMADA: recuperar entre el 60 y el 80 % de esas 527 marcas.
+
+B3. [P1] El 96,8 % del catalogo esta en nivel 1.
+    EVIDENCIA: 2.592 de 2.679 productos sin certificacion verificable.
+    IMPACTO: la mitad "calidad" del score practicamente no discrimina: casi
+    todo el ranking lo decide el precio. La propuesta de valor ("no solo
+    precio: certificacion comprobada") se queda sin material.
+    ARREGLO: no es un bug, es el estado real del mercado, y publicarlo asi es
+    lo honesto. Pero se puede mejorar la senal SIN mentir:
+      a) Terminar la curacion manual de Creapure (verificar.py qs). Cada codigo
+         QS comprobado sube un producto a nivel 4 y da contenido unico.
+      b) Volver a cruzar las listas de Informed Sport/Choice tras B2: hoy no
+         cruzan porque falta la marca.
+      c) Anadir dimensiones de calidad que SI existen en el dato y hoy se
+         desperdician: forma quimica (ya esta), presencia de tabla nutricional
+         completa (HSN), numero de servicios reales por envase. Un "score de
+         transparencia" de la ficha es un dato objetivo y no requiere ninguna
+         afirmacion de salud.
+
+B4. [P1] No hay historico de precios.
+    EVIDENCIA: data/schema.sql tiene producto, ingrediente_producto,
+    certificacion, dosis_referencia y score. Ninguna tabla de series temporales.
+    IMPACTO: se pierde el activo mas valioso y mas dificil de copiar de un
+    comparador. Sin historico no hay: grafica de precio, "minimo historico",
+    alertas de bajada, "no compres ahora, subio un 12 % esta semana",
+    Black Friday con datos. Todo eso es trafico recurrente y es lo unico que
+    hace que alguien vuelva a una web de precios.
+    ARREGLO (barato): una tabla mas.
+        CREATE TABLE precio_historico (
+          producto INTEGER, fecha TEXT, precio_eur REAL,
+          precio_referencia REAL, PRIMARY KEY (producto, fecha));
+    Un INSERT OR IGNORE por producto al final de cada pasada. A 2.700 filas
+    diarias son ~1 M de filas al ano: SQLite ni se despeina.
+    EMPEZAR HOY aunque la funcion de usuario se construya en tres meses: el
+    historico que no se guarda no se puede recuperar.
+
+B5. [P2] Amazon domina el catalogo con la peor calidad de dato.
+    EVIDENCIA: 65,2 % del catalogo, sin datos estructurados, titulos escritos
+    por el vendedor, sin tabla nutricional.
+    IMPACTO: el catalogo se percibe como "listado de Amazon con filtros", que
+    es justo lo que el proyecto NO quiere ser. Ademas empuja el score medio
+    hacia abajo (mediana 44,4).
+    ARREGLO: no reducir Amazon (aporta las marcas de terceros que hacen falta
+    para B1), pero SI marcarlo: un aviso claro en la tabla cuando la fila viene
+    de un titulo de vendedor y no de una ficha de tienda, y no permitir que un
+    producto de Amazon lidere una categoria si su dato es solo el titulo. Ya se
+    hace algo asi con el nivel 4; extenderlo al liderazgo de categoria.
+
+B6. [P2] Faltan atributos que la gente usa para filtrar de verdad.
+    EVIDENCIA: el dataset no tiene sabor, vegano/vegetariano, sin lactosa, sin
+    gluten, edulcorante, pais de fabricacion.
+    IMPACTO: los filtros actuales (tienda, nivel, precio) son de comparador
+    tecnico; los que busca un comprador son "proteina sin lactosa" o
+    "creatina sin sabor". Ademas, AGENTS.md ya reconoce que no se crean
+    landings de "sin lactosa" porque no existe el dato: son decenas de landings
+    de intencion que hoy no se pueden generar.
+    ARREGLO: empezar por lo que se puede sacar del nombre sin inventarse nada
+    (sabor y "sin sabor"/"neutro" salen del titulo en casi todas las tiendas).
+    Vegano y sin lactosa, solo cuando la ficha lo declare; nunca deducido.
+
+B7. [P3] Sin stock ni disponibilidad.
+    IMPACTO: enviar a alguien a un producto agotado quema la confianza y no
+    paga comision.
+    ARREGLO: JSON-LD de las tiendas ya trae availability en varias. Guardarlo y
+    ocultar (no borrar) lo agotado.
+
+
+--- AREA C. RENDIMIENTO WEB ---
+
+C1. [P1] La isla React recibe 605 KB de props en /proteina-whey.
+    EVIDENCIA: la pagina pesa 920 KB; 605 KB son el atributo props del
+    <astro-island>, es decir el array de productos serializado ENTERO, ademas
+    de la tabla que ya viene pintada en HTML. El dato viaja dos veces.
+    IMPACTO: en gzip son 62 KB (aceptable), pero el coste real esta en el
+    cliente: parsear 605 KB de JSON e hidratar 6.223 nodos en un movil de gama
+    media son cientos de milisegundos de bloqueo. Es el mayor lastre de INP.
+    ARREGLO (el mas barato que funciona): pasar a la isla solo los campos que
+    la tabla usa, con claves de una letra, exactamente como ya se hace en
+    pages/datos/busqueda.json.js. Reduccion estimada del 60-70 % del peso de
+    props sin cambiar una sola linea de la interfaz.
+    ALTERNATIVA (mejor pero mas trabajo): no pasar props y que la isla haga
+    fetch de /datos/<categoria>.json al hidratarse. El endpoint YA EXISTE.
+    La tabla en HTML sigue sirviendo a Google y a quien no tenga JS.
+
+C2. [P1] 222 imagenes de 8 dominios de terceros en una sola pagina.
+    EVIDENCIA: zumub.com (49), thgimages.com (66), media-amazon.com (44),
+    sscontent.com (26), hsnstore.com (14), imagedelivery.net (8),
+    iogenixnutrition.com (8), lifepronutrition.com (7).
+    IMPACTO TRIPLE:
+      - Rendimiento: 8 handshakes TLS distintos y ningun control sobre el
+        tamano de las imagenes que sirven.
+      - Privacidad: la IP y el user-agent de cada visitante llegan a 8 tiendas.
+        Es incoherente con haberse molestado en autoalojar las tipografias
+        justo por ese motivo (AGENTS.md lo dice explicitamente).
+      - Fragilidad: el dia que una tienda bloquee el hotlinking, la categoria
+        se queda sin fotos.
+    ARREGLO por fases:
+      Rapido (10 min): <meta name="referrer" content="no-referrer"> y
+      referrerpolicy="no-referrer" en las miniaturas. Corta la fuga de la URL.
+      Bueno (media jornada): descargar las miniaturas en la pasada del scraper,
+      redimensionar a 96 px y subirlas al bucket R2 que YA existe (binding
+      FOTOS, hoy solo lo usan las fotos de resenas). Servirlas desde el propio
+      dominio. Coste en R2: unos pocos centimos al mes.
+
+C3. [P2] Se pintan las 222 filas y el CSS oculta las que pasan de 25.
+    EVIDENCIA: TablaProductos.jsx, constante TOPE = 25, con comentario que
+    explica la decision (que las lea Google).
+    VALORACION: la decision es defendible y esta razonada. Pero en las tres
+    categorias grandes (whey 222, creatina 156, aislada 144) el coste de DOM ya
+    se nota.
+    ARREGLO: mantener el criterio, poner un techo por pagina (p. ej. 80 filas
+    en HTML) y que el resto se pida al JSON al pulsar "ver todas". Google
+    indexa igual: nadie posiciona por el producto numero 150 de una tabla.
+
+C4. [P2] El indice de busqueda pesa 165 KB gzip.
+    EVIDENCIA: /datos/busqueda.json, 693 KB en crudo, 2.679 entradas.
+    IMPACTO: se descarga al primer teclazo; en 4G son unos 300-500 ms antes de
+    ver un resultado.
+    ARREGLO: partirlo por categoria (ya existe /datos/<categoria>.json) y que
+    el buscador global cargue solo un indice de nombres cortos, o servirlo
+    desde una funcion que filtre en el servidor. Con menos de 5.000 productos
+    esto es opcional; anotarlo y revisarlo al pasar de 5.000.
+
+C5. [P2] Sin Cabecera CSP.
+    EVIDENCIA: public/_headers tiene nosniff, Referrer-Policy y X-Frame-Options.
+    No hay Content-Security-Policy.
+    IMPACTO: bajo hoy (sitio estatico, sin scripts de terceros), pero sube en
+    cuanto entren analitica, anuncios o widgets.
+    ARREGLO: una CSP restrictiva ahora que es facil, no cuando ya haya 5
+    scripts. img-src tendra que listar los 8 hosts de tiendas... o ninguno si
+    se hace C2.
+
+C6. [P3] dist pesa 136 MB con 2.996 paginas.
+    VALORACION: dentro de limites de Cloudflare Pages (20.000 ficheros). El
+    build completo por cada cambio de precio es aceptable a esta escala. Vigilar
+    si el catalogo llega a 10.000 productos; ahi tocaria pasar las fichas a
+    renderizado bajo demanda.
+
+
+--- AREA D. FUNCIONALIDAD (que falta y que sobra) ---
+
+D1. [P1] No hay forma de volver. La web no da ninguna razon para una segunda
+    visita.
+    Hoy el recorrido es: Google -> categoria -> ficha -> tienda -> fin. No hay
+    ningun mecanismo de retorno. Es el problema numero uno de negocio despues
+    de no estar publicada.
+    ARREGLOS por relacion valor/coste (ver fichas en el punto 7):
+      - Alerta de precio por correo (necesita B4 + D1 de cuentas, que ya
+        existen). ES LA FUNCION DE MAYOR VALOR DEL PLAN.
+      - Lista "mi botiquin": guardar productos y ver si bajan de precio.
+      - Boletin mensual "que ha bajado y que ha subido".
+
+D2. [P1] La calculadora que le falta a este sitio: "cuanto me cuesta al mes".
+    Hoy el sitio compara EUR/kg, que es correcto pero abstracto. Lo que la gente
+    quiere saber es: "tomando 5 g al dia, este bote me dura 200 dias y me cuesta
+    3,40 EUR al mes". El dato ya esta calculado (servicios_por_envase,
+    coste_por_dosis_efectiva): solo falta presentarlo asi.
+    COSTE: bajo. IMPACTO: alto en conversion y en tiempo de permanencia.
+
+D3. [P2] No existe comparador manual (elegir 2-4 productos y verlos enfrentados).
+    Es LA funcion que la gente espera al leer "comparador" y hoy no esta. La
+    comparativa existente (/comparativa/a-vs-b) es entre TIENDAS, no entre
+    productos, y se genera sola.
+    COSTE: medio (un estado mas en la isla React + una vista). Se puede hacer
+    sin backend, guardando la seleccion en localStorage.
+
+D4. [P2] Las cuentas y resenas estan construidas y no aportan nada todavia.
+    EVIDENCIA: functions/api/[[ruta]].js, 316 lineas, D1 + R2 + PBKDF2 + cookie
+    firmada. Trabajo bien hecho: sin dependencias, comparacion en tiempo
+    constante, 100k vueltas de PBKDF2.
+    PERO: con cero visitantes, cero resenas. Y ojo con el efecto de las resenas
+    en el SEO: el propio proyecto decidio no publicar aggregateRating; en cuanto
+    haya resenas reales habra que decidir si se marcan (se puede, si son
+    autenticas) o no.
+    RECOMENDACION: no promocionarlas todavia; dejarlas donde estan. Antes de
+    abrirlas de verdad hacen falta: rate limit, moderacion minima y recuperar
+    contrasena (AGENTS.md ya lo tiene identificado como pendiente deliberado).
+
+D5. [P2] El buscador solo busca por nombre.
+    ARREGLO: que acepte tambien "proteina barata", "creatina 1 kg", o que al
+    menos sugiera categorias. Coste bajo, mejora la percepcion mucho.
+
+D6. [P3] No hay pagina por marca (/marca/optimum-nutrition).
+    Con 754 marcas y despues de B2, son cientos de paginas de long tail
+    generadas solas con el mismo motor que ya genera /mejores y /comparativa.
+    Requisito: B2 hecho, y minimo de 5 productos por marca para no crear
+    paginas vacias (el mismo criterio que ya usa landings.js).
+
+D7. [P3] Faltan formatos de contenido compartible: no hay nada que alguien
+    quiera enlazar o mandar por WhatsApp. Ver F5-4 (informe trimestral).
+
+
+--- AREA E. DISENO Y ATRACTIVO ---
+
+E1. VALORACION GENERAL: el sistema "Rotativa" es bueno y, sobre todo, es
+    DISTINTO. En un nicho donde todas las webs son la misma plantilla azul con
+    tarjetas redondeadas, un diario de precios a dos tintas se recuerda. No
+    cambiar la direccion de arte.
+
+E2. [P1] Falta la prueba visual del producto: no hay ni una captura, ni un
+    grafico, ni una comparacion visual en la portada. La barra logaritmica del
+    Ponderador es lo mejor que tiene la home y esta a mitad de pagina.
+    ARREGLO: subir la demostracion. Que lo primero que se vea, ademas del H1,
+    sea "la creatina mas barata cuesta X y la mas cara Y, y esta es la
+    diferencia real".
+
+E3. [P1] Las miniaturas de producto llevan alt="" y aria-hidden.
+    EVIDENCIA: TablaProductos.jsx linea 194.
+    VALORACION: es CORRECTO (el nombre esta al lado en texto), no es un fallo de
+    accesibilidad. Se anota para que nadie lo "arregle" mal en el futuro
+    poniendo el nombre duplicado en el alt.
+
+E4. [P2] Un grafico por categoria haria mas por la percepcion de rigor que
+    cualquier texto: dispersion precio vs calidad con el lider marcado. Se puede
+    dibujar en SVG en tiempo de build, sin ninguna libreria, con los datos que
+    ya estan (la frontera de Pareto YA se calcula en index.astro).
+
+E5. [P2] La ficha de producto es densa y correcta, pero no tiene jerarquia de
+    decision: falta el bloque de arriba que diga en una linea "COMPRAR / NO
+    COMPRAR y por que", con el precio por mes (D2) al lado del boton.
+
+E6. [P3] og.png es una sola imagen para las 2.996 paginas. Una imagen OG
+    generada por categoria (con el numero de productos y el precio minimo)
+    multiplica el clic cuando alguien comparte un enlace. assets.py ya sabe
+    generar PNG con Pillow.
+
+
+--- AREA F. SEO Y CAPTACION ---
+
+F1-DIAG. VALORACION: el SEO tecnico esta en el percentil 95. JSON-LD completo y
+    validado, sitemap, robots con bots de IA uno a uno, llms.txt, canonical,
+    FAQ, breadcrumbs, E-E-A-T con Person y Organization, landings de intencion
+    generadas (35 + 29), guias que no envejecen. seo_check.py valida las 2.996
+    paginas en cada build. No hay nada tecnico que arreglar.
+
+F2-DIAG. [P0] Y sin embargo el trafico sera CERO, porque:
+    - El dominio no esta dado de alta ni verificado.
+    - No hay ni un enlace entrante. En un nicho YMYL (salud) y contra dominios
+      con 10 anos de historia (HSN, Myprotein, Menshealth...), un dominio nuevo
+      sin autoridad tarda entre 6 y 12 meses en posicionar por palabras
+      competidas. "Mejor proteina whey" no se gana el primer ano. Hay que
+      asumirlo y planificar por long tail.
+    ESTRATEGIA CORRECTA para los primeros 6 meses: no pelear "mejor creatina",
+    sino las consultas de cola larga donde el dato propio gana:
+      "creatina mas barata por kilo", "cuanto cuesta la creatina al mes",
+      "proteina whey barata sin marca blanca", "que es creapure y como
+      comprobarlo", "informed sport lista espana".
+    Las guias y las landings de intencion ya apuntan ahi. Reforzarlas.
+
+F3. [P1] El activo unico del proyecto no se esta usando como gancho: la
+    METODOLOGIA. Nadie mas publica el codigo de su ranking. Eso es una historia
+    que se puede contar fuera (Reddit, foros, HN, LinkedIn) y que genera los
+    primeros enlaces, que es lo que falta.
+
+F4. [P2] Los datos abiertos (/datos/*.json, CORS abierto, llms.txt) estan bien
+    pensados para que los citen los modelos, pero no hay ninguna llamada a
+    citarlos. Anadir una pagina /datos con licencia explicita (CC-BY, por
+    ejemplo) y la frase "cita asi este dataset" convierte un endpoint en un
+    activo de enlaces.
+
+F5. [P2] Sin Search Console no hay ciclo de mejora. Es la primera fuente de
+    verdad sobre que consultas traen gente, y de ahi salen las siguientes
+    landings (que hoy se estan eligiendo a ojo).
+
+
+--- AREA G. MONETIZACION ---
+
+G1. [P0] Cero programas de afiliado dados de alta.
+    EVIDENCIA: data/afiliados.json, los nueve con "programa": null. 0 productos
+    con url_afiliado en el dataset.
+    IMPACTO: el sitio no puede ingresar ni un euro aunque manana entren 10.000
+    visitas.
+    ARREGLO Y ORDEN REALISTA (los programas tardan en aprobar, hay que empezar
+    ya y en este orden):
+      1. Amazon Afiliados (es el 65 % del catalogo; aprobacion rapida, pero
+         OJO: exige 3 ventas en 180 dias o cancelan la cuenta).
+      2. Awin / Tradedoubler para HSN, Prozis, Myprotein, Nutritienda (suelen
+         estar ahi; comision del 5-12 %, muy superior a Amazon).
+      3. Zumub y LifePro: programa propio o via red.
+    REQUISITO PREVIO de casi todos: web publicada, con aviso legal, politica de
+    privacidad y contacto atendido. Ya esta todo escrito (/legal sale de
+    sitio.js). Es decir: A2 desbloquea G1.
+
+G2. [P1] El disclosure ya esta bien resuelto (visible, rel=sponsored). No
+    tocarlo cuando se activen los enlaces: es lo que hace que el programa no
+    cancele la cuenta y lo que sostiene la promesa editorial.
+
+G3. [P3] Anuncios display: la decision de NO ponerlos hasta tener trafico es
+    correcta y esta bien argumentada. Mantenerla. Con menos de 10.000
+    visitas/mes no ingresan nada y destruyen la credibilidad que es el activo.
+
+G4. [P3] Vias alternativas cuando haya audiencia: patrocinio de boletin,
+    informe trimestral de precios del sector (las marcas pagan por ese dato),
+    API de datos para terceros. Ninguna antes de las 10.000 visitas/mes.
+
+
+--- AREA H. LEGAL Y RIESGO ---
+
+H1. [P0] Verificar los DOI de data/dosis_referencia.json antes de publicar.
+    Ya esta identificado en README y AGENTS.md. Es el unico punto donde un
+    error hace dano real a un lector. No delegable.
+
+H2. [P1] Imagenes de terceros servidas por hotlinking (ver C2). Ademas del
+    rendimiento y la privacidad, hay un componente legal: se estan mostrando
+    imagenes alojadas por las tiendas sin licencia expresa. Alojarlas en R2 no
+    resuelve el derecho de autor, pero el uso de la imagen del producto en un
+    contexto de comparacion y enlace a la tienda es practica estandar del
+    sector. Recomendacion prudente: mantener siempre el enlace a la tienda, y
+    retirar de inmediato cualquier imagen si una tienda lo pide.
+
+H3. [P1] Scraping: hoy se hace de forma ejemplar (robots.txt, delays, UA
+    identificable con contacto). El riesgo real esta documentado en PUBLICAR.md
+    (la IP de Actions). Mantener la regla de no usar proxies ni navegadores
+    headless para saltarse bloqueos. Si una tienda pide parar, se para.
+
+H4. [P2] RGPD con las cuentas activas: hay correo y contrasena en D1 y fotos en
+    R2. Hace falta, antes de abrir el registro al publico: derecho de borrado
+    (un endpoint que borre usuario, resenas y fotos), y decirlo en /legal.
+    Hoy no existe ese endpoint.
+
+H5. [P2] YMYL: la disciplina actual (nunca afirmar efectos de un producto, citar
+    por ingrediente, declarar que el autor no es sanitario) es correcta y es lo
+    que protege al dominio. Cualquier texto nuevo pasa por esa regla.
+
+
+--- AREA I. CODIGO Y CALIDAD ---
+
+I1. VALORACION: el estilo es coherente, los comentarios explican el "por que"
+    (no el "que"), hay 60 pruebas que cubren las invariantes que importan de
+    verdad, y las decisiones de simplificacion estan marcadas. Muy poco que
+    objetar.
+
+I2. [P2] El front no tiene ninguna prueba. Toda la logica de filtrado y orden de
+    TablaProductos.jsx (5 filtros combinables, 3 ordenes) no esta cubierta.
+    ARREGLO: extraer la funcion de filtrado a util.js y probarla con node:test,
+    igual que api.test.mjs. Unas 30 lineas. No hace falta ni jsdom ni framework.
+
+I3. [P2] api.test.mjs existe pero no lo lanza el workflow.
+    ARREGLO: una linea mas en actualizar.yml (`node --test web/`).
+
+I4. [P2] AGENTS.md tiene un dato caduco: dice que el UA del scraper es
+    "ejemplo.es" y ya es el real (scraper/core.py:25). Corregirlo para que
+    nadie "arregle" algo que esta bien.
+
+I5. [P3] data/cache ocupa 974 MB en local. Esta ignorado y es regenerable, pero
+    conviene una limpieza periodica: `find data/cache -mtime +2 -delete`.
+
+
+5. PLAN POR FASES
+--------------------------------------------------------------------------------
+
+FASE 1 - EXISTIR (1 fin de semana) ................................ [P0]
+  1.1  Verificar los DOI de dosis_referencia.json.            (2-3 h, manual)
+  1.2  Primer commit + repositorio privado en GitHub.         (30 min)
+  1.3  Despliegue manual en Cloudflare Pages (PUBLICAR paso 3). (1 h)
+  1.4  Dominio + DNS (PUBLICAR paso 4).                       (1 h + espera)
+  1.5  Search Console + envio de sitemap (PUBLICAR paso 5).   (30 min)
+  1.6  Cloudflare Web Analytics (sin cookies, sin banner).    (15 min)
+  1.7  Conectar Pages al repositorio + encender el robot.     (1 h)
+  1.8  Aviso de dato caducado en el layout (A5).              (15 min)
+  SALIDA: la web existe, se actualiza sola y se puede medir.
+
+FASE 2 - COBRAR (3-4 h + esperas de aprobacion) ................... [P0/P1]
+  2.1  Alta en Amazon Afiliados -> afiliados.json.
+  2.2  Alta en Awin/Tradedoubler para HSN, Prozis, Myprotein, Nutritienda.
+  2.3  Reejecutar exportar.py y comprobar que
+       test_los_afiliados_no_mueven_el_ranking sigue pasando.
+  SALIDA: cada visita puede convertir. Nada mas cambia.
+
+FASE 3 - QUE EL DATO VALGA (1-2 semanas de tardes) ................ [P1]
+  3.1  Tabla precio_historico + INSERT diario (B4). HACER PRIMERO: el
+       historico que no se guarda hoy no se recupera manana.       (2 h)
+  3.2  Extraer marca de los titulos de Amazon (B2).                (3-4 h)
+  3.3  Relajar el emparejamiento entre tiendas + pruebas nuevas (B1). (4-6 h)
+  3.4  Activar tabla "donde comprarlo" + AggregateOffer cuando haya
+       coincidencias.                                              (2 h)
+  3.5  Recruzar Informed Sport/Choice con las marcas nuevas (B3b).  (1 h)
+  3.6  Curar Creapure pendientes con codigo QS (B3a).              (manual)
+  SALIDA: la web puede decir "esto esta mas barato aqui". Es otro producto.
+
+FASE 4 - QUE PESE MENOS Y SE ENTIENDA MEJOR (1 semana) ............ [P1]
+  4.1  Adelgazar los props de la isla React (C1).                  (2 h)
+  4.2  referrerpolicy no-referrer en miniaturas (C2, arreglo rapido). (15 min)
+  4.3  Miniaturas propias en R2 (C2, arreglo bueno).               (4-6 h)
+  4.4  "Te cuesta X EUR al mes" en ficha y tabla (D2).             (3 h)
+  4.5  Bloque de veredicto arriba en la ficha (E5).                (2 h)
+  4.6  Grafico SVG de dispersion por categoria (E4).               (4 h)
+  SALIDA: mas rapida en movil y mucho mas facil de entender.
+
+FASE 5 - QUE LA GENTE VUELVA (2-3 semanas) ....................... [P1/P2]
+  5.1  Alerta de precio por correo (requiere 3.1 + cuentas).       (1-2 dias)
+  5.2  Lista "mi botiquin" en localStorage (sin backend).          (4 h)
+  5.3  Comparador manual de 2-4 productos (D3).                    (1 dia)
+  5.4  Grafica de historico en la ficha (requiere 3.1 y ~30 dias
+       de datos acumulados).                                       (4 h)
+  SALIDA: primera razon real para una segunda visita.
+
+FASE 6 - QUE VENGA GENTE (continuo, desde la semana 2) ........... [P1]
+  Ver el plan de captacion detallado en el punto 8.
+
+FASE 7 - SOLO SI HAY TRAFICO ..................................... [P3]
+  7.1  Paginas de marca (D6, requiere 3.2).
+  7.2  Imagenes OG por categoria (E6).
+  7.3  Boletin mensual.
+  7.4  Revisar display o patrocinio (>10.000 visitas/mes).
+  7.5  Abrir resenas de verdad: rate limit, moderacion, recuperar clave,
+       borrado RGPD (H4).
+
+
+6. PRIORIZACION IMPACTO / ESFUERZO
+--------------------------------------------------------------------------------
+IMPACTO ALTO / ESFUERZO BAJO  (hacer YA, por este orden)
+  - Publicar el sitio (F1 completa)
+  - Dar de alta la afiliacion (F2)
+  - Tabla de historico de precios (3.1)
+  - Adelgazar props de la isla (4.1)
+  - referrerpolicy en imagenes (4.2)
+  - "cuanto cuesta al mes" (4.4)
+  - Aviso de dato caducado (1.8)
+
+IMPACTO ALTO / ESFUERZO MEDIO-ALTO (planificar)
+  - Marca de Amazon + emparejamiento entre tiendas (3.2-3.4)
+  - Alerta de precio por correo (5.1)
+  - Miniaturas propias en R2 (4.3)
+  - Captacion de enlaces con la historia de la metodologia (8)
+
+IMPACTO MEDIO / ESFUERZO BAJO (relleno de tardes sueltas)
+  - Grafico de dispersion (4.6)
+  - Lista "mi botiquin" (5.2)
+  - Pruebas del filtrado del front (I2)
+  - Alerta de fallo del robot (A4)
+
+NO HACER TODAVIA
+  - Anuncios display
+  - App movil
+  - Mas categorias (30 ya son muchas para el nivel de curacion actual)
+  - Mas tiendas antes de que las 8 actuales aporten datos completos
+  - Migrar a otro framework, base de datos o infraestructura
+
+
+7. FICHAS DE LAS FUNCIONES NUEVAS PROPUESTAS
+--------------------------------------------------------------------------------
+
+FUNCION 1 - ALERTA DE PRECIO POR CORREO                     [prioridad maxima]
+  Que hace: el usuario marca un producto y elige un precio objetivo; cuando el
+  scraper detecta que baja de ahi, recibe un correo con el enlace.
+  Por que: es la unica funcion que convierte una visita unica en un usuario
+  recurrente, y ademas el correo llega en el momento exacto de comprar (la
+  conversion de afiliacion mas alta que existe en este nicho).
+  Necesita: precio_historico (3.1), cuentas (ya existen), una tabla de alertas y
+  un envio de correo (Cloudflare Email Workers o un servicio gratuito).
+  Cuidado: es el punto donde la web pasa a tratar datos personales de verdad.
+  Doble confirmacion del correo y baja en un clic, sin excepciones.
+
+FUNCION 2 - CUANTO TE CUESTA AL MES                            [prioridad alta]
+  Que hace: con la dosis diaria (por defecto la de referencia, ajustable), decir
+  cuantos dias dura el envase y cuanto sale al mes.
+  Por que: traduce el EUR/kg a la unidad en que la gente piensa. Y el dato ya
+  esta calculado; es presentacion, no calculo nuevo.
+  Cuidado: la dosis diaria por defecto sale de dosis_referencia.json, con su
+  fuente. Nunca una recomendacion propia.
+
+FUNCION 3 - COMPARADOR MANUAL DE PRODUCTOS                     [prioridad alta]
+  Que hace: seleccionar de 2 a 4 productos y verlos enfrentados por precio,
+  precio por unidad, nivel, dosis y desglose del score.
+  Por que: es lo que un visitante espera al leer "comparador", y hoy no esta.
+  Como hacerlo barato: seleccion en localStorage y una vista que se pinta con
+  el JSON de categoria que ya existe. Cero backend.
+
+FUNCION 4 - HISTORICO DE PRECIO EN LA FICHA                    [prioridad alta]
+  Que hace: una linea con el precio de los ultimos 90 dias, el minimo historico
+  y "hoy esta un X % por encima/debajo de su media".
+  Por que: es el contenido que hace que alguien enlace la ficha, y es imposible
+  de copiar sin haber estado recogiendo datos desde el principio.
+  Necesita: 3.1 y entre 30 y 60 dias de espera. Otra razon para hacer 3.1 YA.
+
+FUNCION 5 - PAGINA POR MARCA                                  [prioridad media]
+  Que hace: /marca/<slug> con todos los productos de esa marca, su nivel medio
+  de verificacion y su posicion de precio.
+  Por que: cientos de paginas de cola larga generadas solas, con el mismo motor
+  que ya genera /mejores y /comparativa.
+  Necesita: B2 (marcas de Amazon). Minimo 5 productos por marca.
+
+FUNCION 6 - INFORME TRIMESTRAL DE PRECIOS DEL SECTOR           [prioridad media]
+  Que hace: una pagina por trimestre con lo que ha subido y bajado, por
+  categoria, con graficos.
+  Por que: es lo unico de esta lista que puede conseguir enlaces de prensa y de
+  foros sin pedirlos. Un dato propio que nadie mas tiene.
+  Necesita: 3.1 y un trimestre de datos.
+
+FUNCION 7 - MODO "SOY NUEVO"                                   [prioridad baja]
+  Que hace: tres preguntas (objetivo, presupuesto, restricciones) y una
+  recomendacion de que categorias mirar, enlazando a las guias.
+  Por que: capta la intencion mas alta del embudo, que hoy solo tienen las
+  guias, y las conecta con las tablas.
+  Cuidado: recomendar CATEGORIAS y enlazar guias, nunca "toma esto". La linea
+  entre orientar y dar consejo nutricional no se cruza.
+
+
+8. PLAN DE CAPTACION DE TRAFICO (12 semanas, desde el despliegue)
+--------------------------------------------------------------------------------
+PREMISA: un dominio nuevo en YMYL no posiciona por palabras competidas en menos
+de 6-12 meses. Las 12 primeras semanas van de indexacion, cola larga y primeros
+enlaces, no de trafico.
+
+SEMANAS 1-2 - Que exista para Google
+  - Search Console: verificar dominio, enviar sitemap, pedir indexacion manual
+    de portada, /metodologia, /quienes-somos y las 5 categorias principales.
+  - Bing Webmaster Tools (10 minutos, y alimenta a ChatGPT/Copilot).
+  - Comprobar en Search Console que se indexan las 2.996 paginas; si Google
+    marca "rastreada, no indexada" en masa, es sintoma de contenido demasiado
+    parecido entre landings: revisar entonces landings.js.
+
+SEMANAS 3-6 - Los primeros enlaces (lo mas dificil y lo mas importante)
+  El gancho NO es "he hecho un comparador de suplementos" (hay cientos). El
+  gancho es "he publicado el codigo y la metodologia con la que puntuo, y hay
+  una prueba automatica que verifica que mis comisiones no mueven el ranking".
+  Eso es una historia, y las historias se enlazan.
+  - Reddit: r/espanol_fitness, r/Fitness_ES, r/gym_es. Aportar el DATO, no el
+    enlace: "he sacado el precio por kilo real de 156 creatinas, esto es lo que
+    sale". El enlace, en un comentario y solo si lo piden.
+  - Foros clasicos del nicho en espanol (Mundo Fitness, ForoMuscle).
+  - Hacker News / r/programming con el angulo tecnico: "scraping educado de 8
+    tiendas y un motor de scoring auditable, en Python stdlib". Trae poco
+    trafico de compradores, pero enlaces de calidad y un dominio nuevo los
+    necesita.
+  - LinkedIn con el angulo de datos.
+  - Contactar con 3-5 blogs pequenos de nutricion deportiva ofreciendo el
+    dataset abierto (/datos/*.json) para que lo citen.
+  - Objetivo realista: 5-10 enlaces de calidad en 4 semanas.
+
+SEMANAS 7-10 - Contenido que puede posicionar YA
+  - Reforzar las guias (que son lo que puede ganar en cola larga): anadir a cada
+    una la pregunta que Google ensena en "otras preguntas", con respuesta corta
+    de 40-60 palabras.
+  - Crear 5-10 landings nuevas GUIADAS POR SEARCH CONSOLE, no por intuicion: las
+    consultas con impresiones y sin clic son la lista de tareas.
+  - Publicar el primer informe de precios (Funcion 6) si ya hay datos.
+
+SEMANAS 11-12 - Medir y decidir
+  - Revisar que consultas traen impresiones y donde esta la posicion media.
+  - Si hay categorias con impresiones y posicion 15-30, ahi es donde merece la
+    pena invertir contenido; el resto, dejarlo madurar.
+
+CANALES QUE NO RECOMIENDO EN ESTA FASE
+  - Redes sociales propias (Instagram/TikTok): coste altisimo de mantenimiento
+    para una web de datos, y no traen enlaces. Si acaso, publicar el grafico de
+    dispersion de una categoria como imagen suelta, sin abrir cuenta.
+  - SEM/Ads: pagar por clics que no pueden convertir hasta que la afiliacion
+    este activa. Y con comisiones del 5-10 % sobre un bote de 25 EUR, la
+    aritmetica casi nunca sale.
+  - Compra de enlaces: en YMYL es el camino corto a una penalizacion.
+
+
+9. PLAN DE MONETIZACION
+--------------------------------------------------------------------------------
+FASE A (inmediata): afiliacion. Ver F2. Es lo unico que hay que hacer.
+FASE B (>3.000 visitas/mes): boletin propio con la alerta de precios. La lista
+  de correo es el unico activo que no depende de Google.
+FASE C (>10.000 visitas/mes): revisar patrocinio de boletin o informe. Display
+  solo si todo lo anterior falla; nunca intercalado en el ranking.
+NUNCA: cobrar a una marca por aparecer, por subir puesto o por un sello. Es el
+  unico movimiento que destruye el activo entero, y ademas hay una prueba
+  automatica que lo delataria.
+
+EXPECTATIVA REALISTA, para no frustrarse: con 1.000 visitas/mes bien orientadas
+(intencion de compra), una tasa de clic al comercio del 15-25 % y una conversion
+del 2-5 %, salen entre 3 y 12 ventas al mes. Con ticket medio de 30 EUR y
+comision del 8 %: entre 7 y 30 EUR/mes. El primer ano de un proyecto asi es de
+construccion de activo, no de ingresos.
+
+
+10. METRICAS Y COMO MEDIRLAS
+--------------------------------------------------------------------------------
+SALUD DEL DATO (medir semanalmente con un script, 20 lineas sobre el dataset)
+  - Productos totales y por tienda (detectar que una tienda deje de raspar).
+  - % sin marca identificada          -> hoy 19,7 %  -> objetivo < 8 %
+  - % con coste por dosis efectiva    -> hoy 48,8 %  -> objetivo > 60 %
+  - Productos de nivel 4              -> hoy 30      -> objetivo > 60
+  - Dias desde la ultima actualizacion-> objetivo <= 2
+
+SALUD DE LA WEB
+  - LCP movil de una categoria grande -> objetivo < 2,5 s
+  - Peso de props de la isla          -> hoy 605 KB  -> objetivo < 150 KB
+  - Peticiones a dominios de terceros -> hoy 8       -> objetivo 0
+
+NEGOCIO
+  - Paginas indexadas (Search Console)-> objetivo > 2.000 en 3 meses
+  - Impresiones y clics por consulta
+  - Dominios de referencia            -> objetivo 10 en 3 meses
+  - Clics salientes a tienda (evento en Cloudflare Analytics)
+  - Ingresos por afiliacion
+
+REGLA: si una metrica no se va a mirar cada semana, no se mide.
+
+
+11. RIESGOS
+--------------------------------------------------------------------------------
+R1. Una tienda bloquea el scraper (ya pasa con MASmusculo).
+    MITIGACION: la ya aplicada (no forzar). El catalogo aguanta perder una
+    tienda; lo que no aguanta es que bloqueen tres. Diversificar es la razon
+    para mantener Amazon pese a su mala calidad de dato.
+R2. La cuenta de Amazon Afiliados se cancela por no hacer 3 ventas en 180 dias.
+    MITIGACION: no darse de alta hasta que haya trafico minimo; entrar antes en
+    las redes (Awin) que no tienen esa clausula.
+R3. Google no indexa las 2.996 paginas por similitud entre landings.
+    MITIGACION: vigilar "rastreada, no indexada" en Search Console y, si pasa,
+    reducir landings antes que anadir mas.
+R4. El proyecto se abandona por falta de resultados a los 3 meses.
+    ES EL RIESGO MAS PROBABLE DE TODOS. Mitigacion: el robot diario hace que la
+    web siga viva sin trabajo humano. Mientras el robot corra, el activo
+    (historico de precios, indexacion, antiguedad del dominio) sigue creciendo
+    aunque nadie toque nada. Por eso la Fase 1 es prioridad absoluta.
+R5. Un error en una dosis de referencia hace dano a un lector.
+    MITIGACION: H1, verificacion manual de los DOI. Innegociable.
+
+
+12. LO QUE NO HAY QUE HACER
+--------------------------------------------------------------------------------
+  - No anadir categorias ni tiendas antes de publicar. 30 categorias y 8
+    tiendas ya son mas de lo que hoy se cura bien.
+  - No cambiar de framework, de base de datos ni de infraestructura. Astro +
+    SQLite + Cloudflare es exactamente lo correcto para este tamano, y el coste
+    de operacion es practicamente cero.
+  - No meter anuncios antes de tener trafico.
+  - No inventarse un dietista-nutricionista en el equipo. La honestidad de
+    /quienes-somos es lo que sostiene el dominio.
+  - No dejar que la afiliacion toque el orden. Nunca. Ni "solo un poco".
+  - No construir la Fase 5 antes de la Fase 1. Una funcion brillante en una web
+    que nadie puede visitar vale exactamente cero.
+
+
+13. SI SOLO HAY TIEMPO PARA UNA COSA
+--------------------------------------------------------------------------------
+Publicarla. Todo lo demas de este documento sigue siendo cierto la semana que
+viene; el mes de indexacion que se pierde hoy no se recupera.
+
+================================================================================
+Fin del plan. Estado del proyecto en el momento de la auditoria:
+tests.py -> 60/60 OK | seo_check.py -> 2.996 paginas, SEO OK | git -> 0 commits.
+================================================================================

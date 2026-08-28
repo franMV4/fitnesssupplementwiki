@@ -1,0 +1,299 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+import { nombreIngrediente, NIVEL, puntos } from '../datos/util.js';
+
+const c = datos.config;
+const pct = (n) => `${Math.round(n * 100)} %`;
+
+const secciones = [
+  { id: 'dosis', titulo: 'Comparamos dosis, no gramos' },
+  { id: 'niveles', titulo: 'Los cuatro niveles de verificacion' },
+  { id: 'formula', titulo: 'La formula' },
+  { id: 'referencias', titulo: 'De donde salen las dosis' },
+  { id: 'sellos', titulo: 'Los sellos de recomendacion' },
+  { id: 'afiliacion', titulo: 'Afiliacion' },
+  { id: 'principios', titulo: 'Que no hacemos' },
+  { id: 'limitaciones', titulo: 'Limitaciones conocidas' },
+];
+---
+<Base ancho="completo"
+      titulo="Metodologia: como se calcula el score y que significa cada nivel"
+      descripcion="Como se puntua cada suplemento, que significan los cuatro niveles de verificacion y por que un analisis pagado por la marca vale menos que una comprobacion contra la fuente.">
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Documento abierto</p>
+    <h1 class="aparece d1">Metodologia</h1>
+    <p class="entradilla aparece d2">
+      Esta pagina explica exactamente como sale cada numero de esta web. Si algo no se
+      puede explicar aqui, no deberia estar en el ranking.
+    </p>
+  </section>
+
+  <div class="con-carril">
+    <aside class="indice carril">
+      <p class="rotulo">Contenido</p>
+      <ol>
+        {secciones.map((s) => <li><a href={`#${s.id}`}>{s.titulo}</a></li>)}
+      </ol>
+    </aside>
+
+    <div class="prosa">
+      <section id="dosis" class="seccion-doc">
+        <h2><span class="num">01</span> Comparamos en la unidad en la que se vende</h2>
+        <p>
+          Cada categoria se compara por <strong>precio por kilo</strong> si se vende en polvo y
+          por <strong>precio por capsula</strong> si se vende en perlas o comprimidos. Las dos
+          unidades no se mezclan nunca en la misma tabla: 30 €/kg y 0,07 €/capsula no son
+          numeros comparables, y ponerlos en la misma columna seria un ranking inventado. Un
+          producto cuya ficha no dice cuanto trae el envase no entra en la comparativa.
+        </p>
+        <p>
+          El precio es el que paga hoy el comprador, no el tachado, y sale de la ficha de la
+          tienda el dia que se recogieron los datos. Las variantes de sabor de un mismo producto
+          se agrupan en una fila para que la tabla no ensene ocho veces lo mismo.
+        </p>
+        <p>
+          <strong>Y ademas, cuando se puede, el coste por dosis efectiva.</strong> El precio por
+          kilo compara envases, no lo que te llevas: un bote barato por kilo con la mitad de
+          activo por servicio no es barato, es la mitad de bote. Cuando la tienda publica cuanto
+          activo lleva cada dosis, calculamos tambien cuantas <strong>dosis efectivas</strong> da
+          el envase segun la dosis de referencia citada, y esa cifra sale en la ficha del
+          producto. No mueve el ranking, porque la mayoria de las tiendas no publican ese dato y
+          rankear con el dejaria fuera a media tabla; pero cuando esta, es lo que de verdad
+          distingue dos botes que cuestan lo mismo por kilo.
+        </p>
+        <p>
+          Por eso el concentrado y el aislado de suero son dos categorias distintas y no una:
+          un kilo de concentrado lleva unos 750 g de proteina y uno de aislado unos 880, asi que
+          compararlos en la misma tabla por precio por kilo pondria siempre al concentrado por
+          delante por llevar mas relleno. En el coste por dosis de la ficha esa diferencia si se
+          descuenta, con la pureza tipica de cada categoria citada en la tabla de dosis.
+        </p>
+        <p>
+          <strong>Cuando no hay datos, no hay nota.</strong> Si la tienda no publica cuanto activo
+          lleva cada dosis, el producto aparece con su precio y con un cero: no le asignamos una
+          dosis tipica ni le suponemos la formula. Los multivitaminicos van asi enteros, porque no
+          existe una dosis de referencia unica para veinte micronutrientes a la vez.
+        </p>
+      </section>
+
+      <section id="niveles" class="seccion-doc">
+        <h2><span class="num">02</span> Los cuatro niveles de verificacion</h2>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>Nivel</th><th>Que significa</th><th class="num">Peso en la calidad</th></tr></thead>
+              <tbody>
+                {[4, 3, 2, 1].map((n) => (
+                  <tr>
+                    <td class="principal">
+                      <span class={`nivel ${NIVEL[n].clase}`}>
+                        <span class="puntos">{puntos(n).map((on) => <i class={on ? 'on' : ''} />)}</span>
+                        <strong>{n}</strong> {datos.niveles[n].nombre}
+                      </span>
+                    </td>
+                    <td data-et="Significa">{datos.niveles[n].detalle}</td>
+                    <td class="num" data-et="Peso">{pct(c.factor_verificacion[n])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>
+          <strong>El nivel 4 lo dan dos cosas, y la ficha dice cual.</strong> La primera es una
+          comprobacion nuestra contra la fuente que emite el sello: el codigo QS del envase en
+          creapure.com, o el lote en la lista publica de Informed Sport. La segunda es que el
+          producto lleve <strong>Creapure o IFOS en el nombre</strong>. Creapure es una marca
+          registrada de Alzchem y solo puede ponerla en el nombre de su producto quien tiene
+          contrato de licencia. IFOS es el programa de analisis por lotes de Nutrasource: los
+          analiza un laboratorio independiente y publica el informe de cada lote, asi que tampoco
+          es un logo que uno se ponga. Ninguno de los dos es decorativo: son afirmaciones que
+          obligan legalmente a la marca y que la tienda firma al listarlas en su catalogo. Solo
+          comparamos tiendas que responden de lo que publican, asi que lo tratamos como lo que es,
+          una certificacion de un tercero, y no como un sello suelto impreso en la etiqueta.
+        </p>
+        <p>
+          <strong>Que no significa.</strong> Que el nombre declare Creapure no quiere decir que
+          hayamos tenido ese bote en la mano ni que hayamos tecleado su codigo QS: eso solo se
+          puede hacer producto a producto, con el envase fisico delante. En la ficha de cada
+          producto se ve exactamente de donde sale su nivel 4, con la fecha y el enlace de la
+          prueba, y si viene de un codigo QS comprobado se dice con esas palabras. Y solo cuenta
+          si esta en el <strong>nombre</strong>: en la descripcion larga de una ficha aparece
+          "Creapure" de otros productos de la misma tienda, y eso no afirma nada de este.
+        </p>
+        <p>
+          <strong>Por que el nivel 3 vale menos que el 4.</strong> Un analisis publicado por la
+          propia marca lo encarga y lo paga la parte interesada: elige el laboratorio, elige el
+          lote y elige si publica el resultado. Un codigo QS de Creapure o un lote en la lista de
+          Informed Sport los emite y los mantiene un tercero al que la marca no paga por aprobar,
+          y cualquiera puede consultarlos. No decimos que un analisis de marca sea falso: decimos
+          que prueba menos.
+        </p>
+        <p>
+          <strong>Por que el nivel 2 es tan bajo.</strong> Que un sello aparezca impreso en la
+          etiqueta o mencionado en la ficha de la tienda no demuestra nada: ha habido casos de
+          logos usados sin certificacion detras. Un sello solo sube a nivel 4 si lo hemos
+          comprobado contra la fuente que lo emite, y queda registrada la fecha de esa
+          comprobacion.
+        </p>
+      </section>
+
+      <section id="formula" class="seccion-doc">
+        <h2><span class="num">03</span> La formula</h2>
+
+        {/* La formula literal, en la banda de tinta. Es la promesa entera de la web en
+            una linea, y los dos pesos salen del mismo fichero de configuracion que usa
+            el motor: no pueden decir una cosa distinta de lo que hace el calculo. */}
+        <div class="negativo">
+          <p class="rotulo">La formula</p>
+          <p class="formula">
+            nota = <em>{pct(c.peso_coste)}</em> &middot; coste + <em>{pct(c.peso_calidad)}</em> &middot; calidad
+          </p>
+        </div>
+
+        <p>El score final va de 0 a 100 y se reparte asi:</p>
+        <div class="rejilla">
+          <div class="bloque">
+            <span class="rotulo">Calidad</span>
+            <span class="cifra l">{pct(c.peso_calidad)}</span>
+            <p class="sutil">
+              Nivel de verificacion x forma quimica del activo x adecuacion de las dosis
+              (esta ultima solo cuando la tienda las publica; si no, no se afirma nada de la
+              formula). La forma estudiada puntua {pct(c.factor_forma_preferida)}, una forma
+              alternativa {' '}{pct(c.factor_forma_alternativa)} y una forma no declarada
+              {' '}{pct(c.factor_forma_desconocida)}.
+            </p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">Precio</span>
+            <span class="cifra l">{pct(c.peso_coste)}</span>
+            <p class="sutil">
+              El precio por kilo (o por capsula) comparado con el mas barato de su categoria,
+              que se lleva el 100 %. Un producto sin formato declarado se queda sin esta mitad.
+            </p>
+          </div>
+        </div>
+        <p>
+          <strong>Infradosaje.</strong> Un ingrediente clave presente por debajo del
+          {' '}{pct(c.umbral_infradosaje)} de su dosis efectiva minima marca el producto como
+          infradosificado y multiplica su calidad por {c.penalizacion_infradosaje}. Es el castigo
+          al <em>fairy dusting</em>: meter un ingrediente famoso en cantidad simbolica para poder
+          ponerlo en la etiqueta.
+        </p>
+        <p>
+          Todos estos pesos estan en un unico fichero de configuracion del proyecto, y esta pagina
+          se genera desde ese mismo fichero: no pueden decir una cosa distinta de lo que hace el
+          calculo.
+        </p>
+      </section>
+
+      <section id="referencias" class="seccion-doc">
+        <h2><span class="num">04</span> De donde salen las dosis de referencia</h2>
+        <p>
+          Cada cifra tiene su fuente citada y se revisa a mano. No se usa ninguna dosis sin
+          referencia publicada.
+        </p>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>Ingrediente</th><th class="num">Dosis efectiva</th><th>Evidencia</th><th>Fuente</th></tr></thead>
+              <tbody>
+                {Object.entries(datos.dosis_referencia).map(([k, d]) => (
+                  <tr>
+                    <td class="principal marca">{nombreIngrediente(k)}</td>
+                    <td class="num" data-et="Dosis">{(d.dosis_efectiva_min_mg / 1000).toFixed(1)}
+                      {d.dosis_efectiva_max_mg ? `–${(d.dosis_efectiva_max_mg / 1000).toFixed(1)}` : ''} g</td>
+                    <td data-et="Evidencia">{d.nivel_evidencia}</td>
+                    <td class="sutil" data-et="Fuente">{d.fuentes.map((f) => <a href={f.url} rel="nofollow">{f.cita}</a>)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="sellos" class="seccion-doc">
+        <h2><span class="num">05</span> Los sellos de recomendacion</h2>
+        <p>
+          Un sello de esta web certifica un <strong>criterio editorial</strong>: que un producto
+          cumple una condicion objetiva y publica. No promete ningun efecto sobre tu cuerpo, tu
+          rendimiento ni tu salud, y no deberia leerse asi.
+        </p>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>Sello</th><th>Se gana cuando</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="principal"><span class="sello">Verificado nivel {c.nivel_sello_verificado}</span></td>
+                  <td data-et="Criterio">Su certificacion la respalda un tercero: comprobada contra la fuente
+                    que la emite, o una marca de ingrediente licenciada declarada en el nombre del
+                    producto. Con fecha y prueba consultable en la ficha.</td>
+                </tr>
+                <tr>
+                  <td class="principal"><span class="sello">Mejor calidad-precio verificada</span></td>
+                  <td data-et="Criterio">Es el score mas alto de su categoria <em>y</em> supera {c.umbral_sello_calidad_precio}
+                    {' '}sobre 100. Si el mejor de una categoria no llega a ese umbral, esa categoria se queda
+                    sin sello: no se reparte por obligacion.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>
+          Los dos umbrales salen del mismo fichero de configuracion que puntua, asi que la
+          respuesta a "por que tiene este producto el sello" es siempre su desglose del score,
+          visible en su ficha. No hay sellos negociados ni patrocinados.
+        </p>
+      </section>
+
+      <section id="afiliacion" class="seccion-doc">
+        <h2><span class="num">06</span> Afiliacion</h2>
+        {/* La seccion no se esconde cuando no hay programas: decir "hoy no ganamos nada
+            con esto" es mas util para el lector que un hueco, y la regla de como
+            funcionaria ya esta escrita antes de que haya dinero de por medio. */}
+        <p>
+          {datos.hay_afiliados
+            ? 'Algunos enlaces a tienda son de afiliado y pueden dejar una comision.'
+            : 'Ahora mismo esta web no tiene ningun enlace de afiliado: ningun enlace a tienda deja comision. La regla, para cuando la haya, ya esta escrita y ya esta programada.'}
+          {' '}Los enlaces de afiliado se aplican <strong>despues</strong> de calcular el
+          ranking, en un fichero que el motor de puntuacion no lee. Un producto sin programa
+          de afiliado se enlaza igual y ocupa exactamente el puesto que le da su score. Hay
+          una prueba automatica que cambia los enlaces de afiliado y comprueba que el orden
+          no se mueve.
+        </p>
+      </section>
+
+      <section id="principios" class="seccion-doc">
+        <h2><span class="num">07</span> Que no hacemos</h2>
+        <ul>
+          <li>No decimos que un producto mejore nada. Los efectos son del ingrediente a la dosis
+            estudiada, con su cita. Un producto solo "contiene X gramos de Y".</li>
+          <li>No cobramos por posicion. Ningun acuerdo comercial mueve un producto en el ranking.</li>
+          <li>No marcamos un sello como verificado sin haberlo comprobado en su fuente.</li>
+          <li>No inventamos datos que la tienda no publica: si falta la dosis por servicio, se
+            dice que falta y el producto puntua peor por ello.</li>
+        </ul>
+      </section>
+
+      <section id="limitaciones" class="seccion-doc">
+        <h2><span class="num">08</span> Limitaciones conocidas</h2>
+        <ul>
+          <li>Los precios cambian a diario y las promociones distorsionan el ranking. La fecha de
+            recogida esta al pie de cada pagina y en cada ficha.</li>
+          <li>Hay tiendas que bloquean la recogida automatica de datos. No se fuerzan: simplemente
+            no aparecen, y eso se dice en el repositorio del proyecto.</li>
+          <li>La verificacion de Creapure exige el codigo QS del envase fisico, asi que solo puede
+            hacerse producto a producto y a mano.</li>
+        </ul>
+        <p class="nota">
+          <strong>Ultima actualizacion de los datos:</strong> {datos.generado}. Los pesos de esta
+          pagina se leen del mismo fichero de configuracion que calcula el ranking.
+        </p>
+      </section>
+    </div>
+  </div>
+</Base>

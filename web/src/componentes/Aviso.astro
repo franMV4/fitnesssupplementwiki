@@ -1,0 +1,18 @@
+---
+import datos from '../datos/dataset.json';
+
+// Disclosure de afiliacion. Va donde hay enlaces a tienda, a la vista, no en el pie.
+// Solo se ensena si de verdad hay algun enlace de afiliado en el dataset: mientras no
+// haya ningun programa dado de alta, este aviso advertiria de una comision que no
+// existe, y una web que avisa de lo que no pasa no parece mas transparente, parece que
+// no sabe lo que hace. Se enciende solo al rellenar data/afiliados.json y reexportar.
+---
+{datos.hay_afiliados && (
+  <p class="nota">
+    <strong>Enlaces de afiliado.</strong> Algunos enlaces a tienda son de afiliado: si
+    compras, esta web puede llevarse una comision, sin coste extra para ti. No cambia
+    nada del ranking: el score se calcula antes y sin mirar esos enlaces, y los productos
+    sin programa de afiliado aparecen exactamente igual.
+    <a href="/metodologia#afiliacion">Como se calcula</a>.
+  </p>
+)}

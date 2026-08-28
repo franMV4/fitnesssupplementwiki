@@ -1,0 +1,66 @@
+---
+// La serie de precios de un producto, dibujada en el build. Sin libreria de graficos:
+// son dos polilineas y un texto, y traerse 60 KB de JS para pintar una escalera seria
+// pagar el framework entero por catorce lineas de SVG.
+//
+// La serie viene de exportar.historicos() y solo trae los dias en que el precio CAMBIA,
+// asi que se dibuja como escalon (el precio se mantiene hasta el apunte siguiente), que
+// ademas es lo que de verdad paso: un precio no interpola entre dos jueves.
+//
+// Sin dos apuntes no se pinta nada. El primer dia del proyecto no hay historia, y un
+// "minimo historico" de un solo dato diria que el precio de hoy es el mejor de siempre:
+// verdad y mentira a la vez.
+import { eur } from '../datos/util.js';
+import { fechaLarga } from '../datos/seo.js';
+
+const { p } = Astro.props;
+const h = p.historico;
+const puntos = h ? [...h.serie, [p.fecha_scrape, p.precio_eur]] : [];
+const hay = h && puntos.length >= 2 && h.max > h.min;
+
+// Caja del dibujo. Coordenadas en unidades del viewBox: el SVG escala solo con el ancho
+// y no hay que calcular pixeles.
+const AN = 640, AL = 120, M = 8;
+const dia = (f) => Date.parse(f);
+const x0 = dia(puntos[0]?.[0] ?? 0), x1 = dia(puntos.at(-1)?.[0] ?? 1);
+const ex = (f) => M + ((dia(f) - x0) / Math.max(1, x1 - x0)) * (AN - 2 * M);
+const ey = (v) => AL - M - ((v - h.min) / Math.max(0.01, h.max - h.min)) * (AL - 2 * M);
+
+// Escalera: horizontal hasta el dia del cambio, vertical en el cambio.
+let d = '';
+if (hay) {
+  d = `M ${ex(puntos[0][0]).toFixed(1)} ${ey(puntos[0][1]).toFixed(1)}`;
+  for (const [f, v] of puntos.slice(1)) {
+    d += ` H ${ex(f).toFixed(1)} V ${ey(v).toFixed(1)}`;
+  }
+}
+
+const hoy = p.precio_eur;
+const dif = hay ? ((hoy - h.min) / h.min) * 100 : 0;
+const enMinimo = hay && hoy <= h.min * 1.001;
+---
+{hay && (
+  <section class="historico">
+    <h2 id="historico" class="titulo-bloque">Como se ha movido el precio</h2>
+    <p class="resumen">
+      <span>minimo <b>{eur(h.min)}</b></span>
+      <span>·</span>
+      <span>maximo <b>{eur(h.max)}</b></span>
+      <span>·</span>
+      <span>hoy <b>{eur(hoy)}</b></span>
+    </p>
+    <svg class="grafico-precio" viewBox={`0 0 ${AN} ${AL}`} role="img" preserveAspectRatio="none"
+         aria-label={`Precio entre ${eur(h.min)} y ${eur(h.max)} desde ${fechaLarga(h.desde)}`}>
+      {/* La linea del minimo: es la referencia con la que se compara el precio de hoy. */}
+      <line x1={M} x2={AN - M} y1={ey(h.min)} y2={ey(h.min)} class="suelo" />
+      <path d={d} class="linea" />
+    </svg>
+    <p class="sutil">
+      {enMinimo
+        ? <>Hoy esta en su <b>minimo</b> de los ultimos {h.n} dias observados.</>
+        : <>Hoy esta un <b>{dif.toFixed(0)} %</b> por encima de su minimo ({eur(h.min)}).</>}
+      {' '}Serie desde el {fechaLarga(h.desde)}, con {h.n} lecturas. Es el precio del envase
+      que publica {p.tienda}, recogido una vez al dia.
+    </p>
+  </section>
+)}

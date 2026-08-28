@@ -1,0 +1,349 @@
+---
+import datos from '../datos/dataset.json';
+import Jsonld from '../componentes/Jsonld.astro';
+import { SITIO, abs } from '../sitio.js';
+import { EVIDENCIA } from '../datos/evidencia.js';
+import { porFamilia } from '../datos/familias.js';
+import { fechaLarga } from '../datos/seo.js';
+import { ARCHIVO, DISPLAY } from '../estilos/fuentes.js';
+import '../estilos/fuentes.css';
+import '../estilos/global.css';
+
+// `schema` son los nodos JSON-LD propios de cada pagina (Product, ItemList, migas...).
+// El WebSite y el editor los pone este layout: van en todas las paginas o no van.
+const { titulo, descripcion, ancho, schema = [], noindex = false } = Astro.props;
+// Ruta normalizada sin barra final: sirve para marcar el enlace activo del menu.
+const aqui = Astro.url.pathname.replace(/\/$/, '') || '/';
+const canonica = abs(Astro.url.pathname);
+const grafo = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': abs('/#sitio'),
+      url: SITIO.url,
+      name: SITIO.nombre,
+      description: SITIO.descripcion,
+      inLanguage: SITIO.idioma,
+      publisher: { '@id': abs('/#editor') },
+    },
+    {
+      // Quien firma los datos. Una comparativa de precios sin autor identificable no
+      // la cita ni Google ni un modelo: es la mitad del E-E-A-T y cuesta doce lineas.
+      '@type': 'Organization',
+      '@id': abs('/#editor'),
+      name: SITIO.nombre,
+      url: SITIO.url,
+      slogan: SITIO.lema,
+      description: SITIO.descripcion,
+      areaServed: SITIO.pais,
+      publishingPrinciples: abs('/metodologia'),
+      founder: { '@id': abs('/#autor') },
+      foundingDate: '2026',
+      knowsAbout: ['Suplementacion deportiva', 'Precio por kilo de suplementos',
+                   'Certificacion de suplementos', 'Creapure', 'IFOS'],
+    },
+    {
+      // La persona detras. Google trata la suplementacion como YMYL y no sube al top una
+      // web de salud sin autor identificable. Lo que se afirma aqui es lo unico que se
+      // puede afirmar sin mentir, y /quienes-somos lo desarrolla, incluido lo que NO es.
+      '@type': 'Person',
+      '@id': abs('/#autor'),
+      name: SITIO.autor.nombre,
+      jobTitle: SITIO.autor.rol,
+      description: `${SITIO.autor.hace} ${SITIO.autor.no_hace}`,
+      email: `mailto:${SITIO.contacto}`,
+      url: abs('/quienes-somos'),
+      worksFor: { '@id': abs('/#editor') },
+    },
+    ...schema,
+  ],
+};
+const total = datos.productos.length;
+// Cuantos dias tienen los precios que se estan ensenando. Si el robot diario se para,
+// la web sigue publicando la edicion de hace tres semanas con la misma cara de siempre:
+// esto lo dice en voz alta. Diez dias es el umbral porque el robot corre a diario y una
+// semana de margen cubre un fallo puntual sin dar la alarma por nada.
+const diasDelDato = datos.generado
+  ? Math.floor((Date.now() - Date.parse(datos.generado)) / 86400000) : null;
+const datoViejo = diasDelDato != null && diasDelDato > 10;
+// Con treinta categorias no cabe una fila de enlaces: van dentro de un <details>.
+const enCategoria = datos.categorias.some((c) => aqui === `/${c.slug}`);
+// Las guias son treinta y tambien: van agrupadas por estante para que el menu se lea.
+const guias = porFamilia(datos.categorias, (c) => EVIDENCIA[c.slug]);
+const enGuia = aqui === '/guias' || aqui.startsWith('/guia/');
+// Lo que desfila en la tira de edicion. Son recuentos del dataset, no eslogans: si
+// manana hay 3.000 productos, la tira lo dice sola.
+const tira = [
+  { etiqueta: 'Mercado espanol' },
+  { etiqueta: 'Edicion del', valor: fechaLarga(datos.generado) },
+  { etiqueta: 'Productos', valor: total },
+  { etiqueta: 'Categorias', valor: datos.categorias.length },
+  { etiqueta: 'Tiendas', valor: new Set(datos.productos.map((p) => p.tienda)).size },
+  { etiqueta: 'De nivel 4 verificado', valor: datos.productos.filter((p) => p.nivel_verificacion === 4).length },
+  { etiqueta: 'El orden no lee el fichero de afiliados' },
+];
+---
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script is:inline>
+    document.documentElement.dataset.tema =
+      localStorage.getItem('tema') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro');
+  </script>
+  <title>{titulo}</title>
+  <meta name="description" content={descripcion} />
+  <link rel="canonical" href={canonica} />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={titulo} />
+  <meta property="og:description" content={descripcion} />
+  <meta property="og:url" content={canonica} />
+  <meta property="og:site_name" content={SITIO.nombre} />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:image" content={abs('/og.png')} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={`${SITIO.nombre}: ${SITIO.lema}`} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <!-- Sin esto Google recorta el fragmento a ~160 caracteres y no coge la respuesta corta. -->
+  {/* Entrar y registrarse son utilidades, no contenido: se sirven, pero no se indexan. */}
+  <meta name="robots" content={noindex
+    ? 'noindex, follow'
+    : 'index, follow, max-snippet:-1, max-image-preview:large'} />
+  <meta name="theme-color" content="#efede6" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  {/* Las dos caras que pinta la primera pantalla. Las demas cargan cuando toca. */}
+  <link rel="preload" as="font" type="font/woff2" href={DISPLAY} crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href={ARCHIVO} crossorigin />
+  <noscript>
+    <style>
+      table.recortada tbody tr:nth-child(n+26) { display: table-row; }
+      @media (max-width: 46rem) {
+        table.recortada tbody tr:nth-child(n+26) { display: grid; }
+      }
+      .ver-mas { display: none; }
+    </style>
+  </noscript>
+  <Jsonld datos={grafo} />
+  {SITIO.analitica && (
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={`{"token": "${SITIO.analitica}"}`}></script>
+  )}
+</head>
+<body>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  {/* Tira de edicion: los recuentos del dataset desfilando, como el teletipo de un
+      diario. La lista va DOS veces porque el desfile la desplaza justo la mitad de su
+      ancho: al llegar al final, la segunda copia esta donde empezo la primera y el
+      bucle no salta. Con `prefers-reduced-motion` el CSS esconde la segunda. */}
+  <div class="tira" aria-hidden="true">
+    <div>
+      {[0, 1].map(() => (
+        <div style="display:flex">
+          {tira.map((t) => (
+            <span><i></i>{t.etiqueta}{t.valor != null && <> <b>{t.valor}</b></>}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <header class="sitio">
+    <div class="envoltorio">
+      <button class="hamburguesa" type="button" aria-label="Abrir el menu"
+              aria-expanded="false" aria-controls="menu-principal">
+        <span aria-hidden="true"></span>
+      </button>
+      <a class="marca-sitio" href="/">
+        <img class="glifo" src="/favicon.svg" alt="" width="22" height="22" />
+        FitnessSupplement<span class="fina">Wiki</span>
+      </a>
+      <nav class="principal" id="menu-principal" aria-label="Secciones">
+        <details class="menu-cat" name="menu">
+          <summary aria-current={enCategoria ? 'page' : undefined}>Categorias</summary>
+          <div class="lamina">
+            {datos.categorias.map((c) => (
+              <a href={`/${c.slug}`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
+                {c.nombre} <span>{c.productos}</span>
+              </a>
+            ))}
+          </div>
+        </details>
+        <details class="menu-cat" name="menu">
+          <summary aria-current={enGuia ? 'page' : undefined}>Guias</summary>
+          <div class="lamina laminas-grupos">
+            {guias.map((g) => (
+              <div class="grupo-menu">
+                <p class="rotulo-menu">{g.nombre}</p>
+                {g.cats.map((c) => (
+                  <a href={`/guia/${c.slug}`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
+                    {c.nombre}
+                  </a>
+                ))}
+              </div>
+            ))}
+            <a class="pie-menu" href="/guias">Ver todas las guias y categorias &rarr;</a>
+          </div>
+        </details>
+        <a href="/metodologia" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
+        <a href="/quienes-somos" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
+        <a class="comparar" href="/guias#categorias">Comparar</a>
+      </nav>
+      <button class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
+        <span class="luna" aria-hidden="true">&#9789;</span><span class="sol" aria-hidden="true">&#9788;</span>
+      </button>
+    </div>
+    {/* El acceso va FUERA del envoltorio: el envoltorio esta limitado a 82rem y
+        centrado, asi que en una pantalla ancha su borde derecho no es el de la
+        ventana. Este va posicionado contra la cabecera, que si llega a la esquina.
+        El href lleva de vuelta a la pagina desde la que se pulsa. */}
+    <a class="acceso-cabecera" href="/entrar" aria-label="Entrar en tu cuenta" title="Entrar">
+      <svg class="silueta" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9" />
+        <path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0" fill="none" stroke="currentColor"
+              stroke-width="1.9" stroke-linecap="square" />
+      </svg>
+      <span class="inicial" hidden></span>
+    </a>
+  </header>
+
+  {datoViejo && (
+    <p class="aviso-caducado">
+      <strong>Estos precios tienen {diasDelDato} dias.</strong> La recogida automatica no se
+      ha ejecutado desde el {datos.generado}: sirven para comparar entre productos, pero el
+      precio bueno es el de la tienda.
+    </p>
+  )}
+
+  <main id="contenido">
+    <div class={ancho === 'completo' ? 'envoltorio' : 'envoltorio estrecho'}><slot /></div>
+  </main>
+
+  <footer class="sitio">
+    <div class="envoltorio">
+      <div class="rejilla-pie">
+        <div>
+          <h4>{SITIO.nombre}</h4>
+          <p>
+            {total} suplementos comparados por <strong>precio por kilo o por capsula</strong> y
+            por lo comprobable que es su certificacion. Ni estrellas, ni opiniones, ni comisiones
+            que muevan el orden.
+          </p>
+        </div>
+        <div>
+          <h4>Categorias</h4>
+          <p>
+            Las {datos.categorias.length} categorias comparadas por precio real, cada una con
+            su tabla ordenable y su ganador.
+          </p>
+          <a class="boton" href="/guias#categorias">Ver todas las categorias <span class="flecha">&rarr;</span></a>
+        </div>
+        <div>
+          <h4>Guias</h4>
+          <p>
+            Para que sirve cada suplemento, con la dosis y la fuente al lado. Sin precios
+            dentro: eso esta en la categoria.
+          </p>
+          <a class="boton" href="/guias#guias">Ver todas las guias <span class="flecha">&rarr;</span></a>
+        </div>
+        <div>
+          <h4>Transparencia</h4>
+          <ul>
+            <li><a href="/quienes-somos">Quienes somos</a></li>
+            <li><a href="/metodologia">Metodologia</a></li>
+            <li><a href="/metodologia#niveles">Niveles de verificacion</a></li>
+            <li><a href="/metodologia#formula">La formula del score</a></li>
+            <li><a href="/metodologia#afiliacion">Afiliacion</a></li>
+            <li><a href="/llms.txt">Resumen para modelos de IA</a></li>
+            <li><a href="/legal">Aviso legal y privacidad</a></li>
+            <li><a href={`mailto:${SITIO.contacto}`}>Contacto</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="colofon">
+        <p class="mono">Recogida de precios del <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time> · {total} productos · {datos.categorias.length} categorias</p>
+        <p>
+          Datos recogidos y metodo mantenido por <a href="/quienes-somos">{SITIO.autor.nombre}</a>.
+          {' '}{SITIO.autor.no_hace}
+        </p>
+        <p>
+          Precios recogidos automaticamente de las tiendas. Pueden variar; el precio bueno
+          siempre es el de la tienda.
+        </p>
+        <p>
+          Esta web informa de hechos verificables sobre productos e ingredientes. No da consejo
+          medico ni nutricional. Ningun efecto se atribuye a un producto: la evidencia se cita
+          por ingrediente en <a href="/metodologia">la metodologia</a>.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Los dos menus son <details>: el atributo name ya impide que se abran los dos a la
+       vez, pero nada nativo los cierra al pinchar fuera ni con Escape, y un panel que se
+       queda abierto tapando la pagina es lo que hace que un menu parezca roto. -->
+  <script is:inline>
+    const cabecera = document.querySelector('header.sitio');
+    const hamburguesa = document.querySelector('.hamburguesa');
+    const cerrarMenu = () => {
+      delete cabecera.dataset.menu;
+      hamburguesa.setAttribute('aria-expanded', 'false');
+    };
+    hamburguesa.addEventListener('click', () => {
+      if (cabecera.dataset.menu === undefined) {
+        cabecera.dataset.menu = 'abierto';
+        hamburguesa.setAttribute('aria-expanded', 'true');
+      } else cerrarMenu();
+    });
+    document.querySelector('.tema').addEventListener('click', () => {
+      const raiz = document.documentElement;
+      raiz.dataset.tema = raiz.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+      localStorage.setItem('tema', raiz.dataset.tema);
+    });
+    document.addEventListener('click', (e) => {
+      for (const d of document.querySelectorAll('nav.principal details[open]')) {
+        if (!d.contains(e.target)) d.open = false;
+      }
+      const menu = document.querySelector('nav.principal');
+      if (!menu.contains(e.target) && !hamburguesa.contains(e.target)) cerrarMenu();
+    });
+    // El icono de cuenta sale en las 2.994 paginas, que son estaticas y todas iguales:
+    // quien esta dentro solo se sabe preguntandolo. Diez lineas sueltas en vez de otra
+    // isla de React en cada pagina, que costaria el framework entero para pintar una
+    // letra.
+    (async () => {
+      const icono = document.querySelector('.acceso-cabecera');
+      const aqui = location.pathname + location.search;
+      if (!/^\/(entrar|registro)/.test(location.pathname)) {
+        icono.href = '/entrar?volver=' + encodeURIComponent(aqui);
+      }
+      try {
+        const { usuario } = await (await fetch('/api/yo')).json();
+        if (!usuario) return;
+        icono.classList.add('dentro');
+        icono.title = usuario.nombre;
+        icono.setAttribute('aria-label', 'Tu cuenta: ' + usuario.nombre);
+        const inicial = icono.querySelector('.inicial');
+        inicial.textContent = [...usuario.nombre][0].toUpperCase();
+        inicial.hidden = false;
+        icono.querySelector('.silueta').remove();
+      } catch { /* Sin API (o sin red) el icono se queda como enlace a /entrar. */ }
+    })();
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (cabecera.dataset.menu !== undefined) { cerrarMenu(); hamburguesa.focus(); }
+      for (const d of document.querySelectorAll('nav.principal details[open]')) {
+        d.open = false;
+        d.querySelector('summary').focus();
+      }
+    });
+  </script>
+</body>
+</html>

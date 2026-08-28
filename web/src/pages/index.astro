@@ -1,0 +1,244 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+import Faq from '../componentes/Faq.astro';
+import Buscador from '../componentes/Buscador.jsx';
+import ControlPeso from '../componentes/ControlPeso.jsx';
+import Ponderador from '../componentes/Ponderador.jsx';
+import { abs } from '../sitio.js';
+import { NIVEL, puntos } from '../datos/util.js';
+import { fechaLarga, resumen } from '../datos/seo.js';
+
+const porCategoria = (slug) => datos.productos.filter((p) => p.categoria === slug);
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+const conSello = datos.productos.filter((p) => p.sellos.length > 0);
+
+// Una fila por categoria con todo lo que la portada necesita: la horquilla de precios
+// y el lider. Se calcula una vez y la usan la tabla ponderable y el JSON-LD.
+const portada = datos.categorias.map((c) => {
+  const ps = porCategoria(c.slug);
+  const r = resumen(c, ps);
+  const min = r.barato?.precio_referencia ?? null;
+  const max = r.caro?.precio_referencia ?? null;
+  // Escala logaritmica: en creatina el techo es 20 veces el suelo, y en lineal los
+  // 45 productos se apelotonan en el primer 5 % de la regla. En log se ve donde esta
+  // de verdad la mediana y donde cae el lider.
+  // Los extremos se recogen un punto hacia dentro: una marca de 3 px justo en el 0 %
+  // se sale de la regla por la izquierda y parece un fallo de maquetacion.
+  const dentro = (v) => (min != null && max != null && max > min && v != null
+    ? Math.min(99, Math.max(1,
+        ((Math.log(v) - Math.log(min)) / (Math.log(max) - Math.log(min))) * 100))
+    : 0);
+  return {
+    ...c,
+    r,
+    unidad: r.unidad,
+    dec: r.dec,
+    min, max,
+    // Donde cae el lider dentro de la horquilla. Si el mejor score esta pegado al suelo,
+    // el barato y el bueno son el mismo, y eso se ve sin leer una sola cifra.
+    posLider: dentro(r.lider?.precio_referencia),
+    posMediana: dentro(r.mediana),
+  };
+});
+
+// Frontera de Pareto precio/calidad: los unicos productos que pueden liderar su
+// categoria con ALGUN peso del score. Es lo que se hidrata en el navegador para la
+// tabla ponderable, unas decenas de filas en lugar de 426.
+const frenteDe = (ps) => {
+  const con = ps.filter((p) => p.precio_referencia != null);
+  return con.filter((p) => !con.some((o) => o !== p
+    && (o.score_calidad ?? 0) >= (p.score_calidad ?? 0)
+    && o.precio_referencia <= p.precio_referencia
+    && ((o.score_calidad ?? 0) > (p.score_calidad ?? 0)
+        || o.precio_referencia < p.precio_referencia)));
+};
+const filasPeso = portada.filter((c) => c.r.lider).map((c) => ({
+  slug: c.slug,
+  nombre: c.nombre,
+  unidad: c.unidad_precio,
+  suelo: c.min,
+  // Lo que antes era la ficha de la seccion "Las 30 comparativas": recuentos y la
+  // horquilla de precios. Va debajo de cada fila en vez de en una segunda lista que
+  // repetia las mismas 30 categorias con otras palabras.
+  productos: c.productos,
+  tiendas: c.r.tiendas,
+  nivel4: c.r.nivel4,
+  min: c.min, max: c.max, mediana: c.r.mediana, dec: c.dec,
+  posMediana: c.posMediana,
+  // El lider solo se marca si esta despegado del suelo: hoy suele SER el mas barato,
+  // y una marca pegada al 0 % no dice nada.
+  posLider: c.posLider > 5 ? c.posLider : null,
+  candidatos: frenteDe(porCategoria(c.slug)).map((p) => ({
+    s: p.slug, marca: p.marca, nombre: p.nombre, tienda: p.tienda, img: p.imagen,
+    p: p.precio_referencia, v: p.nivel_verificacion, cal: p.score_calidad ?? 0,
+  })),
+}));
+
+// La portada responde a la pregunta de arriba del embudo ("que suplementos merecen la
+// pena"); cada categoria responde a la suya. Las dos con la misma frase generada.
+// El unico parrafo de la portada: es la respuesta que copia un modelo y el fragmento
+// que ensena Google, asi que lleva los recuentos, el metodo y la fecha, y nada mas.
+const respuesta =
+  `Compara ${datos.productos.length} suplementos de ${tiendas} tiendas espanolas en ` +
+  `${datos.categorias.length} categorias por precio por kilo (o por capsula) y por lo ` +
+  `comprobable que es su certificacion, del 1 al 4. El orden lo manda una nota de 0 a 100, ` +
+  `mitad precio y mitad calidad verificable, que no mira los enlaces de afiliado. ` +
+  `Precios del ${fechaLarga(datos.generado)}.`;
+
+const faqs = [
+  {
+    p: '¿Como se decide que suplemento es mejor en esta web?',
+    r: `Con una nota de 0 a 100: ${datos.config.peso_coste * 100} % precio frente al mas barato ` +
+       `de su categoria y ${datos.config.peso_calidad * 100} % calidad verificable (nivel de ` +
+       `certificacion, forma quimica del activo y, donde la tienda publica las dosis, si la ` +
+       `formula llega a la dosis efectiva). Cada producto ensena su desglose linea a linea.`,
+  },
+  {
+    p: '¿Por que se compara por precio por kilo y no por envase?',
+    r: 'Porque dos botes al mismo precio pueden costar el doble uno que otro segun lo que ' +
+       'traigan dentro. Cada categoria se compara en la unidad en la que se vende: por kilo los ' +
+       'polvos, por capsula las perlas y los comprimidos, y las dos unidades nunca se mezclan ' +
+       'en la misma tabla.',
+  },
+  {
+    p: '¿Los enlaces de afiliado cambian el orden de los productos?',
+    r: 'No. El score se calcula antes y sin leer el fichero de afiliados, y hay una prueba ' +
+       'automatica que falla si el ranking cambia al aplicarlos. Los productos sin programa de ' +
+       'afiliado aparecen exactamente igual.',
+  },
+  {
+    p: '¿Cada cuanto se actualizan los precios?',
+    r: `Se vuelven a recoger de las tiendas en cada actualizacion; los de esta version son del ` +
+       `${fechaLarga(datos.generado)}. El precio bueno siempre es el de la tienda: aqui sirve ` +
+       `para comparar, no para pagar.`,
+  },
+  {
+    p: '¿Que significa el nivel de verificacion 4?',
+    r: 'Que el sello lo respalda alguien que no es la marca: o se ha comprobado en la fuente ' +
+       'que lo emite (codigo QS de Creapure, lote en Informed Sport), o el producto lleva en el ' +
+       'nombre una marca que exige un tercero detras, como Creapure o IFOS. Un sello suelto en ' +
+       'la etiqueta se queda en el nivel 2.',
+  },
+];
+
+const schema = [
+  {
+    '@type': 'WebPage',
+    '@id': abs('/'),
+    url: abs('/'),
+    name: 'Comparador de suplementos deportivos: precio por kilo y certificacion',
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'ItemList',
+    name: 'Comparativas de suplementos',
+    numberOfItems: datos.categorias.length,
+    itemListElement: datos.categorias.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.nombre,
+      url: abs(`/${c.slug}`),
+    })),
+  },
+];
+---
+<Base ancho="completo"
+      titulo="Comparador de suplementos: precio por kilo y certificacion"
+      descripcion="Comparamos suplementos por precio por kilo (o por capsula) y por el nivel de verificacion de sus certificaciones, con el desglose de cada nota."
+      schema={schema}>
+
+  <section class="portada">
+    <p class="edicion aparece">
+      <span>Edicion <b><time datetime={datos.generado}>{fechaLarga(datos.generado)}</time></b></span>
+      <span>Mercado espanol</span>
+      <span>El orden no lee el fichero de afiliados</span>
+    </p>
+
+    {/* El H1 dice que es esto y con que se compara: son las palabras con las que se
+        busca. La frase de marca no se tira, baja a antetitulo, donde hace de gancho sin
+        ocupar el sitio de la consulta. */}
+    <p class="lema-portada aparece d1">Lo que cuesta de verdad, y quien responde de lo que vende</p>
+    <h1 class="aparece d1">Comparador de suplementos deportivos: precio por kilo y certificacion verificada</h1>
+
+    {/* Entradilla y "respuesta corta" eran dos parrafos que decian lo mismo con otras
+        palabras, uno encima del buscador y otro debajo. Van juntos, en uno, y encima:
+        debajo del campo solo queda lo que se toca. */}
+    <p class="respuesta aparece d2"><b>La respuesta corta.</b> {respuesta}</p>
+
+    {/* Lo unico que se puede tocar aqui arriba, asi que se hidrata al cargar y no en el
+        primer hueco libre: con client:idle las primeras teclas de quien escribe rapido
+        se pierden. El indice, en cambio, no viaja en el HTML: se pide al escribir.
+        La capa lleva z-index porque la lamina de resultados tiene que taparlo todo:
+        cada bloque animado de mas abajo abre su propia capa de pintado. */}
+    <div class="capa-buscador aparece d2">
+      <Buscador client:load categorias={datos.categorias} total={datos.productos.length} />
+      <ControlPeso client:idle />
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Lo mejor de cada categoria ahora mismo</h2>
+      <p class="apunte">Ordenado por score, no por comision</p>
+    </div>
+
+    {/* La tabla se reordena moviendo el peso del score. Es la metodologia funcionando
+        delante del lector: convence mas que jurar que es neutral. */}
+    <Ponderador client:visible filas={filasPeso} />
+
+    <p class="nota">
+      <strong>El orden lo manda el score.</strong> Ni la afiliacion ni ningun acuerdo comercial
+      mueven un producto de sitio; hay una prueba automatica que lo comprueba en cada
+      actualizacion de datos.
+      {conSello.length > 0 && (
+        <> {conSello.length} {conSello.length === 1 ? 'producto lleva sello' : 'productos llevan sello'} de
+        esta web, y un sello certifica un criterio editorial publico, nunca un efecto sobre tu
+        cuerpo. <a href="/metodologia#sellos">Criterio de los sellos</a>.</>
+      )}
+    </p>
+  </section>
+
+  <section class="seccion negativo">
+    <div class="cabecera-seccion">
+      <h2>Como se lee la puntuacion</h2>
+      <p class="apunte">Tres numeros, ninguna estrella</p>
+    </div>
+    <div class="rejilla">
+      <div class="bloque">
+        <span class="indice-bloque">01</span>
+        <h3>Euros por kilo o por capsula</h3>
+        <p>
+          Cada categoria se compara en la unidad en la que se vende: por kilo los polvos, por
+          capsula las perlas y los comprimidos. Nunca se mezclan las dos en la misma tabla, y el
+          precio es el que paga hoy el comprador, no el tachado.
+        </p>
+      </div>
+      <div class="bloque">
+        <span class="indice-bloque">02</span>
+        <h3>Nivel de verificacion</h3>
+        <p>Del 1 al 4. Solo el 4 significa comprobado contra la fuente que emite el sello.</p>
+        {[4, 3, 2, 1].map((n) => (
+          <div class={`nivel ${NIVEL[n].clase}`}>
+            <span class="puntos">{puntos(n).map((on) => <i class={on ? 'on' : ''} />)}</span>
+            {NIVEL[n].etiqueta}
+          </div>
+        ))}
+      </div>
+      <div class="bloque">
+        <span class="indice-bloque">03</span>
+        <h3>Score de 0 a 100</h3>
+        <p>
+          Mitad precio frente al mas barato de su categoria, mitad calidad. Cada producto lleva
+          su desglose linea a linea: puedes ver exactamente por que puntua lo que puntua.
+        </p>
+        <a href="/metodologia" class="enlace-accion">Leer la metodologia →</a>
+      </div>
+    </div>
+  </section>
+
+  <Faq faqs={faqs} titulo="Preguntas sobre este comparador" />
+</Base>

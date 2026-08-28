@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+import Acceso from '../componentes/Acceso.jsx';
+
+// Pagina de acceso. No entra en el sitemap y va con noindex: es una utilidad, no un
+// contenido, y una web de datos no quiere posicionar su formulario de login.
+//
+// `?volver=/producto/x` trae de vuelta a donde se pulso el icono de la cabecera. Lo que
+// llegue por ahi lo filtra `seguro()` en la API: solo rutas de esta web.
+//
+// El maquetado es el mismo que /registro y el formulario tambien: cambia el titular y
+// con que pestana arranca. El lector puede saltar de una a otra sin recargar.
+const volver = Astro.url.searchParams.get('volver') ?? '/';
+---
+<Base titulo="Entrar | FitnessSupplementWiki"
+      descripcion="Entra en tu cuenta para puntuar productos y dejar tu resena."
+      noindex>
+  <div class="pagina-acceso">
+    <div class="acceso-doble">
+      <div class="acceso-titular aparece">
+        <p class="antetitulo">Tu cuenta &middot; Gratis y sin correos</p>
+        <h1>Entrar</h1>
+        <p class="entradilla">
+          La cuenta sirve para una cosa: puntuar productos y dejar resenas que vean los
+          demas lectores. No hace falta para consultar precios ni rankings.
+        </p>
+      </div>
+
+      <ol class="sumario-acceso aparece d2">
+        <li>
+          <span class="n">01</span>
+          <div><b>Puntuar</b><p>De una a cinco estrellas en lo que hayas probado.</p></div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div><b>Resenar</b><p>Tu experiencia, con foto del bote si quieres.</p></div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div><b>Y nada mas</b><p>Ninguna cuenta mueve el orden de las tablas. Eso lo decide la formula.</p></div>
+        </li>
+      </ol>
+
+      <div class="acceso-ficha aparece d1">
+        <p class="sello-acceso">Solo para<br />puntuar y resenar</p>
+        <Acceso client:load modo="entrar" volver={volver} />
+      </div>
+    </div>
+
+    <p class="sutil">
+      Si aun no tienes cuenta, <a href={`/registro?volver=${encodeURIComponent(volver)}`}>crea una</a>.
+      Como se tratan tus datos esta en el <a href="/legal">aviso legal</a>.
+    </p>
+  </div>
+</Base>

@@ -1,0 +1,372 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import Aviso from '../../componentes/Aviso.astro';
+import Resenas from '../../componentes/Resenas.jsx';
+import Historico from '../../componentes/Historico.astro';
+import { abs } from '../../sitio.js';
+import { NIVEL, TIENDAS, costeMes, duracionDias, eur, nombreIngrediente, precioReferencia,
+         puntos } from '../../datos/util.js';
+import {
+  descripcionProducto, nom, ofertaLd, tituloProducto, veredictoProducto,
+} from '../../datos/seo.js';
+
+export function getStaticPaths() {
+  return datos.productos.map((p) => ({ params: { slug: p.slug }, props: { p } }));
+}
+
+const { p } = Astro.props;
+const nivel = NIVEL[p.nivel_verificacion];
+const nivelInfo = datos.niveles[p.nivel_verificacion];
+const categoria = datos.categorias.find((c) => c.slug === p.categoria);
+// El mismo bote en OTRA tienda. La comparacion tiene que ser estricta o deja de ser el
+// mismo producto: con solo marca + formato + forma, la creatina de 1 kg de HSN Raw Series
+// se emparejaba con la glutamina Kyowa y con la Creatina Excell Creapure de la misma
+// tienda (mismo gramaje, misma forma declarada) y salian tres precios de 14 a 53 EUR
+// como si fueran el mismo producto. Ahora hace falta ademas la misma categoria, el mismo
+// numero de capsulas y, sobre todo, que sea otra tienda: "donde comprarlo" no puede
+// listar tres veces la misma.
+// La marca se compara sin mayusculas (una tienda escribe "VITOBEST" y otra "Vitobest")
+// y el gramaje con un 5 % de holgura: el mismo bote se lista como 900 g en una tienda y
+// como 908 g en otra, y eso no son dos productos. La `forma` deja de exigirse: solo la
+// declaran unas tiendas, y pedirla dejaba fuera al mismo bote por un campo que a una de
+// las dos le falta. Lo que NO se relaja es marca + categoria + tipo de envase: sin eso
+// vuelve a pasar lo de emparejar la creatina de 1 kg con la glutamina de 1 kg.
+const MARGEN = 0.05;
+const mismoTamano = (a, b) => (
+  a == null && b == null ? true
+  : a == null || b == null ? false
+  : Math.abs(a - b) <= Math.max(a, b) * MARGEN);
+const enOtrasTiendas = datos.productos.filter(
+  (o) => o.id !== p.id && o.tienda !== p.tienda && o.categoria === p.categoria
+        && o.marca.toLowerCase() === p.marca.toLowerCase() && p.marca !== 'Desconocida'
+        && mismoTamano(o.formato_gramos, p.formato_gramos)
+        && mismoTamano(o.unidades, p.unidades));
+// El mas barato del grupo (este bote incluido). Si el ganador no es el que se esta
+// mirando, la ficha lo dice arriba de la tabla: es lo unico que se viene a buscar aqui.
+const mejorOferta = [p, ...enOtrasTiendas]
+  .reduce((a, b) => (b.precio_eur < a.precio_eur ? b : a), p);
+
+// Posicion dentro de su categoria, con el mismo orden que la tabla.
+const ranking = datos.productos
+  .filter((o) => o.categoria === p.categoria)
+  .sort((a, b) => (b.score_final ?? -1) - (a.score_final ?? -1));
+const puesto = ranking.findIndex((o) => o.id === p.id) + 1;
+const formato = p.formato_gramos ? `${p.formato_gramos} g` : p.unidades ? `${p.unidades} capsulas` : 'formato no declarado';
+
+// Una categoria de repuesto por si el dataset se queda a medias: la ficha se sigue
+// pudiendo servir aunque falte la categoria, y el SEO no se cae con ella.
+const cat = categoria ?? { slug: p.categoria, nombre: p.categoria, termino: p.categoria,
+                           unidad_precio: p.unidad_precio };
+const veredicto = veredictoProducto(p, datos.productos, cat, datos.generado);
+const canonica = abs(`/producto/${p.slug}`);
+const tienda = TIENDAS[p.tienda] ?? p.tienda;
+
+// El mismo bote en varias tiendas es un AggregateOffer, no cuatro fichas: es lo que hace
+// que el resultado de busqueda ensene un rango de precio en vez de uno suelto.
+// ponytail: hoy no salta nunca (las cinco tiendas venden marca propia, asi que ninguna
+// coincidencia cruza tienda). Se queda porque cuelga de la misma condicion que la tabla
+// "donde comprarlo" que ve el lector: el dia que entre una marca de terceros en dos
+// tiendas, el marcado y la tabla tienen que decir lo mismo sin que nadie se acuerde.
+const todas = [p, ...enOtrasTiendas];
+const precios = todas.map((o) => o.precio_eur);
+const ofertas = enOtrasTiendas.length === 0 ? ofertaLd(p) : {
+  '@type': 'AggregateOffer',
+  priceCurrency: 'EUR',
+  lowPrice: Math.min(...precios),
+  highPrice: Math.max(...precios),
+  offerCount: todas.length,
+  offers: todas.map(ofertaLd),
+};
+
+const schema = [
+  {
+    '@type': 'Product',
+    '@id': `${canonica}#producto`,
+    name: nom(p),
+    url: canonica,
+    brand: { '@type': 'Brand', name: p.marca },
+    category: cat.nombre,
+    ...(p.imagen ? { image: p.imagen } : {}),
+    description: descripcionProducto(p, datos.productos, cat),
+    // El id del dataset como sku: dos fichas nunca comparten uno y Google necesita un
+    // identificador para no fusionar dos variantes del mismo bote en un solo producto.
+    sku: String(p.id),
+    offers: ofertas,
+    // El score es una resena editorial de esta web, con su autor y su fecha. NO se
+    // publica como aggregateRating: no hay opiniones de usuarios y fingirlas es lo
+    // que hace que Google deje de creerse el marcado de un sitio entero.
+    ...(p.score_final != null ? {
+      review: {
+        '@type': 'Review',
+        name: `Analisis de ${nom(p)}: precio por unidad y certificacion`,
+        author: { '@id': abs('/#editor') },
+        // Quien firma el criterio, con nombre y cara en /quienes-somos. Sin esto, la
+        // resena la firma "una web", y una web no es una fuente.
+        creator: { '@id': abs('/#autor') },
+        datePublished: p.fecha_scrape,
+        reviewRating: {
+          '@type': 'Rating',
+          ratingValue: Number(p.score_final.toFixed(0)),
+          bestRating: 100,
+          worstRating: 0,
+        },
+        reviewBody: veredicto,
+      },
+    } : {}),
+    additionalProperty: [
+      ...(p.precio_referencia != null ? [{
+        '@type': 'PropertyValue',
+        name: `Precio por ${p.unidad_precio === 'kg' ? 'kilo' : 'capsula'}`,
+        value: p.precio_referencia,
+        unitText: 'EUR',
+      }] : []),
+      { '@type': 'PropertyValue', name: 'Nivel de verificacion (1-4)',
+        value: p.nivel_verificacion, maxValue: 4 },
+    ],
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(`/${p.categoria}`) },
+      { '@type': 'ListItem', position: 3, name: nom(p), item: canonica },
+    ],
+  },
+];
+---
+<Base titulo={tituloProducto(p, datos.productos)}
+      descripcion={descripcionProducto(p, datos.productos, cat)}
+      schema={schema}>
+
+  <p class="migas">
+    <a href="/">Inicio</a> / <a href={`/${p.categoria}`}>{categoria?.nombre ?? p.categoria}</a> / {p.marca}
+  </p>
+
+  <div class="disposicion-ficha">
+    <div class="lateral aparece">
+      {p.imagen && (
+        <figure class="foto-producto">
+          {/* La sirve la CDN de la tienda; aqui no se aloja ninguna imagen. */}
+          <img src={p.imagen} alt={`${p.marca} ${p.nombre}`} loading="lazy" decoding="async"
+               referrerpolicy="no-referrer" />
+          <figcaption>Imagen de {TIENDAS[p.tienda] ?? p.tienda}</figcaption>
+        </figure>
+      )}
+
+      {/* El enlace a la tienda va pegado a la foto y encima de la ficha: es lo que
+          viene a hacer aqui quien ya ha decidido, y despues de ocho filas de datos
+          quedaba fuera de pantalla en movil. */}
+      <p class="accion-lateral">
+        <a class="boton primario" href={p.url_afiliado ?? p.url}
+           rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'} target="_blank">
+          Ver en {TIENDAS[p.tienda] ?? p.tienda} <span class="flecha">→</span>
+        </a>
+        {costeMes(p) != null && (
+          <span class="sutil">
+            {eur(costeMes(p))} al mes a un servicio al dia · el envase dura {Math.round(duracionDias(p))} dias
+          </span>
+        )}
+      </p>
+
+      <dl class="ficha-tecnica">
+        <div class="grande">
+          <dt>Score</dt>
+          <dd>{p.score_final?.toFixed(0) ?? '—'}<small>/100</small></dd>
+        </div>
+        <div>
+          <dt>Precio por {precioReferencia(p).unidad || 'unidad'}</dt>
+          <dd>{precioReferencia(p).valor}</dd>
+        </div>
+        <div>
+          <dt>Envase</dt>
+          <dd>{eur(p.precio_eur)}</dd>
+        </div>
+        {p.coste_por_dosis_efectiva && (
+          <div>
+            <dt>Por dosis efectiva</dt>
+            <dd>{eur(p.coste_por_dosis_efectiva, 3)}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Verificacion</dt>
+          <dd>
+            <span class={`nivel ${nivel.clase}`}>
+              <span class="puntos">{puntos(p.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
+              Nivel {p.nivel_verificacion}
+            </span>
+          </dd>
+        </div>
+        {costeMes(p) != null && (
+          <div>
+            {/* El EUR/kg compara; esto es lo que sale de la cuenta corriente, que es en
+                lo que piensa quien compra. El supuesto (un servicio al dia) va en el dt:
+                la dosis de cada persona no la decide esta web. */}
+            <dt>Al mes (1 servicio/dia)</dt>
+            <dd>{eur(costeMes(p))}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Formato</dt>
+          <dd class="suave">{formato}</dd>
+        </div>
+        <div>
+          <dt>Tienda</dt>
+          <dd class="suave">{TIENDAS[p.tienda] ?? p.tienda}</dd>
+        </div>
+        <div>
+          <dt>Recogido</dt>
+          <dd class="mono"><time datetime={p.fecha_scrape}>{p.fecha_scrape}</time></dd>
+        </div>
+      </dl>
+    </div>
+
+    <div>
+      <p class="antetitulo aparece d1">
+        {p.marca} · puesto {puesto} de {ranking.length} en {categoria?.nombre.toLowerCase() ?? p.categoria}
+      </p>
+      <h1 class="aparece d2">{p.nombre}</h1>
+
+      <p class="respuesta aparece d3">
+        <b>La respuesta corta.</b> {veredicto}
+      </p>
+
+      {p.sellos.length > 0 && (
+        <p class="sellos-ficha aparece d3">
+          {p.sellos.map((s) => <span class="sello" title={s.criterio}>{s.texto}</span>)}
+        </p>
+      )}
+      {p.sellos.length > 0 && (
+        <p class="sutil"><a href="/metodologia#sellos">Que prueba cada sello</a>.</p>
+      )}
+      {p.flag_infradosaje && <p class="infradosis">producto infradosificado</p>}
+
+      <h2>Por que puntua asi</h2>
+      <p class="sutil">
+        Calidad {p.score_calidad?.toFixed(0) ?? '—'}/100 · <a href="/metodologia">como se calcula</a>.
+      </p>
+      <ul class="desglose">
+        {p.desglose.map((d) => <li>{d}</li>)}
+      </ul>
+
+      {p.ingredientes.length > 0 && <h2>Ingredientes frente a la dosis de referencia</h2>}
+      {p.ingredientes.map((i) => {
+        const ref = i.referencia;
+        const dosis = i.dosis_por_servicio_mg;
+        const pct = ref && dosis ? Math.min(100, (dosis / ref.dosis_efectiva_min_mg) * 100) : null;
+        return (
+          <div class="ingrediente">
+            <div class="fila">
+              <span class="nombre">{nombreIngrediente(i.ingrediente)}</span>
+              <span class={`dosis ${dosis ? '' : 'falta'}`}>
+                {dosis ? `${(dosis / 1000).toFixed(1)} g por servicio` : 'dosis no declarada en la ficha'}
+              </span>
+            </div>
+            {ref && (
+              <>
+                {pct !== null && (
+                  <div class={`barra ${pct < 60 ? 'baja' : ''}`}>
+                    <span style={`width:${pct}%`}></span>
+                  </div>
+                )}
+                <div class="sutil">
+                  Dosis efectiva de referencia: <span class="num-t">{(ref.dosis_efectiva_min_mg / 1000).toFixed(1)}
+                  {ref.dosis_efectiva_max_mg ? `–${(ref.dosis_efectiva_max_mg / 1000).toFixed(1)}` : ''} g</span>
+                  {' '}(evidencia {ref.nivel_evidencia}).
+                  {ref.fuentes.map((f) => <> Fuente: <a href={f.url} rel="nofollow">{f.cita}</a></>)}
+                </div>
+              </>
+            )}
+            {!ref && <div class="sutil">Sin dosis de referencia publicada para este ingrediente: no se puntua.</div>}
+          </div>
+        );
+      })}
+      {p.ingredientes.some((i) => i.referencia) && (
+        <p class="sutil">
+          Los efectos de las fuentes son del ingrediente a la dosis citada, no de este producto.
+        </p>
+      )}
+
+      <h2>Certificaciones</h2>
+      {/* Sin sellos la tabla era una cabecera de cuatro columnas para una celda que
+          decia lo mismo que la linea de nivel de debajo. Se queda la linea. */}
+      {p.certificaciones.length > 0 && <div class="tabla-marco">
+        <div class="tabla-scroll">
+          <table class="apilable">
+            <caption>Certificaciones declaradas y su prueba</caption>
+            <thead><tr><th>Sello</th><th>Nivel</th><th>Prueba</th><th>Comprobado</th></tr></thead>
+            <tbody>
+              {p.certificaciones.map((c) => (
+                <tr>
+                  <td class="principal marca">{c.tipo.replace(/_/g, ' ')}</td>
+                  <td data-et="Nivel">
+                    <span class={`nivel ${NIVEL[c.nivel_verificacion].clase}`}>
+                      <span class="puntos">{puntos(c.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
+                      {c.nivel_verificacion}
+                    </span>
+                  </td>
+                  <td data-et="Prueba">
+                    {c.codigo_qs && <span class="mono">codigo QS {c.codigo_qs}<br /></span>}
+                    {c.url_evidencia
+                      ? <a href={c.url_evidencia} rel="nofollow noopener" target="_blank">ver evidencia</a>
+                      : <span class="sutil">sin prueba consultable</span>}
+                  </td>
+                  <td class="sutil" data-et="Comprobado">{c.verificado_fecha ?? '—'} {c.verificado_por ? `(${c.verificado_por})` : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>}
+      <p class="sutil">{nivelInfo.detalle}</p>
+
+      <Historico p={p} />
+
+      <h2>Donde comprarlo</h2>
+      {mejorOferta && mejorOferta.id !== p.id && (
+        <p class="nota">
+          <strong>El mismo envase esta mas barato en {TIENDAS[mejorOferta.tienda] ?? mejorOferta.tienda}.</strong>
+          {' '}{eur(mejorOferta.precio_eur)} frente a {eur(p.precio_eur)} aqui: te ahorras
+          {' '}{eur(p.precio_eur - mejorOferta.precio_eur)}. Es el mismo producto y el mismo
+          formato en otra tienda, no una version parecida.
+        </p>
+      )}
+      <div class="tabla-marco">
+        <div class="tabla-scroll">
+          <table class="apilable">
+            <caption>Precio del mismo producto por tienda</caption>
+            <thead><tr><th>Tienda</th><th class="num">Envase</th><th class="num">Precio unidad</th><th></th></tr></thead>
+            <tbody>
+              {[p, ...enOtrasTiendas].map((o) => (
+                <tr>
+                  <td class="principal marca">{TIENDAS[o.tienda] ?? o.tienda}</td>
+                  <td class="num" data-et="Envase">{eur(o.precio_eur)}</td>
+                  <td class="num" data-et="Por unidad">{precioReferencia(o).valor}/{precioReferencia(o).unidad}</td>
+                  <td>
+                    <a class="enlace-accion" href={o.url_afiliado ?? o.url}
+                       rel={o.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+                       target="_blank">ver en la tienda →</a>
+                    {o.url_afiliado && <span class="sutil"> (afiliado)</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <Aviso />
+
+      <h2 id="opiniones">Opiniones de los lectores</h2>
+      <p class="sutil">
+        La nota de arriba la pone esta web (precio y certificacion); esta la ponen los lectores.
+      </p>
+      {/* Isla React: solo se carga cuando el lector llega a esta altura de la ficha.
+          Es la unica parte de la web que habla con una base de datos (/api/*). */}
+      <Resenas client:visible producto={p.slug} />
+
+      <p class="volver">
+        <a class="boton" href={`/${p.categoria}`}>← Volver a {categoria?.nombre.toLowerCase() ?? p.categoria}</a>
+      </p>
+    </div>
+  </div>
+</Base>

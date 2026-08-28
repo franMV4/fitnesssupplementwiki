@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FitnessSupplementWiki">
+  <rect width="32" height="32" fill="#efede6"/>
+  <g fill="#141210">
+    <rect x="5" y="17.6" width="4" height="5.4"/>
+    <rect x="11" y="13.4" width="4" height="9.6"/>
+    <rect x="17" y="9.2" width="4" height="13.8"/>
+    <rect x="23" y="5" width="4" height="18"/>
+  </g>
+  <rect x="5" y="25" width="22" height="2" fill="#de3b0f"/>
+</svg>

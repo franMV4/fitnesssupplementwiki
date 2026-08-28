@@ -1,0 +1,181 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+import { SITIO, abs } from '../sitio.js';
+import { fechaLarga } from '../datos/seo.js';
+
+// Aviso legal, privacidad, cookies y afiliacion en una sola pagina: son cuatro textos
+// cortos y repartirlos en cuatro URLs solo hace mas dificil encontrarlos.
+// El titular sale de sitio.js. Si esta vacio, la pagina lo dice en alto a proposito:
+// mejor un hueco visible que un nombre inventado en un texto legal.
+const titular = SITIO.titular || '[pendiente: nombre o razon social del titular]';
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+const schema = [{
+  '@type': 'WebPage',
+  '@id': abs('/legal'),
+  url: abs('/legal'),
+  name: 'Aviso legal, privacidad y afiliacion',
+  inLanguage: 'es-ES',
+  dateModified: datos.generado,
+  isPartOf: { '@id': abs('/#sitio') },
+  publisher: { '@id': abs('/#editor') },
+}];
+---
+<Base titulo="Aviso legal, privacidad y afiliacion"
+      descripcion="Titular del sitio, tratamiento de datos, uso de cookies, relacion con las tiendas y limites de la informacion publicada en FitnessSupplementWiki."
+      schema={schema}>
+
+  <p class="migas"><a href="/">Inicio</a> / Legal</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo">Condiciones de uso</p>
+    <h1>Aviso legal y privacidad</h1>
+    <p class="entradilla">
+      Quien esta detras de {SITIO.nombre}, que hace esta web con tus datos (nada) y que
+      relacion tiene con las tiendas que compara.
+    </p>
+  </section>
+
+  <div class="prosa">
+    <h2 id="titular">Titular del sitio</h2>
+    <p>
+      En cumplimiento del articulo 10 de la Ley 34/2002 de servicios de la sociedad de la
+      informacion y de comercio electronico:
+    </p>
+    <ul>
+      <li><strong>Titular:</strong> {titular}</li>
+      <li><strong>Correo de contacto:</strong> <a href={`mailto:${SITIO.contacto}`}>{SITIO.contacto}</a></li>
+      <li><strong>Sitio web:</strong> {SITIO.url}</li>
+      <li>
+        <strong>Actividad:</strong> publicacion de comparativas de precios y certificaciones
+        de suplementos alimenticios a la venta en tiendas de terceros. Esta web no vende ni
+        distribuye ningun producto.
+      </li>
+    </ul>
+
+    <h2 id="privacidad">Proteccion de datos</h2>
+    <p>
+      Navegar por esta web <strong>no requiere dar ningun dato</strong>: las paginas son
+      estaticas, no hay perfilado, no hay publicidad personalizada y no se vende ni se cede
+      nada a nadie. Solo se guardan datos personales en dos casos, y en los dos los das tu
+      a proposito:
+    </p>
+    <ul>
+      <li>
+        <strong>Si creas una cuenta</strong> para escribir resenas: se guarda tu nombre, tu
+        correo y tu contrasena (esta ultima cifrada con PBKDF2, nunca en claro), mas las
+        resenas y las fotos que publiques. Sirven para eso y para nada mas: no se usan para
+        mandarte correos ni se ceden.
+      </li>
+      <li>
+        <strong>Si escribes al correo de contacto</strong>: tu mensaje y tu direccion se usan
+        unicamente para responderte y se conservan mientras dure esa conversacion.
+      </li>
+    </ul>
+    <p>
+      Tienes derecho de acceso, rectificacion, supresion, oposicion, limitacion y
+      portabilidad conforme al Reglamento (UE) 2016/679, y a reclamar ante la Agencia
+      Espanola de Proteccion de Datos. <strong>El borrado no hay que pedirlo</strong>: en
+      <a href="/entrar">tu cuenta</a> hay un boton que borra tu usuario, tus resenas y tus
+      fotos en el momento y sin intermediarios. Para lo demas, escribe al correo de contacto.
+    </p>
+    <p>
+      El servidor que sirve estas paginas (Cloudflare Pages) registra peticiones y direcciones
+      IP de forma agregada para funcionar y protegerse de abusos, como cualquier servidor web.
+      Ese tratamiento es responsabilidad del proveedor de alojamiento.
+    </p>
+
+    <h2 id="cookies">Cookies</h2>
+    <p>
+      <strong>Esta web no instala ninguna cookie de seguimiento ni de publicidad</strong>, y
+      por eso no veras un banner de consentimiento: lo unico que usa esta exento de pedirlo.
+      Lo que hay es esto, y nada mas:
+    </p>
+    <ul>
+      <li>
+        <strong>Una cookie de sesion</strong>, solo si entras en tu cuenta. Sirve para
+        mantenerte identificado y caduca a los 30 dias; al salir de la cuenta se borra.
+        Es tecnicamente necesaria, asi que la ley no exige consentimiento previo.
+      </li>
+      <li>
+        <strong>Almacenamiento local del navegador</strong> para dos comodidades: si
+        prefieres el tema claro u oscuro, y la lista de productos que guardas en
+        <a href="/comparar">tu comparativa</a>. Las dos cosas se quedan en tu navegador,
+        no viajan a ningun servidor y no identifican a nadie. Se borran vaciando los datos
+        del sitio en tu navegador.
+      </li>
+    </ul>
+    <p>
+      {SITIO.analitica
+        ? 'La medicion de visitas se hace con una analitica sin cookies que no identifica a nadie.'
+        : 'Ahora mismo no hay ninguna herramienta de medicion de visitas instalada.'}
+      Las imagenes de los productos las sirven las tiendas desde sus propios servidores,
+      asi que tu navegador se conecta a ellos al cargar una ficha. Las tipografias se sirven
+      desde este mismo dominio precisamente para no enviar tu IP a terceros.
+    </p>
+
+    <h2 id="afiliacion">Afiliacion y relacion con las tiendas</h2>
+    {datos.hay_afiliados ? (
+      <p>
+        Algunos enlaces a tienda son enlaces de afiliado: si compras a traves de ellos, esta web
+        puede recibir una comision <strong>sin coste adicional para ti</strong>. Esos enlaces van
+        marcados como tales en cada pagina donde aparecen.
+      </p>
+    ) : (
+      <p>
+        <strong>Ahora mismo esta web no incluye ningun enlace de afiliado</strong> y no recibe
+        comision de ninguna tienda. Si en el futuro los incluye, apareceran marcados como tales
+        en cada pagina donde salgan y este aviso lo dira. Lo que sigue es la regla que se aplica
+        desde el primer dia.
+      </p>
+    )}
+    <p>
+      <strong>La afiliacion no influye en el orden ni en la puntuacion.</strong> El score se
+      calcula antes de aplicar ningun enlace de afiliado y sin leer el fichero que los contiene;
+      hay una prueba automatica que falla si el ranking cambia al aplicarlos, y los productos
+      sin programa de afiliado aparecen exactamente igual. El detalle esta en la
+      <a href="/metodologia#afiliacion">metodologia</a>.
+    </p>
+    <p>
+      Esta web no tiene relacion comercial, societaria ni de patrocinio con las {tiendas}
+      tiendas comparadas mas alla, en su caso, de su programa publico de afiliacion. Las marcas
+      y los nombres de producto pertenecen a sus titulares y se citan a efectos identificativos.
+    </p>
+
+    <h2 id="informacion">Sobre la informacion publicada</h2>
+    <p>
+      Los precios se recogen automaticamente de las webs de las tiendas y se publican con la
+      fecha de recogida (los de esta version son del
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>). Pueden haber
+      cambiado desde entonces: <strong>el precio valido siempre es el de la tienda</strong> en
+      el momento de la compra. Se pone el maximo cuidado en que los datos sean correctos, pero
+      no se garantiza que esten libres de errores; si ves uno, escribe al correo de contacto y
+      se corrige.
+    </p>
+    <p>
+      <strong>Esto no es consejo medico ni nutricional.</strong> Esta web informa de hechos
+      verificables sobre productos (precio, formato, certificaciones declaradas y su nivel de
+      comprobacion) y cita evidencia cientifica <em>por ingrediente</em>, con su dosis y su
+      fuente. En ningun caso se afirma que un producto concreto produzca ningun efecto sobre
+      la salud. Los suplementos alimenticios no sustituyen a una dieta equilibrada. Consulta a
+      un profesional sanitario antes de tomar cualquier suplemento, especialmente si estas
+      embarazada, en periodo de lactancia, en tratamiento medico o tienes alguna patologia.
+    </p>
+
+    <h2 id="propiedad">Propiedad intelectual y reutilizacion</h2>
+    <p>
+      Los textos, la metodologia y las puntuaciones de esta web son obra propia. Los datos de
+      cada comparativa se publican tambien en formato abierto (por ejemplo,
+      <a href="/datos/creatina.json">/datos/creatina.json</a>) y se pueden reutilizar citando
+      la fuente y la fecha de recogida. Las imagenes de producto pertenecen a las tiendas y se
+      sirven desde sus servidores.
+    </p>
+
+    <h2 id="legislacion">Legislacion aplicable</h2>
+    <p>
+      Estas condiciones se rigen por la legislacion espanola. Para cualquier controversia seran
+      competentes los juzgados y tribunales del domicilio del titular, salvo que la normativa
+      de consumo aplicable determine otro fuero.
+    </p>
+  </div>
+</Base>

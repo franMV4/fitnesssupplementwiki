@@ -1,0 +1,31 @@
+# Cloudflare Pages. Sin esto, los assets con hash se revalidan en cada visita y el
+# LCP paga un viaje de red que no hacia falta.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Los woff2 llevan el hash de Google en el nombre: si cambia la fuente, cambia la URL.
+/fuentes/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  # Se pone ahora, que el sitio no carga nada de fuera y es facil, y no cuando ya haya
+  # cinco scripts de terceros y toque negociar con cada uno.
+  # 'unsafe-inline' en script-src es obligado: el tema (para que no parpadee), el menu y
+  # el icono de cuenta van en <script is:inline> dentro del HTML. Aun asi, lo que la
+  # cabecera impide es lo que importa: que un script INYECTADO cargue codigo de un
+  # dominio ajeno o mande datos a uno.
+  # img-src https: por las fotos de producto, que las sirven ocho CDN de tienda distintas.
+  Content-Security-Policy: default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+
+# Datos pensados para que los lean otros: se citan mejor si se pueden pedir desde fuera.
+/datos/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+
+/llms.txt
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600

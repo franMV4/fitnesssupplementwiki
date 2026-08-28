@@ -1,0 +1,91 @@
+# Robot diario: recoge precios, recalcula el ranking y confirma el resultado.
+#
+# El reparto de trabajo es este, y no se puede hacer de otra forma:
+#   GitHub Actions  -> ejecuta Python, tiene cron y puede escribir en el repositorio.
+#   Cloudflare Pages -> construye el sitio estatico cuando llega un push. No ejecuta
+#                       Python, no tiene cron y cada build arranca en una maquina vacia.
+# Por eso el scraper vive aqui: al hacer commit del dataset, Pages despliega solo.
+#
+# La base de datos se confirma con el dataset a proposito (ver .gitignore): es el estado
+# del que depende que una pasada parcial no borre productos y donde viven las
+# verificaciones curadas a mano.
+#
+# Si esto falla no hace falta montar ninguna notificacion: GitHub manda un correo al dueno
+# del repositorio cuando un workflow programado falla, y la propia web lo dice sola (el
+# layout avisa cuando los precios pasan de diez dias). Dos avisos ya son suficientes.
+
+name: Actualizar precios
+
+on:
+  schedule:
+    # 05:15 UTC = 07:15 en horario de verano peninsular, 06:15 en invierno. Temprano y a
+    # una hora rara a proposito: menos carga para las tiendas y menos cola en Actions.
+    # GitHub retrasa los cron cuando hay pico, asi que la hora exacta no esta garantizada.
+    - cron: '15 5 * * *'
+  # Para poder lanzarlo a mano desde la pestana Actions sin esperar a manana.
+  workflow_dispatch:
+
+# Permiso de escritura: el workflow confirma el dataset actualizado en el repositorio.
+permissions:
+  contents: write
+
+# Si ayer se quedo uno colgado, no se solapan dos scrapers sobre la misma BD.
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    # Una pasada completa son 30 categorias por 8 tiendas, con espera entre peticiones
+    # (2 s en general, 6 s en Zumub y 4 s en Prozis, que limitan por rafaga). Desde una IP
+    # de centro de datos son 30-45 minutos. Si algo se atasca, que muera solo en vez de
+    # gastar la cuota del mes: en repositorio privado son 2.000 minutos gratis.
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # El scraper es stdlib pura: no hay requirements.txt que instalar.
+          python-version: '3.13'
+
+      # Aqui NO se cachea data/cache a proposito. La cache del scraper caduca a las 6
+      # horas (CACHE_TTL_S en scraper/core.py) y esto corre una vez al dia: al arrancar,
+      # todo lo guardado ya estaria caducado. Seria subir y bajar casi 1 GB diario para
+      # volver a descargarlo todo igual.
+      - name: Recoger precios y recalcular
+        run: python actualizar.py
+
+      # Los tests protegen invariantes que importan de verdad (que la afiliacion no mueva
+      # el ranking, que no se mezclen unidades en una tabla). Si fallan, se corta ANTES
+      # de confirmar nada: mejor la web de ayer que una web con datos malos.
+      - name: Comprobaciones
+        run: python tests.py
+
+      - name: Construir el sitio y validar el SEO
+        run: |
+          cd web
+          npm ci
+          # Las pruebas de la API (cuentas y resenas) y las del filtrado de la tabla.
+          # Son node:test de la stdlib: no instalan nada y tardan menos de un segundo.
+          node --test
+          npm run build
+          cd ..
+          python seo_check.py
+
+      - name: Confirmar los datos nuevos
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/datos/dataset.json data/suplementos.sqlite
+          # Si ninguna tienda ha movido un precio, no hay nada que confirmar: un commit
+          # vacio al dia solo sirve para ensuciar el historial y disparar un despliegue
+          # que publica exactamente lo mismo.
+          if git diff --staged --quiet; then
+            echo "Sin cambios en los precios. No se despliega."
+          else
+            git commit -m "datos: precios del $(date -u +%Y-%m-%d)"
+            git push
+          fi

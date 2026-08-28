@@ -1,0 +1,230 @@
+---
+import Base from '../../layouts/Base.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { EVIDENCIA, NIVEL_EVIDENCIA, REVISADO } from '../../datos/evidencia.js';
+import { abs } from '../../sitio.js';
+import { eur, UNIDAD } from '../../datos/util.js';
+import { fechaLarga } from '../../datos/seo.js';
+
+// La guia y la comparativa son dos paginas a proposito: /creatina responde "que creatina
+// comprar" (quiero comprar) y /guia/creatina responde "para que sirve la creatina" (quiero
+// entender). Una consulta por pagina, que es la regla de SEO-PRODUCTOS.md; meterlo todo en
+// /creatina haria que compitiera consigo misma por dos intenciones distintas.
+export function getStaticPaths() {
+  // Solo las categorias con evidencia escrita: una categoria nueva no genera una guia
+  // vacia, se queda sin guia hasta que alguien escriba la suya con sus fuentes.
+  return datos.categorias
+    .filter((c) => EVIDENCIA[c.slug])
+    .map((c) => ({
+      params: { categoria: c.slug },
+      props: { cat: c, ev: EVIDENCIA[c.slug],
+               productos: datos.productos.filter((p) => p.categoria === c.slug) },
+    }));
+}
+
+const { cat, ev, productos } = Astro.props;
+
+// Invariante 4 de AGENTS.md, comprobado donde no puede rotar: ninguna cifra sin fuente.
+// Si un efecto apunta a una fuente que no existe, revienta el build en vez de publicar un
+// porcentaje colgando de un [3] que no lleva a ninguna parte.
+for (const e of ev.efectos) {
+  for (const i of e.f) {
+    if (!ev.fuentes[i]) throw new Error(`${cat.slug}: "${e.que}" cita la fuente ${i + 1}, que no existe`);
+  }
+  if (!e.f.length) throw new Error(`${cat.slug}: "${e.que}" no cita ninguna fuente`);
+}
+
+const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+const dec = unidad === 'kg' ? 2 : 3;
+const precios = productos.map((p) => p.precio_referencia).filter((n) => n != null);
+const barato = precios.length ? Math.min(...precios) : null;
+const tiendas = new Set(productos.map((p) => p.tienda)).size;
+const nivel = NIVEL_EVIDENCIA[ev.nivel];
+const canonica = abs(`/guia/${cat.slug}`);
+
+const secciones = [
+  { id: 'efectos', titulo: 'Que hace y cuanto' },
+  { id: 'protocolo', titulo: 'Como se toma' },
+  { id: 'situaciones', titulo: 'Cuando tiene sentido' },
+  { id: 'fuentes', titulo: 'Fuentes' },
+];
+
+const schema = [
+  {
+    // Article y no MedicalWebPage: esto es divulgacion sobre un ingrediente con sus citas,
+    // no consejo clinico, y marcarlo como medico invita a un escrutinio que no toca.
+    '@type': 'Article',
+    '@id': `${canonica}#articulo`,
+    headline: ev.h1,
+    description: ev.descripcion,
+    inLanguage: 'es-ES',
+    mainEntityOfPage: canonica,
+    // dateModified es de ESTE texto, no de la recogida de precios: son dos frescuras
+    // distintas y mezclarlas seria decir que las cifras se revisaron cuando no.
+    dateModified: REVISADO,
+    author: { '@id': abs('/#editor') },
+    publisher: { '@id': abs('/#editor') },
+    isPartOf: { '@id': abs('/#sitio') },
+    about: { '@type': 'Thing', name: cat.termino },
+    citation: ev.fuentes.map((f) => ({ '@type': 'CreativeWork', name: f.cita, url: f.url })),
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(`/${cat.slug}`) },
+      { '@type': 'ListItem', position: 3, name: 'Guia', item: canonica },
+    ],
+  },
+];
+---
+<Base ancho="completo" titulo={ev.titulo} descripcion={ev.descripcion} schema={schema}>
+
+  <p class="migas"><a href="/">Inicio</a> / <a href={`/${cat.slug}`}>{cat.nombre}</a> / Guia</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{cat.nombre} · {nivel.etiqueta}</p>
+    <h1 class="aparece d1">{ev.h1}</h1>
+    <p class="respuesta aparece d2"><b>La respuesta corta.</b> {ev.resumen}</p>
+    <p class="entradilla aparece d2">
+      {nivel.explica} Ninguna cifra de esta pagina se atribuye a un producto concreto: el
+      efecto es del ingrediente y cada numero lleva su fuente al lado.
+    </p>
+  </section>
+
+  <div class="con-carril">
+    <aside class="indice carril">
+      <p class="rotulo">Contenido</p>
+      <ol>{secciones.map((s) => <li><a href={`#${s.id}`}>{s.titulo}</a></li>)}</ol>
+      <p class="rotulo" style="margin-top:1.5rem">Revisado</p>
+      <p class="mono"><time datetime={REVISADO}>{fechaLarga(REVISADO)}</time></p>
+    </aside>
+
+    <div class="prosa">
+      <section id="efectos" class="seccion-doc">
+        <h2><span class="num">01</span> Que hace y cuanto</h2>
+        <p>
+          Cada fila es un efecto medido, con la cifra que da el estudio y el numero de la
+          fuente. Donde la evidencia no da una cifra, la columna lo dice en vez de inventarse
+          un porcentaje.
+        </p>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <caption>Efectos de {cat.termino} con su fuente</caption>
+              <thead>
+                <tr><th>Efecto</th><th>Cuanto</th><th>Detalle</th></tr>
+              </thead>
+              <tbody>
+                {ev.efectos.map((e) => (
+                  <tr>
+                    <td class="principal" data-et="Efecto">{e.que}</td>
+                    <td data-et="Cuanto"><b class="cifra">{e.cifra}</b></td>
+                    <td data-et="Detalle">
+                      {e.detalle}{' '}
+                      {e.f.map((i) => (
+                        <a class="ref" href={`#fuente-${i + 1}`} aria-label={`Fuente ${i + 1}`}>[{i + 1}]</a>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="protocolo" class="seccion-doc">
+        <h2><span class="num">02</span> Como se toma</h2>
+        <ul>
+          <li><strong>Dosis.</strong> {ev.protocolo.dosis}</li>
+          <li><strong>Cuando.</strong> {ev.protocolo.cuando}</li>
+          <li><strong>Cuanto tarda en notarse.</strong> {ev.protocolo.tarda}</li>
+        </ul>
+        <h3>Detalles que cambian el resultado</h3>
+        <ul>{ev.protocolo.notas.map((n) => <li>{n}</li>)}</ul>
+      </section>
+
+      <section id="situaciones" class="seccion-doc">
+        <h2><span class="num">03</span> Cuando tiene sentido y cuando no</h2>
+        <div class="rejilla">
+          <div class="bloque">
+            <h3>Compensa si</h3>
+            <ul>{ev.cuando_si.map((s) => <li>{s}</li>)}</ul>
+          </div>
+          <div class="bloque">
+            <h3>No compensa si</h3>
+            <ul>{ev.cuando_no.map((s) => <li>{s}</li>)}</ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="fuentes" class="seccion-doc">
+        <h2><span class="num">04</span> Fuentes</h2>
+        <p>
+          Todas las cifras de arriba salen de aqui. Son posicionamientos de sociedades
+          cientificas, metaanalisis y revisiones con revision por pares: si una afirmacion no
+          se puede colgar de una de estas lineas, no esta en la pagina.
+        </p>
+        <ol class="fuentes">
+          {ev.fuentes.map((f, i) => (
+            <li id={`fuente-${i + 1}`}>
+              {f.cita} <a href={f.url} rel="nofollow noopener" target="_blank">{f.url.replace('https://doi.org/', 'doi:')}</a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  </div>
+
+  <p class="nota">
+    <strong>Esto no es consejo medico.</strong> Es lo que dicen unos estudios sobre un
+    ingrediente, no una pauta para ti. Con una enfermedad de por medio, medicacion o embarazo,
+    la decision es de un profesional sanitario que te conozca.
+  </p>
+
+  <Faq faqs={ev.faqs} titulo={`Preguntas sobre ${cat.termino}`} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Y ahora, cual comprar</h2>
+      <p class="apunte">Los precios, aparte de la evidencia</p>
+    </div>
+    <p class="prosa">
+      Esta pagina explica que hace {cat.termino} y no menciona ni una marca a proposito. La
+      comparativa es la otra mitad: <b>{productos.length}</b> productos de {tiendas}{' '}
+      {tiendas === 1 ? 'tienda' : 'tiendas'}
+      {barato != null && <> desde <b>{eur(barato, dec)}</b> por {unidad}</>}, ordenados por
+      precio y por lo comprobable que es su certificacion.
+    </p>
+    <p><a class="boton" href={`/${cat.slug}`}>Ver la comparativa de {cat.nombre.toLowerCase()}</a></p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Otras guias</h2>
+      <p class="apunte">Que hace cada suplemento, con sus fuentes</p>
+    </div>
+    <div class="lista-categorias">
+      {datos.categorias.filter((c) => c.slug !== cat.slug && EVIDENCIA[c.slug]).map((c) => (
+        <a class="fila-categoria" href={`/guia/${c.slug}`}>
+          <span class="nombre">{EVIDENCIA[c.slug].h1}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{NIVEL_EVIDENCIA[EVIDENCIA[c.slug].nivel].etiqueta.replace('Evidencia ', '')}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Marcador de fuente: un numero pequeno que no rompe la linea de texto. */
+  .ref { font-size: .75rem; vertical-align: super; text-decoration: none; margin-left: .1rem; }
+  .fuentes { padding-left: 1.2rem; margin: 0; max-width: 48rem; }
+  .fuentes li { color: var(--tinta-2); font-size: .85rem; line-height: 1.5; margin-bottom: var(--e3); }
+  .fuentes a { word-break: break-word; }
+  /* La rejilla de "compensa / no compensa" hereda .bloque, solo necesita respirar. */
+  .prosa .rejilla { gap: var(--e5); margin-bottom: var(--e5); }
+  .prosa .rejilla ul { margin-bottom: 0; }
+</style>

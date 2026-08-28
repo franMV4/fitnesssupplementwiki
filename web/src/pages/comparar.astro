@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro';
+import Comparador from '../componentes/Comparador.jsx';
+
+// La comparativa que arma el lector con el boton "+ comparar" de las tablas.
+//
+// noindex a proposito: su contenido lo pone el navegador de cada visitante, asi que para
+// Google esta pagina esta vacia y no hay nada que indexar. Es una utilidad, como /entrar.
+---
+<Base titulo="Tu comparativa de suplementos"
+      descripcion="Los productos que has guardado, enfrentados por precio por unidad, coste al mes, certificacion y score."
+      noindex>
+
+  <p class="migas"><a href="/">Inicio</a> / Tu comparativa</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Lo que estas mirando</p>
+    <h1 class="aparece d1">Tu comparativa</h1>
+    <p class="entradilla aparece d2">
+      Los productos que has ido guardando desde las tablas, uno al lado del otro. La lista
+      se guarda en tu navegador: no hace falta cuenta, no viaja a ningun servidor y sigue
+      aqui la proxima vez que entres.
+    </p>
+  </section>
+
+  <Comparador client:load />
+
+  <p class="nota">
+    <strong>Cada categoria, en su unidad.</strong> Los polvos se comparan por kilo y las
+    capsulas por capsula, y las dos no se mezclan nunca en la misma tabla: por eso los
+    productos salen agrupados por categoria y no todos juntos.
+    <a href="/metodologia#formula">Como se calcula el score</a>.
+  </p>
+</Base>

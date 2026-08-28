@@ -1,0 +1,230 @@
+{
+  "_lee_esto": [
+    "Esta tabla es el activo del proyecto y la rellena una persona, no el scraper.",
+    "Regla: ninguna cifra entra sin su fuente citada. Si no puedes citarla, no la pongas.",
+    "La mayoria son posicionamientos o revisiones de la ISSN (revision por pares).",
+    "ANTES DE PUBLICAR: abre cada DOI y confirma cifra y referencia con tus ojos.",
+    "pureza_tipica: fraccion del bote que es el activo. Solo donde el producto no es el",
+    "activo puro (un kilo de concentrado de suero no es un kilo de proteina). Es un valor",
+    "tipico de la categoria, no la analitica de cada bote: si una marca publica la suya,",
+    "gana la de la ficha.",
+    "Se carga con: python data/db.py"
+  ],
+  "dosis": [
+    {
+      "ingrediente": "creatina_monohidrato",
+      "dosis_efectiva_min_mg": 3000,
+      "dosis_efectiva_max_mg": 5000,
+      "forma_preferida": "monohidrato",
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Kreider RB et al. ISSN position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine. J Int Soc Sports Nutr. 2017;14:18. Dosis de mantenimiento 3-5 g/dia de creatina monohidrato.",
+          "url": "https://doi.org/10.1186/s12970-017-0173-z"
+        }
+      ]
+    },
+    {
+      "ingrediente": "beta_alanina",
+      "dosis_efectiva_min_mg": 4000,
+      "dosis_efectiva_max_mg": 6000,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Trexler ET et al. ISSN position stand: Beta-Alanine. J Int Soc Sports Nutr. 2015;12:30. 4-6 g/dia durante al menos 2-4 semanas; el efecto depende de la dosis acumulada, no de una toma puntual.",
+          "url": "https://doi.org/10.1186/s12970-015-0090-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "citrulina_malato",
+      "dosis_efectiva_min_mg": 6000,
+      "dosis_efectiva_max_mg": 8000,
+      "forma_preferida": "malato",
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Citrulina malato en el rango de 6-8 g por toma en los estudios de rendimiento.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "cafeina",
+      "dosis_efectiva_min_mg": 200,
+      "dosis_efectiva_max_mg": 400,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Guest NS et al. ISSN position stand: caffeine and exercise performance. J Int Soc Sports Nutr. 2021;18:1. 3-6 mg/kg de peso corporal; el rango en mg de esta tabla equivale a 3-6 mg/kg para una persona de ~67 kg y es orientativo: la dosis correcta depende del peso.",
+          "url": "https://doi.org/10.1186/s12970-020-00383-4"
+        }
+      ]
+    },
+    {
+      "ingrediente": "proteina_whey_concentrada",
+      "dosis_efectiva_min_mg": 20000,
+      "dosis_efectiva_max_mg": 40000,
+      "pureza_tipica": 0.75,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. Dosis de 20-40 g de proteina por toma para maximizar la sintesis proteica muscular.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        },
+        {
+          "cita": "de Wit JN. Nutritional and functional characteristics of whey proteins in food products. J Dairy Sci. 1998;81(3):597-608. Los concentrados de suero comerciales van del 35% al 80% de proteina; el 75% de esta tabla es el valor tipico del WPC80 rebajado por saborizantes y edulcorantes. Si la ficha publica su analitica, manda la ficha.",
+          "url": "https://doi.org/10.3168/jds.S0022-0302(98)75613-9"
+        }
+      ]
+    },
+    {
+      "ingrediente": "proteina_whey_aislada",
+      "dosis_efectiva_min_mg": 20000,
+      "dosis_efectiva_max_mg": 40000,
+      "pureza_tipica": 0.88,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. Dosis de 20-40 g de proteina por toma para maximizar la sintesis proteica muscular.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        },
+        {
+          "cita": "de Wit JN. Nutritional and functional characteristics of whey proteins in food products. J Dairy Sci. 1998;81(3):597-608. Los aislados de suero parten del 90% de proteina; el 88% de esta tabla descuenta saborizantes y edulcorantes del producto acabado.",
+          "url": "https://doi.org/10.3168/jds.S0022-0302(98)75613-9"
+        }
+      ]
+    },
+    {
+      "ingrediente": "bcaa",
+      "dosis_efectiva_min_mg": 5000,
+      "dosis_efectiva_max_mg": 10000,
+      "forma_preferida": null,
+      "nivel_evidencia": "baja",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. La toma debe aportar 700-3000 mg de leucina; un BCAA 2:1:1 a 5 g aporta ~2,5 g de leucina. La misma revision recuerda que los BCAA aislados no superan a una proteina completa, que si trae los nueve aminoacidos esenciales.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        }
+      ]
+    },
+    {
+      "ingrediente": "glutamina",
+      "dosis_efectiva_min_mg": 5000,
+      "dosis_efectiva_max_mg": 10000,
+      "forma_preferida": null,
+      "nivel_evidencia": "baja",
+      "fuentes": [
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. La glutamina aparece entre los suplementos cuya evidencia de mejora del rendimiento o la composicion corporal es limitada o nula; los 5 g son la dosis habitual de los estudios, no una dosis eficaz demostrada.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "colageno_hidrolizado",
+      "dosis_efectiva_min_mg": 10000,
+      "dosis_efectiva_max_mg": 15000,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Clark KL et al. 24-week study on the use of collagen hydrolysate as a dietary supplement in athletes with activity-related joint pain. Curr Med Res Opin. 2008;24(5):1485-96. 10 g diarios de colageno hidrolizado durante 24 semanas.",
+          "url": "https://doi.org/10.1185/030079908X291967"
+        }
+      ]
+    },
+    {
+      "ingrediente": "omega_3_epa_dha",
+      "dosis_efectiva_min_mg": 250,
+      "dosis_efectiva_max_mg": 2000,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "EFSA Panel on Dietetic Products, Nutrition and Allergies. Scientific Opinion on Dietary Reference Values for fats. EFSA Journal. 2010;8(3):1461. Ingesta adecuada de 250 mg diarios de EPA+DHA para el adulto. La cifra se refiere a la SUMA de EPA y DHA, no al aceite de pescado del envase: un bote de 1000 mg por capsula rara vez aporta mas de 300 mg de los dos.",
+          "url": "https://doi.org/10.2903/j.efsa.2010.1461"
+        }
+      ]
+    },
+    {
+      "ingrediente": "proteina_vegetal",
+      "dosis_efectiva_min_mg": 20000,
+      "dosis_efectiva_max_mg": 40000,
+      "pureza_tipica": 0.8,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. Dosis de 20-40 g de proteina por toma para maximizar la sintesis proteica muscular; la misma revision advierte de que las fuentes vegetales aportan menos leucina por gramo, asi que la toma suele tener que ser mayor que con suero.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        },
+        {
+          "cita": "Gorissen SHM et al. Protein content and amino acid composition of commercially available plant-based protein isolates. Amino Acids. 2018;50(12):1685-1695. Los aislados vegetales del mercado van del 50% al 90% de proteina segun la fuente; el 80% de esta tabla es el valor tipico de un aislado de guisante o de soja ya saborizado. Si la marca publica su analitica, manda la ficha.",
+          "url": "https://doi.org/10.1007/s00726-018-2640-5"
+        }
+      ]
+    },
+    {
+      "ingrediente": "proteina_caseina",
+      "dosis_efectiva_min_mg": 20000,
+      "dosis_efectiva_max_mg": 40000,
+      "pureza_tipica": 0.8,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. Dosis de 20-40 g de proteina por toma; la caseina se digiere despacio y por eso se usa en la toma previa a dormir.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        },
+        {
+          "cita": "Trommelen J, van Loon LJC. Pre-sleep protein ingestion to improve the skeletal muscle adaptive response to exercise training. Nutrients. 2016;8(12):763. Los protocolos usan 30-40 g de caseina antes de dormir. El 80% de pureza de esta tabla es el valor tipico de una caseina micelar comercial ya saborizada; si la marca publica su analitica, manda la ficha.",
+          "url": "https://doi.org/10.3390/nu8120763"
+        }
+      ]
+    },
+    {
+      "ingrediente": "aminoacidos_esenciales",
+      "dosis_efectiva_min_mg": 10000,
+      "dosis_efectiva_max_mg": 15000,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Jager R et al. ISSN position stand: protein and exercise. J Int Soc Sports Nutr. 2017;14:20. La toma tiene que aportar 700-3000 mg de leucina dentro de un aporte suficiente del resto de esenciales; unos 10 g de EAA cubren ese rango. La misma revision recuerda que una proteina completa hace el mismo trabajo y suele salir mas barata.",
+          "url": "https://doi.org/10.1186/s12970-017-0177-8"
+        }
+      ]
+    },
+    {
+      "ingrediente": "carnitina",
+      "dosis_efectiva_min_mg": 2000,
+      "dosis_efectiva_max_mg": 4000,
+      "forma_preferida": "tartrato",
+      "nivel_evidencia": "baja",
+      "fuentes": [
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. La L-carnitina aparece entre los suplementos cuya evidencia de mejora del rendimiento o de la perdida de grasa es limitada o mixta; los 2-4 g diarios son la dosis habitual de los estudios, no una dosis eficaz demostrada.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "melatonina",
+      "dosis_efectiva_min_mg": 1,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 432/2012 de la Comision, lista de declaraciones de propiedades saludables autorizadas. La declaracion sobre la melatonina y la reduccion del tiempo necesario para conciliar el sueno solo puede usarse si el producto aporta 1 mg de melatonina por porcion, tomada poco antes de acostarse. Es una condicion de uso legal, no una recomendacion medica.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32012R0432"
+        }
+      ]
+    }
+  ]
+}

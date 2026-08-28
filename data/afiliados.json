@@ -1,0 +1,56 @@
+{
+  "_lee_esto": [
+    "Enlaces de afiliado por tienda. El motor de scoring NO lee este fichero jamas:",
+    "se aplica al exportar, cuando el ranking ya esta cerrado. Hay una prueba que lo",
+    "comprueba (tests.py: test_los_afiliados_no_mueven_el_ranking).",
+    "Una tienda sin programa se enlaza igual, con enlace normal, y compite en igualdad.",
+    "'parametros' se anaden a la URL del producto. 'programa' es solo para tu control."
+  ],
+  "tiendas": {
+    "hsn": {
+      "programa": null,
+      "parametros": {}
+    },
+    "myprotein": {
+      "programa": null,
+      "parametros": {}
+    },
+    "nutritienda": {
+      "programa": null,
+      "parametros": {}
+    },
+    "prozis": {
+      "programa": null,
+      "parametros": {}
+    },
+    "masmusculo": {
+      "programa": null,
+      "parametros": {}
+    },
+    "lifepro": {
+      "programa": null,
+      "parametros": {}
+    },
+    "amazon": {
+      "programa": null,
+      "parametros": {}
+    },
+    "zumub": {
+      "programa": null,
+      "parametros": {}
+    },
+    "iogenix": {
+      "programa": null,
+      "parametros": {}
+    }
+  },
+  "_ejemplo": {
+    "hsn": {
+      "programa": "Awin 1234",
+      "parametros": {
+        "utm_source": "comparador",
+        "awc": "TU_ID"
+      }
+    }
+  }
+}

@@ -1,0 +1,144 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+import { SITIO, abs } from '../sitio.js';
+import { fechaLarga } from '../datos/seo.js';
+
+// E-E-A-T. Google trata la suplementacion como YMYL ("Your Money or Your Life") y no
+// posiciona arriba una web de salud sin nadie identificable detras. Esta pagina existe
+// para eso, y por eso dice tambien lo que NO se es: la unica forma de firmar una web de
+// suplementos sin ser sanitario es no dar consejo sanitario, y decirlo en la misma pagina
+// donde se dice quien eres. Un titulo inventado tumba el dominio entero, no la pagina.
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+const canonica = abs('/quienes-somos');
+const autor = SITIO.autor;
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': canonica,
+    url: canonica,
+    name: `Quien esta detras de ${SITIO.nombre}`,
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+    mainEntity: { '@id': abs('/#autor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Quienes somos', item: canonica },
+    ],
+  },
+];
+---
+<Base titulo="Quienes somos: quien compara y verifica estos datos"
+      descripcion={`Quien esta detras de ${SITIO.nombre}, como se recogen los precios de ${tiendas} tiendas, quien comprueba las certificaciones y que no hace esta web: ni consejo medico ni recomendaciones personalizadas.`}
+      schema={schema}>
+
+  <p class="migas"><a href="/">Inicio</a> / Quienes somos</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Quien responde de estos datos</p>
+    <h1 class="aparece d1">Quienes somos</h1>
+    <p class="entradilla aparece d2">
+      Una comparativa de suplementos sin nombre detras no la deberia creer nadie, ni un
+      lector ni un buscador. Aqui esta el nombre, lo que hace y —igual de importante— lo
+      que no hace.
+    </p>
+  </section>
+
+  <div class="prosa">
+    <section class="seccion-doc">
+      <h2><span class="num">01</span> Quien</h2>
+      <p>
+        <strong>{autor.nombre}</strong>. {autor.rol}. {autor.hace} Escribe tambien todos los
+        textos que se ven aqui, salvo los que genera el propio programa a partir de los datos.
+      </p>
+      <p>
+        Contacto directo, sin formulario: <a href={`mailto:${SITIO.contacto}`}>{SITIO.contacto}</a>.
+        Si un precio esta mal, si un sello esta mal clasificado o si un producto no deberia
+        estar en una categoria, ese correo es el sitio. Las correcciones entran en la
+        siguiente actualizacion de datos y no hace falta pedir permiso a nadie.
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">02</span> Que no es esta web</h2>
+      <p class="nota">
+        <strong>{autor.no_hace}</strong> No hay aqui ninguna recomendacion personalizada, ni
+        una pauta, ni una dosis para ti. Si tomas medicacion, estas embarazada, tienes una
+        patologia renal o hepatica, o simplemente dudas, la pregunta es para tu medico o tu
+        dietista-nutricionista, no para una tabla de precios.
+      </p>
+      <p>
+        Lo que si se publica son <strong>hechos comprobables</strong>: lo que cuesta un kilo,
+        lo que declara la ficha de la tienda, y si ese sello se ha podido comprobar contra
+        quien lo emite. Ningun efecto se atribuye a un producto: la evidencia se cita
+        siempre por <strong>ingrediente</strong>, con su dosis y su DOI, en
+        {' '}<a href="/metodologia#referencias">la metodologia</a> y en
+        {' '}<a href={`/guia/${datos.categorias[0].slug}`}>las guias de evidencia</a>.
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">03</span> Como se hace, para poder discutirlo</h2>
+      <p>
+        La experiencia que se puede alegar aqui no es clinica, es de datos, y esa si esta a
+        la vista: {datos.productos.length} productos de {tiendas} tiendas espanolas en
+        {' '}{datos.categorias.length} categorias, recogidos automaticamente y vueltos a
+        recoger en cada actualizacion. La ultima fue el
+        {' '}<time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>.
+      </p>
+      <ul>
+        <li>
+          El <strong>precio</strong> se lee de la ficha de la tienda y se normaliza a la
+          unidad en la que se vende esa categoria: euros por kilo los polvos, euros por
+          capsula las perlas. Nunca se mezclan las dos unidades en una tabla.
+        </li>
+        <li>
+          La <strong>certificacion</strong> se clasifica en cuatro niveles, y el nivel 4
+          exige que el sello lo respalde alguien que no sea la marca: o se ha comprobado el
+          codigo en la fuente que lo emite, o el nombre lleva una marca que exige contrato
+          con un tercero, como Creapure o IFOS.
+        </li>
+        <li>
+          El <strong>score</strong> es mitad precio por unidad y mitad calidad verificable, y
+          cada producto ensena su desglose linea a linea en su ficha. Si un numero no se
+          puede explicar, no sale.
+        </li>
+        <li>
+          Los <strong>enlaces de afiliado</strong> no entran en el calculo, y hay una prueba
+          automatica que falla si el orden cambia al aplicarlos.
+        </li>
+      </ul>
+      <p>
+        Todo eso esta escrito con detalle en <a href="/metodologia">la metodologia</a>, que es
+        el documento que hay que leer para llevarle la contraria a esta web con argumentos.
+        Los datos de cada categoria se publican tambien
+        {' '}<a href={`/datos/${datos.categorias[0].slug}.json`}>en JSON</a>, para que
+        cualquiera pueda rehacer las cuentas por su cuenta.
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">04</span> De donde sale el dinero</h2>
+      <p>
+        {datos.hay_afiliados
+          ? 'Algunos enlaces a tienda son de afiliado: si compras, esta web puede llevarse una comision, sin coste extra para ti. El score se calcula antes y sin mirar esos enlaces.'
+          : 'Hoy no hay ningun programa de afiliado activo: ningun enlace de esta web genera comision. Si algun dia lo hay, se avisara en cada pagina donde haya enlaces a tienda y el criterio no cambiara, porque el score se calcula sin mirarlos.'}
+        {' '}<a href="/metodologia#afiliacion">Como funciona la afiliacion aqui</a> ·
+        {' '}<a href="/legal">Aviso legal</a>.
+      </p>
+      <p>
+        Ninguna marca ni tienda paga por aparecer, por subir puestos ni por llevarse un sello.
+        No se aceptan productos gratis a cambio de resenas, entre otras cosas porque aqui no
+        se resena ningun producto: se compara lo que cuesta y lo que se puede comprobar.
+      </p>
+    </section>
+  </div>
+
+  <p class="volver"><a class="boton" href="/metodologia">Leer la metodologia completa →</a></p>
+</Base>

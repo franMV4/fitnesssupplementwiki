@@ -1,0 +1,21 @@
+# Configuracion de Cloudflare Pages. Existe por una razon: las funciones de
+# functions/ y sus dos bindings (D1 y R2). Sin este fichero, "wrangler pages deploy"
+# sube el sitio estatico y deja la API fuera.
+#
+# Los ids salen de crear los recursos una vez, ver PUBLICAR.md paso 9.
+name = "fitnesssupplementwiki"
+compatibility_date = "2026-08-28"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "suplementos"
+database_id = "PON-AQUI-EL-ID-QUE-TE-DA-CLOUDFLARE"
+
+[[r2_buckets]]
+binding = "FOTOS"
+bucket_name = "suplementos-fotos"
+
+# SECRETO no se escribe aqui: es un secreto y este fichero va a git.
+#   npx wrangler pages secret put SECRETO
+# En local vive en web/.dev.vars, que esta en .gitignore.

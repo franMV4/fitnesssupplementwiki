@@ -1,0 +1,66 @@
+---
+import { NIVEL, TIENDAS, precioReferencia, puntos } from '../datos/util.js';
+import { nom, porScore } from '../datos/seo.js';
+
+// Los tres atajos de arriba de la tabla. Quien llega a /proteina-whey desde Google se
+// encuentra 120 filas y no sabe por donde empezar: el 80 % de las visitas quiere una de
+// estas tres respuestas, y las tres estan a un clic en vez de a un scroll.
+//
+// No son "recomendaciones": son el primero de tres ordenaciones distintas de la misma
+// tabla, y cada uno dice literalmente por que esta ahi. Si un producto gana dos, sale
+// una sola vez con las dos razones: repetirlo daria tres ganadores donde hay dos.
+const { productos, unidad } = Astro.props;
+
+const conPrecio = productos.filter((p) => p.precio_referencia != null);
+const mejor = porScore(conPrecio)[0] ?? null;
+const barato = conPrecio.slice().sort((a, b) => a.precio_referencia - b.precio_referencia)[0] ?? null;
+// El mejor certificado solo cuenta si hay sello de verdad (nivel 4): en proteinas el
+// techo es un analisis de la propia marca, y llamar a eso "mejor certificado" es vender
+// como sello lo que es la palabra del fabricante.
+const certificado = porScore(conPrecio.filter((p) => p.nivel_verificacion === 4))[0] ?? null;
+
+const candidatos = [
+  { clave: 'calidad-precio', rotulo: 'Mejor calidad-precio', p: mejor,
+    razon: mejor ? `Score ${mejor.score_final?.toFixed(0)} de 100: la nota mas alta con la mitad del peso en el precio por ${unidad}.` : '' },
+  { clave: 'barato', rotulo: `Mas barato por ${unidad}`, p: barato,
+    razon: barato ? `Nadie de esta tabla baja de ${precioReferencia(barato).valor} por ${unidad}. Barato no es bueno: mira su nivel de verificacion.` : '' },
+  { clave: 'certificado', rotulo: 'Mejor certificado', p: certificado,
+    razon: certificado ? 'Nivel 4: el sello lo respalda un tercero, no la marca. Es el que mejor puntua de los verificados.' : '' },
+].filter((d) => d.p);
+
+// Un producto que gana dos categorias se funde en una sola tarjeta con las dos razones.
+const destacados = [];
+for (const d of candidatos) {
+  const ya = destacados.find((o) => o.p.id === d.p.id);
+  if (ya) {
+    ya.rotulo = `${ya.rotulo} y ${d.rotulo.toLowerCase()}`;
+    ya.razones.push(d.razon);
+  } else {
+    destacados.push({ ...d, razones: [d.razon] });
+  }
+}
+---
+{destacados.length > 0 && (
+  <div class="destacados aparece d2">
+    {destacados.map((d) => {
+      const n = NIVEL[d.p.nivel_verificacion];
+      return (
+        <div class="bloque destacado-bloque">
+          <span class="rotulo-destacado">{d.rotulo}</span>
+          <h3><a href={`/producto/${d.p.slug}`}>{nom(d.p)}</a></h3>
+          <p class="linea-destacado">
+            <span class="cifra">{precioReferencia(d.p).valor}<span class="unidad">/{precioReferencia(d.p).unidad}</span></span>
+            <span class={`nivel ${n.clase}`}>
+              <span class="puntos">{puntos(d.p.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
+              {n.etiqueta}
+            </span>
+          </p>
+          {d.razones.map((r) => <p>{r}</p>)}
+          <p class="sutil">
+            En {TIENDAS[d.p.tienda] ?? d.p.tienda} · <a href={`/producto/${d.p.slug}`}>ver el desglose de su nota</a>
+          </p>
+        </div>
+      );
+    })}
+  </div>
+)}

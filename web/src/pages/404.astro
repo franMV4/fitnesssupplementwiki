@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import datos from '../datos/dataset.json';
+
+// Un producto que la tienda deja de vender desaparece del dataset y su URL se queda
+// enlazada por ahi fuera. Sin esta pagina, ese enlace es un callejon sin salida.
+---
+<Base titulo="Pagina no encontrada" descripcion="La pagina que buscas no existe o el producto ya no esta en el catalogo.">
+  <p class="antetitulo">Error 404</p>
+  <h1>Esta pagina no existe</h1>
+  <div class="prosa">
+    <p>
+      Puede que el producto ya no lo venda la tienda: cuando desaparece de su catalogo,
+      desaparece tambien de aqui. Estas son las {datos.categorias.length} comparativas.
+    </p>
+  </div>
+  <div class="lista-categorias">
+    {datos.categorias.map((c) => (
+      <a class="fila-categoria" href={`/${c.slug}`}>
+        <span class="nombre">{c.nombre}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{c.productos} prod.</span>
+      </a>
+    ))}
+  </div>
+</Base>

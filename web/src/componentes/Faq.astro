@@ -1,0 +1,35 @@
+---
+import Jsonld from './Jsonld.astro';
+
+// Preguntas y respuestas generadas desde el dataset (datos/seo.js). Van visibles y
+// planas, no dentro de un <details>: lo que se pliega se lee peor y lo que se lee peor
+// no lo cita nadie. El JSON-LD sale de las mismas cadenas, asi que no pueden decir
+// cosas distintas.
+const { faqs, titulo = 'Preguntas frecuentes' } = Astro.props;
+const esquema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((f) => ({
+    '@type': 'Question',
+    name: f.p,
+    acceptedAnswer: { '@type': 'Answer', text: f.r },
+  })),
+};
+---
+{faqs.length > 0 && (
+  <section class="seccion faq">
+    <div class="cabecera-seccion">
+      <h2>{titulo}</h2>
+      <p class="apunte">Respondidas con los datos de esta pagina</p>
+    </div>
+    <dl>
+      {faqs.map((f) => (
+        <>
+          <dt>{f.p}</dt>
+          <dd>{f.r}</dd>
+        </>
+      ))}
+    </dl>
+    <Jsonld datos={esquema} />
+  </section>
+)}

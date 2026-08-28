@@ -1,0 +1,218 @@
+---
+import Base from '../../layouts/Base.astro';
+import TablaProductos from '../../componentes/TablaProductos.jsx';
+import Aviso from '../../componentes/Aviso.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { abs } from '../../sitio.js';
+import { NIVEL, paraTabla, precioReferencia, puntos } from '../../datos/util.js';
+import { fechaLarga, listaLd, nom } from '../../datos/seo.js';
+import {
+  COMPARATIVAS, comparativasDe, descripcionComparativa, faqsComparativa, mejoresDe,
+  respuestaComparativa,
+} from '../../datos/landings.js';
+
+// "HSN o Myprotein" en una categoria. La pagina existe porque esa consulta no la responde
+// bien una tabla de 120 filas: quien la busca ya eligio categoria y solo quiere el
+// desempate. Ver datos/landings.js.
+export function getStaticPaths() {
+  return COMPARATIVAS.map((l) => ({ params: { slug: l.slug }, props: { l } }));
+}
+
+const { l } = Astro.props;
+const { cat, na, nb, ra, rb } = l;
+const respuesta = respuestaComparativa(l);
+const faqs = faqsComparativa(l);
+const canonica = abs(`/comparativa/${l.slug}`);
+const hermanas = comparativasDe(cat.slug).filter((o) => o.slug !== l.slug);
+const selecciones = mejoresDe(cat.slug);
+
+// Las dos tiendas, fila a fila y con el mismo criterio: es la tabla que la gente se hace
+// a mano en una hoja de calculo antes de comprar.
+const lados = [
+  { n: na, r: ra, url: `/mejores/${cat.slug}-de-${l.a}` },
+  { n: nb, r: rb, url: `/mejores/${cat.slug}-de-${l.b}` },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: l.titulo,
+    description: descripcionComparativa(l),
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(`/${cat.slug}`) },
+      { '@type': 'ListItem', position: 3, name: `${na} vs ${nb}`, item: canonica },
+    ],
+  },
+  listaLd(l.titulo, l.productos),
+];
+---
+<Base ancho="completo" titulo={l.titulo} descripcion={descripcionComparativa(l)} schema={schema}>
+
+  <p class="migas">
+    <a href="/">Inicio</a> / <a href={`/${cat.slug}`}>{cat.nombre}</a> / {na} vs {nb}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      Cara a cara · datos del{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{l.h1}</h1>
+    {respuesta && <p class="respuesta aparece d2"><b>La respuesta corta.</b> {respuesta}</p>}
+    <p class="entradilla aparece d2">
+      Las dos tiendas medidas con el mismo criterio: precio por {ra.unidad} y nivel de
+      verificacion de la certificacion. No hay ganador absoluto porque no lo hay: gana una
+      por precio y puede ganar otra por sello, y aqui se ven las dos cosas por separado.
+    </p>
+  </section>
+
+  <Aviso />
+
+  <h2 class="titulo-bloque">Las dos tiendas de un vistazo</h2>
+  <div class="destacados aparece d2">
+    {lados.map((lado) => (
+      <div class="bloque destacado-bloque">
+        <span class="rotulo-destacado">{lado.n}</span>
+        <h3><a href={lado.url}>{lado.r.n} productos de {cat.termino}</a></h3>
+        <p class="linea-destacado">
+          <span class="cifra">{lado.r.precio(lado.r.mediana)}</span>
+          <span class="sutil">mediana</span>
+        </p>
+        <p>
+          De {lado.r.precio(lado.r.barato?.precio_referencia)} a
+          {' '}{lado.r.precio(lado.r.caro?.precio_referencia)}.
+          {' '}{lado.r.nivel4} en nivel 4 de verificacion y {lado.r.nivel3} en nivel 3.
+        </p>
+        {lado.r.lider && (
+          <p class="sutil">
+            Su mejor nota: <a href={`/producto/${lado.r.lider.slug}`}>{nom(lado.r.lider)}</a>,
+            {' '}{lado.r.lider.score_final?.toFixed(0)}/100 a
+            {' '}{precioReferencia(lado.r.lider).valor}/{precioReferencia(lado.r.lider).unidad}.
+          </p>
+        )}
+      </div>
+    ))}
+  </div>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{na} frente a {nb}, dato a dato</h2>
+      <p class="apunte">Los mismos numeros para las dos</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{na} y {nb} en {cat.termino}, con los precios del {fechaLarga(datos.generado)}</caption>
+          <thead>
+            <tr>
+              <th>Dato</th>
+              <th class="num">{na}</th>
+              <th class="num">{nb}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="principal marca">Productos comparados</td>
+              <td class="num" data-et={na}>{ra.n}</td>
+              <td class="num" data-et={nb}>{rb.n}</td>
+            </tr>
+            <tr>
+              <td class="principal marca">Mediana por {ra.unidad}</td>
+              <td class={`num ${ra.mediana <= rb.mediana ? 'destacado' : ''}`} data-et={na}>{ra.precio(ra.mediana)}</td>
+              <td class={`num ${rb.mediana < ra.mediana ? 'destacado' : ''}`} data-et={nb}>{rb.precio(rb.mediana)}</td>
+            </tr>
+            <tr>
+              <td class="principal marca">Mas barato por {ra.unidad}</td>
+              <td class="num" data-et={na}>{ra.precio(ra.barato?.precio_referencia)}</td>
+              <td class="num" data-et={nb}>{rb.precio(rb.barato?.precio_referencia)}</td>
+            </tr>
+            <tr>
+              <td class="principal marca">Mas caro por {ra.unidad}</td>
+              <td class="num" data-et={na}>{ra.precio(ra.caro?.precio_referencia)}</td>
+              <td class="num" data-et={nb}>{rb.precio(rb.caro?.precio_referencia)}</td>
+            </tr>
+            <tr>
+              <td class="principal marca">Mejor score</td>
+              <td class="num" data-et={na}>{ra.lider?.score_final?.toFixed(0) ?? '—'}</td>
+              <td class="num" data-et={nb}>{rb.lider?.score_final?.toFixed(0) ?? '—'}</td>
+            </tr>
+            <tr>
+              <td class="principal marca">Nivel 4 (sello con un tercero detras)</td>
+              {[{ r: ra, n: na }, { r: rb, n: nb }].map((lado) => (
+                <td data-et={lado.n} class={lado.r.nivel4 === 0 ? 'num' : ''}>
+                  {lado.r.nivel4 === 0 ? `0 de ${lado.r.n}` : (
+                    <span class={`nivel ${NIVEL[4].clase}`}>
+                      <span class="puntos">{puntos(4).map((on) => <i class={on ? 'on' : ''} />)}</span>
+                      {lado.r.nivel4} de {lado.r.n}
+                    </span>
+                  )}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <td class="principal marca">Nivel 3 (analisis de la propia marca)</td>
+              <td class="num" data-et={na}>{ra.nivel3} de {ra.n}</td>
+              <td class="num" data-et={nb}>{rb.nivel3} de {rb.n}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>La mediana no es el precio que vas a pagar.</strong> Es el punto medio del
+      catalogo de esa tienda en esta categoria, y sirve para saber si una tienda es cara o
+      barata en conjunto. Para comprar manda la fila concreta de la tabla de abajo.
+    </p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Los {l.productos.length} productos de las dos tiendas</h2>
+      <p class="apunte">Filtra por tienda para ver solo una</p>
+    </div>
+    <TablaProductos productos={l.productos.map(paraTabla)} client:visible />
+  </section>
+
+  <Faq faqs={faqs} titulo={`Preguntas sobre ${na} y ${nb} en ${cat.termino}`} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Seguir comparando {cat.termino}</h2>
+      <p class="apunte">Mismo dataset, otra pregunta</p>
+    </div>
+    <div class="lista-categorias">
+      <a class="fila-categoria" href={`/${cat.slug}`}>
+        <span class="nombre">{cat.consultas?.mejor
+          ? cat.consultas.mejor.charAt(0).toUpperCase() + cat.consultas.mejor.slice(1)
+          : cat.nombre}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{cat.productos} prod.</span>
+      </a>
+      {hermanas.map((o) => (
+        <a class="fila-categoria" href={`/comparativa/${o.slug}`}>
+          <span class="nombre">{o.na} o {o.nb} en {cat.termino}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{o.productos.length} prod.</span>
+        </a>
+      ))}
+      {selecciones.map((o) => (
+        <a class="fila-categoria" href={`/mejores/${o.slug}`}>
+          <span class="nombre">{o.h1.split(':')[0]}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{o.productos.length} prod.</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

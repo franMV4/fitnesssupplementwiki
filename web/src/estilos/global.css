@@ -1,0 +1,1937 @@
+/* ============================================================================
+   Sistema de diseno "Rotativa": la portada de un diario de precios, impresa a
+   dos tintas sobre papel crudo.
+
+   Lo que cambia respecto al boletin anterior: el titular deja de ser una serif
+   discreta y pasa a ser una condensada de cartel en versales, las cifras crecen
+   hasta el cuerpo de un titular, los filetes suben de 1px a 2-3px y aparecen
+   bandas en negativo (tinta llena) para lo que el lector tiene que tocar. La
+   regla vieja se mantiene: cero cajas redondeadas, cero sombras difuminadas y
+   una sola tinta de senal.
+
+   Un unico fichero: lo importa Base.astro y sirve a las doce plantillas.
+   ========================================================================= */
+
+/* --- 1. Tokens ----------------------------------------------------------- */
+:root {
+  --papel:   #efede6;
+  --papel-2: #e8e5db;
+  --papel-3: #e4e1d7;
+  --tinta:   #141210;
+  --tinta-2: #3a342c;
+  --tinta-3: #6b6558;
+  --regla:   rgba(20, 18, 16, .16);
+  --regla-2: rgba(20, 18, 16, .30);
+  /* El gris de rotulo es dos tonos mas oscuro que el del boceto: a 11 px, el
+     #8a8478 original daba 3,17:1 sobre este papel y AA pide 4,5. */
+
+  /* Banda destacada (pie, tira de edicion, "como se lee la puntuacion"). En los dos
+     temas es un escalon de superficie, un tono por encima del fondo y con filete: la
+     banda de tinta llena partia la pagina clara en dos desde que el fondo es una foto.
+     Por eso son tokens y no colores escritos a mano. */
+  --neg:         #e2ded2;
+  --neg-tinta:   #141210;
+  --neg-tinta-2: #3a342c;
+  --neg-regla:   rgba(20, 18, 16, .22);
+
+  /* Acento unico. Cinco apariciones por pantalla como mucho.
+     Son tres tonos del mismo naranja porque ninguno vale para las tres cosas:
+     - `--senal` es el de relleno (cuadrados, barras, degradados, fondos de boton).
+       Sobre papel da 3,78:1, que es lo que AA pide a un grafismo y no a un texto.
+     - `--senal-txt` es el mismo naranja para TEXTO pequeno sobre papel: 5,19:1.
+     - `--senal-neg` es el de texto DENTRO de una banda destacada. */
+  --senal:      #de3b0f;
+  --senal-txt:  #b2301c;
+  --senal-sobre:#ffffff;
+  --senal-neg:  #b2301c;
+  --senal-piel: #f7e4de;
+
+  /* Niveles 1-4. El 4 es verde: en esta paleta la tinta ya la gastan el titular
+     y los filetes, y un 4 en negro no se distinguia del resto de la fila. */
+  --n4: #0e6b4b;
+  --n3: #1f5c8c;
+  --n2: #8a5c0a;
+  --n1: #6b6558;
+  --alarma: #b2301c;
+
+  --display: "Big Shoulders Display", "Haettenschweiler", Impact, sans-serif;
+  --texto:   "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:    "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  /* La escala respira un escalon mas de lo que respiraba: a partir de --e4 los
+     saltos crecen ~25 %. Las paginas se leian apelotonadas y todo el CSS usa
+     estos tokens, asi que el aire se reparte solo por las doce plantillas. */
+  --e1: .25rem; --e2: .55rem; --e3: .9rem;    --e4: 1.35rem;
+  --e5: 2rem;   --e6: 3rem;   --e7: 4.75rem;  --e8: 6.5rem;
+
+  --ancho:  82rem;
+  --medida: 48rem;          /* medida de lectura: ~95 caracteres, ver seccion 3 */
+  --margen: clamp(1.1rem, 3.4vw, 3.25rem);
+  --carril: 11rem;          /* margen impreso con metadatos */
+
+  /* Versalitas de rotulo: se repiten en veinte sitios y siempre son las mismas
+     dos declaraciones. */
+  --rotulo-tam: .69rem;
+  --rotulo-esp: .13em;
+
+  /* Fondo fotografico de la pagina y el velo de papel que lleva encima. El velo no
+     es decoracion: la foto tiene bultos de contraste medio y el texto del diario se
+     lee sobre ella si va tapada al 73 %. Son tokens porque cambian con el tema. */
+  --fondo: url("/fondo-claro.png");
+  --velo:  rgba(239, 237, 230, .73);
+}
+
+/* El mismo diario con la luz apagada: no hay un segundo diseno, solo otros valores
+   para los mismos tokens. El papel se vuelve tinta y la tinta papel, el naranja sube
+   de tono porque el #de3b0f sobre negro no llega al contraste minimo, y la banda en
+   negativo se invierte tambien (si no, seria la unica zona clara de la pagina). */
+:root[data-tema="oscuro"] {
+    --papel:   #141210;
+    --papel-2: #1c1813;
+    --papel-3: #262019;
+    --tinta:   #efede6;
+    --tinta-2: #c3bbad;
+    --tinta-3: #8a8478;
+    --regla:   rgba(239, 237, 230, .16);
+    --regla-2: rgba(239, 237, 230, .32);
+
+    --neg:         #231e17;
+    --neg-tinta:   #efede6;
+    --neg-tinta-2: #a39b8e;
+    --neg-regla:   #3f382e;
+
+    --senal:      #ff6a3d;
+    --senal-txt:  #ff8a63;
+    --senal-sobre:#141210;
+    --senal-neg:  #ff8a63;
+    --senal-piel: #3a1c12;
+
+    --n4: #3fa57c;
+    --n3: #6fa8d8;
+    --n2: #d4a32f;
+    --n1: #8a8478;
+    --alarma: #ff6a3d;
+
+    --fondo: url("/fondo-oscuro.png");
+    --velo:  rgba(20, 18, 16, .73);
+}
+/* El grano es ruido negro: sobre papel oscuro hay que invertirlo o solo ensucia. */
+:root[data-tema="oscuro"] body::before { filter: invert(1); opacity: .05; }
+
+/* --- 2. Reset y base ----------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* La cabecera pegajosa mide 62 px: sin esto, cualquier enlace a un #ancla deja el
+   titulo de destino debajo de la cabecera y el lector cree que no ha pasado nada. */
+:target { scroll-margin-top: 5rem; }
+
+body {
+  margin: 0;
+  background: linear-gradient(var(--velo), var(--velo)), var(--fondo) center / cover fixed no-repeat var(--papel);
+  color: var(--tinta);
+  font-family: var(--texto);
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--senal); color: #fff; }
+
+:focus-visible { outline: 2px solid var(--senal); outline-offset: 2px; }
+
+/* Primer tabulador de la pagina: con la cabecera pegajosa y treinta enlaces dentro de
+   los dos menus, llegar al contenido con el teclado eran treinta y cinco pulsaciones. */
+.saltar {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--tinta); color: var(--papel); text-decoration: none;
+  padding: .6rem 1rem; font-size: .9rem;
+}
+.saltar:focus { left: 0; }
+
+img, svg { max-width: 100%; }
+hr { border: 0; border-top: 1px solid var(--regla); margin: var(--e6) 0; }
+
+/* Enlace de prosa: filete fino que se tine al pasar por encima. */
+a { color: inherit; text-decoration-color: var(--regla-2); text-underline-offset: .18em; }
+a:hover { text-decoration-color: var(--senal-txt); color: var(--senal-txt); }
+.prosa a, .sutil a { text-decoration-thickness: 1px; }
+
+/* --- 3. Tipografia ------------------------------------------------------- */
+/* Los titulares son de cartel: condensada de peso maximo, en versales y con el
+   interlineado por debajo del cuerpo, que es lo que hace que un titular parezca
+   un bloque de tinta y no una linea de texto grande. */
+h1, h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: .88;
+  letter-spacing: .006em;
+  text-transform: uppercase;
+  margin: 0 0 var(--e3);
+  text-wrap: balance;
+}
+h1 { font-size: clamp(2.2rem, 4.4vw, 3.9rem); }
+h2 { font-size: clamp(1.8rem, 3.2vw, 2.8rem); margin-top: var(--e7); }
+/* El h3 NO sube a la condensada: rotula nombres de producto y de ingrediente, que
+   llevan cifras, unidades y parentesis. En versales condensadas "Evowhey 2Kg
+   (Informed Sport)" se lee peor, no mejor. */
+h3 {
+  font-family: var(--texto); font-weight: 700; font-size: 1.05rem;
+  line-height: 1.3; letter-spacing: 0; margin: 0 0 var(--e3);
+}
+p  { margin: 0 0 var(--e4); }
+
+/* Antetitulo: rotulo en mono, no cursiva de prensa. Es el pie de imprenta de la
+   pagina, y en mono se lee como un dato y no como una frase de marca. */
+.antetitulo {
+  font-family: var(--mono);
+  font-size: .69rem; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--senal-txt);
+  margin: 0 0 var(--e2);
+}
+
+.entradilla {
+  font-size: 1.1rem;
+  line-height: 1.55;
+  color: var(--tinta-2);
+  max-width: 52rem;
+  text-wrap: pretty;
+}
+
+.sutil { color: var(--tinta-3); font-size: .85rem; line-height: 1.6; }
+.mono  { font-family: var(--mono); font-size: .8em; letter-spacing: .03em; }
+.num-t { font-variant-numeric: tabular-nums lining-nums; }
+
+/* Rotulo: sobrevive solo para rotular columnas y campos. */
+.rotulo {
+  font-size: var(--rotulo-tam); font-weight: 700; letter-spacing: var(--rotulo-esp);
+  text-transform: uppercase; color: var(--tinta-3);
+  margin: 0 0 var(--e2); display: block;
+}
+
+/* La prosa se estrecha por elemento, no en bloque: asi las tablas y las notas
+   de metodologia usan la columna entera y solo el texto queda a medida corta. */
+.prosa p, .prosa ul, .prosa h2, .prosa h3 { max-width: var(--medida); }
+.prosa h2 { max-width: 22ch; }
+.prosa .nota { max-width: 62rem; }
+.prosa .tabla-marco { margin: var(--e5) 0; }
+.prosa p { color: var(--tinta-2); }
+.prosa strong { color: var(--tinta); font-weight: 700; }
+.prosa ul { padding-left: 0; list-style: none; margin: 0 0 var(--e4); }
+.prosa ul li {
+  position: relative; padding-left: 1.4rem; margin: var(--e2) 0; color: var(--tinta-2);
+}
+/* Marca de lista: filete corto, no punto. Es la misma figura que separa los
+   apartados de la metodologia. */
+.prosa ul li::before {
+  content: ""; position: absolute; left: 0; top: .68em;
+  width: 14px; height: 3px; background: var(--senal);
+}
+
+/* --- 4. Estructura ------------------------------------------------------- */
+.envoltorio { width: 100%; max-width: var(--ancho); margin: 0 auto; padding: 0 var(--margen); }
+.envoltorio.estrecho { max-width: 66rem; }
+main { display: block; padding-bottom: var(--e8); }
+.seccion { margin-top: var(--e7); }
+/* La cabecera de pagina no tiene nada a la derecha: a 46rem el titular y la
+   entradilla se quedaban en la mitad izquierda de un envoltorio de 82rem. */
+.cabecera-pagina { margin: 0 0 var(--e6); max-width: 58rem; }
+.tabla-categoria { margin-top: var(--e6); }
+
+/* Cabecera de seccion: titulo a la izquierda, apunte a la derecha, filete grueso
+   debajo. El filete de 3px es lo que separa una seccion de la siguiente ahora que
+   no hay cajas. */
+.cabecera-seccion {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--e4); flex-wrap: wrap;
+  border-bottom: 3px solid var(--tinta);
+  padding-bottom: var(--e2); margin-bottom: var(--e5);
+}
+.cabecera-seccion h2 { margin: 0; }
+.cabecera-seccion .apunte {
+  color: var(--tinta-3); margin: 0;
+  font-family: var(--mono); font-size: .7rem;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+
+/* Reticula con carril de margen (metadatos al lado, como en pagina impresa). */
+.con-carril { display: grid; gap: var(--e5); }
+@media (min-width: 78rem) {
+  /* El hueco entre columnas aloja los numerales colgados de metodologia. */
+  .con-carril { grid-template-columns: var(--carril) 1fr; gap: var(--e7); align-items: start; }
+  .con-carril > .carril { position: sticky; top: 5.5rem; }
+}
+.carril p { color: var(--tinta-3); font-size: .78rem; line-height: 1.45; margin: 0 0 var(--e3); }
+
+/* Banda destacada: escalon de superficie de borde a borde del envoltorio. Se reserva
+   para lo que el lector toca o para la formula, que es la promesa de la web. */
+.negativo {
+  background: var(--neg); color: var(--neg-tinta-2);
+  padding: var(--e6) var(--e5);
+  margin-top: var(--e7);
+  /* El filete es lo unico que separa la banda del fondo: el escalon de superficie
+     solo, sobre una pagina con foto detras, no se lee como banda. */
+  border-block: 1px solid var(--neg-regla);
+}
+.negativo h2, .negativo h3, .negativo b, .negativo strong { color: var(--neg-tinta); }
+.negativo .cabecera-seccion { border-bottom-color: var(--neg-regla); }
+.negativo .cabecera-seccion .apunte { color: var(--neg-tinta-2); }
+.negativo p { color: var(--neg-tinta-2); }
+.negativo .bloque { border-top-color: var(--neg-tinta); }
+.negativo .bloque p { color: var(--neg-tinta-2); }
+.negativo .nota { border-top-color: var(--neg-regla); color: var(--neg-tinta-2); }
+.negativo .rotulo { color: var(--neg-tinta-2); }
+.negativo .cifra { color: var(--neg-tinta); }
+.negativo a:hover, .negativo .enlace-accion { color: var(--senal-neg); }
+
+/* --- 5. Tira de edicion y cabecera del sitio ----------------------------- */
+/* La tira: el pie de imprenta antes de la cabecera. Desfila porque los recuentos
+   no caben en una linea de movil y porque es lo primero que dice de que va esto.
+   Se para al pasar por encima y no se mueve si el sistema pide menos animacion. */
+.tira {
+  background: var(--neg); color: var(--neg-tinta-2);
+  border-bottom: 1px solid var(--neg-regla);
+  overflow: hidden; font-size: .7rem; letter-spacing: .02em;
+}
+.tira > div { display: flex; width: max-content; animation: desfile 58s linear infinite; }
+.tira:hover > div { animation-play-state: paused; }
+.tira span {
+  display: flex; align-items: center; gap: .55rem; flex: none;
+  padding: .5rem 1.4rem; border-right: 1px solid var(--neg-regla); white-space: nowrap;
+}
+.tira i { width: 5px; height: 5px; background: var(--senal); flex: none; }
+.tira b { color: var(--neg-tinta); font-weight: 700; font-variant-numeric: tabular-nums; }
+@keyframes desfile { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .tira > div { animation: none; }
+  /* Sin desfile, la segunda copia de la lista seria el mismo texto dos veces. */
+  .tira > div > div:nth-child(2) { display: none; }
+}
+
+header.sitio {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--papel);
+  border-bottom: 2px solid var(--tinta);
+}
+header.sitio .envoltorio {
+  display: flex; align-items: stretch;
+  /* El hueco de la derecha es el del icono de cuenta, que va absoluto contra la
+     cabecera y no cuenta como un hijo mas de esta fila. */
+  min-height: 62px; padding-right: 3.4rem;
+}
+.marca-sitio {
+  display: inline-flex; align-items: center; gap: .6rem;
+  text-decoration: none; color: var(--tinta); margin-right: auto;
+  font-family: var(--display); font-weight: 900; letter-spacing: .012em;
+  font-size: 1.7rem; line-height: 1; text-transform: uppercase;
+}
+.marca-sitio:hover { color: var(--tinta); }
+/* El glifo es /favicon.svg: la marca se dibuja una vez y la comparten cabecera,
+   pestana del navegador, icono de iOS y og:image. */
+.marca-sitio .glifo { width: 24px; height: 24px; flex: none; }
+.marca-sitio .fina {
+  font-family: var(--texto); font-weight: 700;
+  font-size: .63rem; letter-spacing: .17em; color: var(--tinta-3);
+  align-self: flex-end; padding-bottom: .3rem;
+}
+
+/* Los enlaces del menu son pestanas a sangre: ocupan el alto entero de la cabecera
+   y se invierten al pasar por encima. Sin cajas y sin subrayados: el filete vertical
+   de 1px entre ellas es lo unico que las separa. */
+nav.principal { display: flex; align-items: stretch; }
+nav.principal > a, .menu-cat > summary, .tema {
+  display: inline-flex; align-items: center; gap: .35rem;
+  color: var(--tinta-2); text-decoration: none; cursor: pointer;
+  border-left: 1px solid var(--regla);
+  padding: 0 clamp(.6rem, 1.3vw, 1.1rem);
+  font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  transition: background .16s ease, color .16s ease;
+}
+nav.principal > a:hover, .menu-cat > summary:hover, .tema:hover {
+  background: var(--tinta); color: var(--papel);
+}
+nav.principal a[aria-current="page"],
+.menu-cat > summary[aria-current="page"] {
+  color: var(--tinta); box-shadow: inset 0 -3px 0 var(--senal);
+}
+/* El unico boton de la cabecera y el unico naranja de la pantalla que no es un dato. */
+nav.principal > a.comparar {
+  background: var(--senal-txt); color: var(--senal-sobre); border-left: 0;
+  padding-inline: clamp(.8rem, 1.5vw, 1.35rem);
+}
+nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel); }
+
+/* Tres rayas. Solo en movil: en escritorio caben las cinco pestanas y un menu
+   escondido detras de un boton es un clic de mas por cada seccion. */
+.hamburguesa { display: none; }
+
+/* Interruptor de tema. Es un <button> y no un enlace porque no lleva a ningun sitio:
+   cambia un atributo del <html>. Los dos glifos van siempre en el DOM y el CSS ensena
+   el que toca, que es una linea menos de JS. */
+.tema {
+  /* Fuera del <nav>: es lo ultimo de la barra, pegado al borde derecho, y ahi se
+     queda aunque las pestanas del menu bajen de linea. */
+  background: none; border: 0; border-left: 1px solid var(--regla);
+  font-family: var(--texto); line-height: 1; min-width: 3.4rem; justify-content: center;
+}
+/* El sol y la luna son glifos de texto: crecen con font-size y nada mas. */
+.tema .sol, .tema .luna { font-size: 1.5rem; }
+.tema .sol { display: none; }
+:root[data-tema="oscuro"] .tema .sol  { display: inline; }
+:root[data-tema="oscuro"] .tema .luna { display: none; }
+
+/* Acceso a la cuenta. NO se llama `.cuenta`: esa clase ya existe desde antes y es el
+   contador "27 prod." de las listas de categoria, en seis plantillas. Llamar asi a esto
+   convirtio cada contador de la web en una caja absoluta de 5.000 px pegada al margen
+   derecho. Antes de bautizar una clase, buscarla.
+
+   Es lo unico de la cabecera que NO vive dentro del envoltorio:
+   el envoltorio esta limitado a 82rem y centrado, asi que en un monitor ancho su borde
+   derecho se queda a un palmo del de la ventana. Esto va absoluto contra
+   `header.sitio`, que es sticky y por tanto ya sirve de referencia sin tocar nada. */
+.acceso-cabecera {
+  position: absolute; top: 0; right: 0; height: 100%;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 3.4rem; color: var(--tinta-2);
+  border-left: 1px solid var(--regla); text-decoration: none;
+  transition: background .16s ease, color .16s ease;
+}
+.acceso-cabecera:hover { background: var(--tinta); color: var(--papel); }
+/* Con sesion abierta el dibujo se cambia por la inicial dentro de un cuadro de tinta:
+   a un vistazo se distingue "puedo entrar" de "ya estoy dentro" sin leer nada. */
+.acceso-cabecera .inicial {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.75rem; height: 1.75rem;
+  background: var(--senal-txt); color: var(--senal-sobre);
+  font-family: var(--display); font-weight: 900; font-size: 1.1rem; line-height: 1;
+  padding-top: .12rem;
+}
+.acceso-cabecera.dentro:hover .inicial { background: var(--papel); color: var(--tinta); }
+
+/* Desplegable de categorias con <details>: sin una linea de JS. */
+.menu-cat { position: relative; display: flex; }
+.menu-cat > summary { list-style: none; }
+.menu-cat > summary::-webkit-details-marker { display: none; }
+.menu-cat > summary::after { content: "\25BE"; font-size: .8em; opacity: .6; }
+.menu-cat[open] > summary { background: var(--tinta); color: var(--papel); }
+.menu-cat .lamina {
+  /* Anclada a la DERECHA: el menu vive en el lado derecho de la cabecera y la lamina,
+     con treinta categorias en tres columnas, mide 700px. Anclada a la izquierda se salia
+     de la pantalla y metia scroll horizontal en el documento con solo abrir el menu. */
+  position: absolute; top: 100%; right: 0; z-index: 20;
+  min-width: 16rem; padding: var(--e2) 0;
+  background: var(--papel); border: 2px solid var(--tinta);
+  /* Sombra dura y desplazada, no difuminada: es un papel encima de otro papel. */
+  box-shadow: 9px 9px 0 rgba(20, 18, 16, .13);
+  /* Con treinta categorias una sola columna mide mas que la pantalla: se reparte en
+     columnas segun quepa, con tope de alto y scroll propio. */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  width: max-content; max-width: min(46rem, calc(100vw - 2rem));
+  max-height: min(70vh, 34rem); overflow-y: auto;
+}
+.menu-cat .lamina a {
+  display: flex; justify-content: space-between; gap: var(--e4);
+  padding: .4rem 1rem; text-decoration: none; color: var(--tinta-2); font-size: .88rem;
+  transition: background .12s ease, padding-left .12s ease;
+}
+.menu-cat .lamina a:hover { background: var(--papel-3); color: var(--tinta); padding-left: 1.35rem; }
+.menu-cat .lamina a[aria-current="page"] { color: var(--senal-txt); box-shadow: inset 3px 0 0 var(--senal); }
+.menu-cat .lamina a span { color: var(--tinta-3); font-size: .78rem; font-variant-numeric: tabular-nums; }
+
+/* Menu de guias: los mismos treinta enlaces, pero por estante. Una lista plana de
+   treinta "para que sirve X" no se lee, se escanea y se abandona. */
+.lamina.laminas-grupos {
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  max-width: min(54rem, calc(100vw - 2rem)); padding-bottom: 0;
+}
+.laminas-grupos .grupo-menu { padding: .3rem 0 var(--e2); }
+.rotulo-menu {
+  margin: 0 0 .2rem; padding: 0 1rem;
+  font-family: var(--mono);
+  font-size: .66rem; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--senal-txt);
+}
+.laminas-grupos .grupo-menu a { display: block; }
+/* Ultima fila del menu, cruzando todas las columnas: la salida al indice completo. */
+.laminas-grupos .pie-menu {
+  grid-column: 1 / -1; border-top: 2px solid var(--tinta);
+  color: var(--tinta); font-weight: 700; padding: .6rem 1rem;
+  font-size: .69rem; letter-spacing: .11em; text-transform: uppercase;
+}
+.laminas-grupos .pie-menu:hover { background: var(--tinta); color: var(--papel); padding-left: 1rem; }
+
+/* Indice de /guias: los mismos estantes, ya sin menu que quepa en pantalla. */
+.estantes {
+  display: grid; gap: var(--e5) var(--e6); margin: var(--e5) 0 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+}
+.estante ul { list-style: none; margin: 0; padding: 0; }
+.estante li { margin: 0; }
+.fila-indice {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3);
+  padding: .5rem 0; border-bottom: 1px solid var(--regla);
+  text-decoration: none; color: var(--tinta); font-size: .95rem;
+  transition: background .14s ease, padding-left .14s ease;
+}
+.fila-indice:hover { color: var(--tinta); background: var(--papel-3); padding-left: .6rem; }
+.fila-indice .cuenta {
+  color: var(--tinta-3); font-size: .76rem; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 6. Pie -------------------------------------------------------------- */
+/* El pie cierra la pagina con la misma banda con la que la abre la tira de edicion. */
+footer.sitio {
+  background: var(--neg);
+  border-top: 1px solid var(--neg-regla);
+  padding: var(--e7) 0 var(--e5);
+  color: var(--neg-tinta-2); font-size: .88rem;
+}
+.rejilla-pie {
+  display: grid; gap: var(--e5) var(--e6);
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  padding-bottom: var(--e5); border-bottom: 1px solid var(--neg-regla);
+}
+footer.sitio h4 {
+  font-family: var(--mono); font-size: .66rem; font-weight: 400;
+  letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  margin: 0 0 var(--e3); color: var(--senal-neg);
+}
+footer.sitio strong { color: var(--neg-tinta); font-weight: 700; }
+footer.sitio ul { list-style: none; padding: 0; margin: 0; }
+footer.sitio li { margin: .35rem 0; }
+footer.sitio .boton {
+  margin-top: var(--e3); border-color: var(--neg-regla); color: var(--neg-tinta);
+}
+footer.sitio .boton:hover {
+  background: var(--neg-tinta); border-color: var(--neg-tinta); color: var(--neg);
+}
+footer.sitio a { color: var(--neg-tinta-2); text-decoration: none; }
+footer.sitio a:hover { color: var(--senal-neg); }
+.colofon {
+  margin-top: var(--e5); padding-top: var(--e4);
+  border-top: 1px solid var(--neg-regla);
+  font-size: .78rem; line-height: 1.6; color: var(--neg-tinta-2); max-width: 52rem;
+}
+.colofon .mono { color: var(--neg-tinta); letter-spacing: .05em; text-transform: uppercase; }
+.colofon p:last-child { margin-bottom: 0; }
+
+/* --- 7. Botones y enlaces de accion -------------------------------------- */
+/* Cuadrados, sin radio y en versalitas: es un boton de imprenta, no de app. El
+   hover del primario lo desplaza dos pixeles arriba y a la izquierda, que es el
+   unico movimiento de la web que no responde a un dato. */
+.boton {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font: inherit; font-size: .69rem; font-weight: 700;
+  letter-spacing: .11em; text-transform: uppercase;
+  padding: .85rem 1.4rem; border-radius: 0;
+  border: 2px solid var(--tinta); background: transparent; color: var(--tinta);
+  text-decoration: none; cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+.boton:hover { background: var(--tinta); border-color: var(--tinta); color: var(--papel); }
+.boton.primario { background: var(--senal-txt); border-color: var(--senal-txt); color: var(--senal-sobre); }
+.boton.primario:hover {
+  background: var(--tinta); border-color: var(--tinta); color: var(--papel);
+  transform: translate(-2px, -2px);
+}
+.boton .flecha { transition: transform .16s ease; }
+.boton:hover .flecha { transform: translateX(3px); }
+
+.enlace-accion {
+  display: inline-block; text-decoration: none; color: var(--senal-txt);
+  font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  position: relative; padding-bottom: 3px;
+}
+.enlace-accion::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: currentColor; transform: scaleX(0); transform-origin: left;
+  transition: transform .2s ease;
+}
+.enlace-accion:hover { color: var(--senal-txt); }
+.enlace-accion:hover::after { transform: scaleX(1); }
+
+/* --- 8. Bloques con filete (sustituyen a las tarjetas) ------------------- */
+.rejilla { display: grid; gap: var(--e5) var(--e6); grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); }
+.bloque { border-top: 6px solid var(--tinta); padding: var(--e3) 0 var(--e5); }
+.bloque h3 { margin: var(--e2) 0; }
+.bloque p { color: var(--tinta-2); font-size: .9rem; margin: 0 0 var(--e3); }
+.bloque .nivel { display: flex; margin: .35rem 0; }
+.bloque .cifra { margin: .4rem 0; }
+.bloque p:last-child { margin-bottom: 0; }
+/* El numeral del bloque deja de ser un "01" pequeno y pasa a ser la cifra que
+   ordena la seccion, al cuerpo de un titular. */
+.bloque .indice-bloque {
+  display: block;
+  font-family: var(--display); font-weight: 900;
+  font-size: clamp(2.6rem, 5vw, 4rem); line-height: .8;
+  color: var(--senal);
+  font-variant-numeric: tabular-nums;
+}
+/* Dentro de la banda el fondo es el contrario, asi que el naranja tambien. */
+.negativo .bloque .indice-bloque { color: var(--senal-neg); }
+
+/* Cifra: la condensada del titular, en tabulares. Es el dato que manda en esta web
+   y se pinta al cuerpo con el que se pintaria un titular. */
+.cifra {
+  font-family: var(--display); font-weight: 800;
+  letter-spacing: .01em; font-variant-numeric: tabular-nums lining-nums;
+  line-height: .9; display: block;
+}
+.cifra.l  { font-size: clamp(2.2rem, 3.6vw, 3rem); }
+.cifra .unidad {
+  font-family: var(--texto); font-size: .3em; font-weight: 500;
+  color: var(--tinta-3); margin-left: .25em; letter-spacing: 0;
+}
+
+/* --- 9. Portada ---------------------------------------------------------- */
+/* Linea de edicion: el pie de imprenta de la portada, en mono y con el cuadrado
+   que parpadea. Los recuentos ya desfilan arriba; aqui solo queda el sello de que
+   esto es una edicion con fecha. */
+.edicion {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem;
+  padding: 0 0 var(--e5); margin: 0;
+  font-family: var(--mono); font-size: .69rem; letter-spacing: var(--rotulo-esp);
+  text-transform: uppercase; color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+.edicion::before {
+  content: ""; width: 8px; height: 8px; background: var(--senal); flex: none;
+  animation: parpadeo 2.4s ease-in-out infinite;
+}
+.edicion b { color: var(--tinta); font-weight: 700; }
+@keyframes parpadeo { 0%, 100% { opacity: 1; } 50% { opacity: .14; } }
+
+.portada { padding-top: var(--e5); }
+/* El H1 dice la palabra clave entera ("Comparador de suplementos deportivos: precio por
+   kilo y certificacion verificada"). En condensada de cartel cabe entera a un cuerpo que
+   en la serif anterior habria ocupado ocho lineas. */
+.portada h1 {
+  font-size: clamp(2.4rem, 5.4vw, 4.9rem);
+  max-width: 26ch;
+  margin-bottom: var(--e4);
+}
+/* La frase de marca, que antes era el H1. Va encima, como rotulo en mono y en la
+   tinta de senal: se lee primero sin competir con el titular por el tamano. */
+.lema-portada {
+  font-family: var(--mono); font-size: .72rem;
+  letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--senal-txt); margin: 0 0 var(--e3); max-width: 90ch;
+}
+.acciones { display: flex; gap: var(--e3); flex-wrap: wrap; margin-top: var(--e5); }
+
+/* Indice de categorias: lista con filetes, no rejilla de tarjetas. */
+.lista-categorias { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr)); gap: 0 var(--e6); }
+.fila-categoria {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--e3);
+  padding: .85rem 0; border-bottom: 1px solid var(--regla);
+  text-decoration: none; color: var(--tinta);
+  transition: background .14s ease, padding-left .14s ease;
+}
+.fila-categoria:hover { color: var(--tinta); background: var(--papel-3); padding-left: .7rem; }
+.fila-categoria .nombre {
+  font-family: var(--display); font-size: 1.4rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .01em;
+}
+.fila-categoria:hover .nombre { color: var(--senal); }
+.fila-categoria .guia { flex: 1; min-width: 1.5rem; border-bottom: 1px dotted var(--regla-2); translate: 0 -.25em; }
+/* Un nombre largo ("Multivitaminicos") mas su precio y su recuento no caben en una
+   columna de 24rem: en vez de desbordar sobre la columna vecina, el precio baja de
+   linea y sigue alineado a la derecha. */
+.fila-categoria .desde { margin-left: auto; font-variant-numeric: tabular-nums; font-size: .95rem; white-space: nowrap; }
+.fila-categoria .cuenta { color: var(--tinta-3); font-size: .78rem; white-space: nowrap; min-width: 5.5rem; text-align: right; }
+
+/* Los tres atajos de arriba de la tabla (Destacados.astro). Reusan `.bloque`: mismo
+   filete grueso, sin caja ni sombra. */
+.destacados {
+  display: grid; gap: var(--e5) var(--e6); margin: var(--e6) 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+}
+.destacado-bloque h3 { font-size: 1.05rem; line-height: 1.3; }
+.destacado-bloque h3 a { color: inherit; text-decoration: none; }
+.destacado-bloque h3 a:hover { color: var(--senal-txt); }
+.rotulo-destacado {
+  display: block; font-family: var(--mono);
+  font-size: .66rem; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--senal-txt); padding-top: var(--e2);
+}
+.bloque .linea-destacado {
+  display: flex; align-items: flex-end; gap: var(--e3); flex-wrap: wrap;
+  margin: var(--e2) 0 var(--e3);
+}
+.linea-destacado .cifra { font-size: 2.6rem; }
+.linea-destacado .nivel { padding-bottom: .35rem; }
+
+/* --- 10. Niveles, sellos, barras, notas ---------------------------------- */
+.nivel {
+  font-size: .78rem; font-weight: 600; white-space: nowrap;
+  letter-spacing: .04em;
+  display: inline-flex; align-items: center; gap: .45rem;
+}
+/* Los cuatro puntos pasan a ser cuatro barritas: a 5x14 px se cuentan de un
+   vistazo y ocupan lo mismo que una palabra, que es lo que hace que la columna
+   de verificacion se lea sin leerla. */
+.puntos { display: inline-flex; gap: 2px; }
+.puntos i { width: 5px; height: 14px; background: var(--regla); }
+.puntos i.on { background: currentColor; }
+.nivel.n4 { color: var(--n4); } .nivel.n3 { color: var(--n3); }
+.nivel.n2 { color: var(--n2); } .nivel.n1 { color: var(--n1); }
+
+/* El sello va en tinta de senal llena: es la unica etiqueta de la web que afirma
+   algo, y tiene que verse que la pone esta web y no la tienda. */
+.sello {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .14rem .5rem; border: 0;
+  background: var(--senal-txt); color: var(--senal-sobre);
+  font-family: var(--mono); font-size: .66rem; letter-spacing: .04em; text-transform: uppercase;
+  white-space: nowrap; vertical-align: middle;
+}
+.infradosis {
+  display: inline-flex; align-items: center; gap: .3rem;
+  color: var(--alarma); font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; margin-top: .25rem;
+}
+.infradosis::before { content: "\25B2"; font-size: .8em; }
+
+.barra { background: var(--regla); height: 6px; overflow: hidden; }
+.barra > span { display: block; height: 100%; background: var(--tinta); }
+.barra.baja > span { background: var(--alarma); }
+.barra.mini { height: 3px; margin-top: .4rem; }
+
+/* Nota al pie: sustituye a la caja de aviso. */
+.nota {
+  border-top: 2px solid var(--tinta);
+  padding-top: var(--e3); margin: var(--e5) 0;
+  font-size: .85rem; line-height: 1.55; color: var(--tinta-3); max-width: 62rem;
+}
+.nota strong { color: var(--tinta); font-weight: 700; }
+.nota::before { content: "\2020"; color: var(--senal); margin-right: .4rem; font-weight: 700; }
+
+/* --- 11. Tablas ---------------------------------------------------------- */
+.tabla-marco { border-top: 3px solid var(--tinta); }
+.tabla-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+thead th {
+  background: var(--papel);
+  font-size: var(--rotulo-tam); font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  color: var(--tinta-3); text-align: left; padding: .7rem .7rem .55rem;
+  white-space: nowrap; border-bottom: 2px solid var(--tinta);
+}
+/* ponytail: .tabla-scroll (overflow-x:auto) es el scrollport, no el viewport:
+   un top distinto de 0 empuja la cabecera por encima de las filas. */
+.tabla-marco thead th { position: sticky; top: 0; z-index: 2; }
+tbody td { padding: 1.05rem .7rem; border-bottom: 1px solid var(--regla); vertical-align: middle; }
+tbody:last-of-type tr:last-child td { border-bottom: 2px solid var(--tinta); }
+tbody tr { transition: background .12s ease; }
+.tabla-marco tbody tr:hover { background: var(--papel-3); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums lining-nums; }
+.tabla-marco table a { text-decoration: none; }
+.tabla-marco .sello { margin-left: .4rem; }
+/* La nota de cada fila al cuerpo de un titular: es la columna por la que la tabla
+   esta ordenada y tiene que ganar a las otras seis de un vistazo. */
+.tabla-marco .cifra { font-size: 2.1rem; }
+.tabla-marco .barra.mini { display: block; }
+th.rango { width: 3rem; }
+td.puntuacion { min-width: 5.5rem; }
+.marca { font-weight: 700; }
+table.datos { margin: var(--e4) 0; }
+
+/* Enlace de producto: subrayado que crece desde la izquierda. */
+.enlace-producto {
+  background-image: linear-gradient(var(--tinta), var(--tinta));
+  background-size: 0% 1px; background-position: 0 100%; background-repeat: no-repeat;
+  transition: background-size .2s ease;
+}
+tr:hover .enlace-producto, .enlace-producto:hover { background-size: 100% 1px; }
+
+/* El numero de puesto en la condensada: es el otro extremo de la fila y hace pareja
+   con la nota. */
+.puesto {
+  font-family: var(--display); font-weight: 800; font-size: 1.6rem; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--tinta-3);
+}
+.puesto.top { color: var(--senal); }
+.destacado { color: var(--senal-txt); font-weight: 700; }
+td.alarma { box-shadow: inset 3px 0 0 var(--alarma); }
+
+/* Fotos: las sirve la CDN de cada tienda; aqui no se aloja ninguna. Casi todas
+   vienen recortadas sobre blanco, asi que sobre el papel crudo necesitan su
+   propia superficie clara o parecen manchas. */
+.miniatura {
+  width: 55px; height: 55px; flex: 0 0 55px; object-fit: contain;
+  background: #fff; border: 1px solid var(--regla); padding: 2px;
+}
+.con-miniatura { display: flex; align-items: center; gap: .65rem; }
+.celda-producto { min-width: 0; }
+
+.foto-producto { margin: 0 0 var(--e4); }
+.foto-producto img {
+  width: 100%; aspect-ratio: 1; object-fit: contain;
+  background: #fff; border: 2px solid var(--tinta); padding: var(--e3);
+}
+.foto-producto figcaption {
+  margin-top: var(--e2); font-family: var(--mono);
+  font-size: .66rem; letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-3);
+}
+
+/* Linea de resumen: los cuatro numeros de la vieja tira de estadisticas. */
+.resumen {
+  display: flex; flex-wrap: wrap; gap: .3rem var(--e4);
+  font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums; margin: 0 0 var(--e3);
+}
+.resumen b { color: var(--tinta); font-weight: 700; }
+
+/* Titulo de los bloques que antes colgaban del H1 sin nivel intermedio (los tres
+   destacados, la tabla grande). Mismo cuerpo que el resto de H2, menos aire encima:
+   no abre seccion, encabeza la pieza que viene justo debajo. */
+.titulo-bloque {
+  margin: var(--e6) 0 var(--e4); scroll-margin-top: 5.5rem;
+  border-bottom: 3px solid var(--tinta); padding-bottom: var(--e2);
+}
+
+/* Recorte de la tabla: las filas 26 en adelante siguen en el HTML, solo tapadas.
+   El numero va en pareja con TOPE en TablaProductos.jsx. */
+table.recortada tbody tr:nth-child(n+26) { display: none; }
+.ver-mas { margin-top: var(--e4); }
+.volver-arriba {
+  display: inline-block; margin: var(--e4) 0 0 var(--e4);
+  font-family: var(--mono); font-size: .7rem; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tinta-3); text-decoration: none;
+}
+.volver-arriba:hover { color: var(--senal-txt); }
+
+/* Encabezado que ordena. Es un boton de verdad (teclado y lector de pantalla), pero
+   dibujado como la cabecera que ya habia: aqui no cabe un boton con su caja. */
+th button.orden {
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  border-bottom: 1px dotted var(--regla-2);
+}
+th.num button.orden { float: right; }
+th button.orden:hover { color: var(--senal-txt); border-bottom-color: var(--senal); }
+th[aria-sort="ascending"] button.orden { color: var(--tinta); border-bottom: 2px solid var(--senal); }
+th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--senal); }
+
+/* --- 12. Filtros (isla React) -------------------------------------------- */
+.barra-filtros {
+  display: flex; gap: var(--e4) var(--e5); flex-wrap: wrap; align-items: flex-end;
+  padding: var(--e3) 0 var(--e4);
+  border-bottom: 1px solid var(--regla-2);
+  margin-bottom: var(--e4);
+}
+.campo { display: flex; flex-direction: column; gap: .3rem; }
+.campo.ancho { flex: 1 1 13rem; }
+.campo.linea { flex-basis: 100%; }
+.campo input[type="number"] { width: 8rem; }
+.campo > span {
+  font-size: var(--rotulo-tam); letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--tinta-3); font-weight: 700;
+}
+.campo select, .campo input {
+  font: inherit; font-size: .95rem; color: var(--tinta);
+  background: transparent; border: 0; border-bottom: 2px solid var(--tinta);
+  border-radius: 0; padding: .4rem .1rem; min-height: 34px;
+  transition: border-color .15s ease;
+}
+.campo select {
+  appearance: none; padding-right: 1.4rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--tinta) 50%), linear-gradient(135deg, var(--tinta) 50%, transparent 50%);
+  background-position: calc(100% - 9px) 17px, calc(100% - 5px) 17px;
+  background-size: 4px 4px, 4px 4px; background-repeat: no-repeat;
+}
+.campo select:hover, .campo input:hover { border-bottom-color: var(--senal); }
+.campo input::placeholder { color: var(--tinta-3); }
+
+/* Los chips comparten borde: son un mando de botones pegados, no pastillas
+   sueltas. Con el filete colapsado leen como una sola pieza. */
+.grupo-chips {
+  display: flex; flex-wrap: wrap; gap: 0;
+  border: 1px solid var(--regla-2); width: max-content; max-width: 100%;
+}
+.chip {
+  font: inherit; font-size: .66rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--tinta-2); background: transparent;
+  border: 0; border-right: 1px solid var(--regla-2); border-radius: 0;
+  padding: .6rem .9rem; cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+.chip:last-child { border-right: 0; }
+.chip:hover { background: var(--papel-3); color: var(--tinta); }
+.chip[aria-pressed="true"] { background: var(--tinta); color: var(--papel); }
+
+.contador {
+  font-family: var(--mono); font-size: .72rem;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tinta-3); margin: 0 0 var(--e3);
+  font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap;
+}
+.contador b { color: var(--tinta); font-weight: 700; }
+/* El "limpiar filtros" es un chip suelto, no parte del mando: se le devuelve su
+   propio filete, que el grupo le habia quitado. */
+.contador .chip { border: 1px solid var(--regla-2); padding: .35rem .7rem; }
+.vacio {
+  padding: var(--e7) var(--e4); text-align: center; color: var(--tinta-3);
+  font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em;
+}
+
+/* --- 13. Ficha de producto ----------------------------------------------- */
+.disposicion-ficha { display: grid; gap: var(--e5); align-items: start; }
+@media (min-width: 62rem) {
+  .disposicion-ficha { grid-template-columns: minmax(0, 19rem) minmax(0, 1fr); gap: var(--e7); }
+  .disposicion-ficha > .lateral { position: sticky; top: 5.5rem; }
+}
+.ficha-tecnica { margin: 0; border-top: 3px solid var(--tinta); }
+.ficha-tecnica div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e3);
+  padding: .7rem 0; border-bottom: 1px solid var(--regla);
+}
+.ficha-tecnica dt { font-size: .8rem; color: var(--tinta-3); }
+.ficha-tecnica dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.ficha-tecnica .grande dd {
+  font-family: var(--display); font-weight: 800; font-size: 2.2rem; line-height: .9;
+}
+.ficha-tecnica dd small { font-family: var(--texto); font-size: .5em; font-weight: 400; color: var(--tinta-3); }
+.ficha-tecnica dd .nivel { font-weight: 600; }
+.ficha-tecnica dd.suave { font-weight: 500; }
+.ficha-tecnica dd.mono { font-weight: 400; }
+
+/* Los titulares de la ficha bajan un escalon respecto al resto de la web. No es
+   capricho: aqui el h1 es el nombre que pone la tienda, y "Ashwagandha en
+   Comprimidos 2000 mg | 6 Meses de Suministro - 365 Comprimidos Veganos |
+   Withania Somnifera | Alta Potencia | Formato Ahorro | Horbaach" son 150
+   caracteres. A cuerpo de cartel llenaba la pantalla antes de decir el precio. */
+.disposicion-ficha h1 { font-size: clamp(1.6rem, 2.9vw, 2.5rem); max-width: 26ch; }
+.disposicion-ficha h2 { font-size: clamp(1.5rem, 2.4vw, 2.1rem); }
+.disposicion-ficha .sutil { max-width: 34rem; }
+.sellos-ficha { display: flex; flex-wrap: wrap; gap: .4rem; margin: var(--e4) 0 var(--e2); }
+
+.accion-lateral { margin: 0 0 var(--e5); }
+.accion-lateral .boton { width: 100%; justify-content: center; }
+.volver { margin-top: var(--e6); }
+
+.migas {
+  font-family: var(--mono); font-size: .69rem; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--tinta-3); margin: var(--e5) 0 var(--e4);
+}
+.migas a { color: var(--tinta-3); text-decoration: none; }
+.migas a:hover { color: var(--senal-txt); }
+
+/* Desglose de la nota: numerales colgados del margen, en la condensada. */
+.desglose { list-style: none; padding: 0; margin: var(--e4) 0; counter-reset: d; }
+.desglose li {
+  counter-increment: d; position: relative; padding: var(--e4) 0 var(--e4) 3rem;
+  border-bottom: 1px solid var(--regla);
+}
+.desglose li::before {
+  content: counter(d, decimal-leading-zero);
+  position: absolute; left: 0; top: var(--e4);
+  font-family: var(--display); font-weight: 800; font-size: 1.7rem; line-height: 1;
+  color: var(--senal); font-variant-numeric: tabular-nums;
+}
+
+.ingrediente { padding: var(--e5) 0; border-bottom: 1px solid var(--regla); }
+.ingrediente .fila { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e4); flex-wrap: wrap; }
+.ingrediente .nombre {
+  font-family: var(--display); font-size: 1.5rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .01em;
+}
+.ingrediente .dosis { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ingrediente .dosis.falta { color: var(--tinta-3); font-weight: 400; }
+.ingrediente .barra { margin: var(--e3) 0 var(--e2); max-width: 24rem; }
+
+/* --- 14. Metodologia ----------------------------------------------------- */
+.indice ol { list-style: none; padding: 0; margin: var(--e2) 0 0; counter-reset: idx; }
+.indice li { counter-increment: idx; }
+.indice a {
+  display: flex; gap: .6rem; padding: .35rem 0; text-decoration: none;
+  color: var(--tinta-2); font-size: .9rem;
+}
+.indice a::before {
+  content: counter(idx, decimal-leading-zero);
+  font-family: var(--mono); font-size: .72rem; color: var(--senal-txt); flex: none;
+}
+.indice a:hover { color: var(--tinta); }
+.seccion-doc { scroll-margin-top: 5.5rem; }
+.seccion-doc h2 { position: relative; }
+.seccion-doc h2 .num {
+  font-family: var(--mono); font-size: .8rem; font-weight: 400;
+  color: var(--senal-txt); display: block; margin-bottom: var(--e2);
+  letter-spacing: var(--rotulo-esp);
+}
+
+/* La formula, cuando se pinta suelta: en mono y grande, que es como se lee una
+   formula. Va dentro de una banda `.negativo`. */
+.formula {
+  font-family: var(--mono); font-size: clamp(1rem, 2.4vw, 2.1rem);
+  line-height: 1.5; letter-spacing: -.01em; color: var(--neg-tinta); margin: 0;
+}
+.formula em { color: var(--senal-neg); font-style: normal; }
+
+/* --- 15. Animaciones ----------------------------------------------------- */
+.aparece { animation: entra .42s cubic-bezier(.16, .9, .24, 1) both; }
+.d1 { animation-delay: .05s; } .d2 { animation-delay: .11s; }
+.d3 { animation-delay: .17s; } .d4 { animation-delay: .23s; }
+@keyframes entra {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+/* Una sola regla para todo el sitio: quien pide menos animacion no ve ninguna,
+   incluidos el desfile de la tira y el cuadrado que parpadea. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* --- 15b. Respuesta corta y preguntas ------------------------------------- */
+/* Lo que copia un modelo y lo que ensena Google. Filete grueso encima y rotulo en
+   mono: se distingue del resto de la prosa sin ser una caja. */
+.respuesta {
+  border-top: 3px solid var(--tinta);
+  padding-top: var(--e3); margin: 0 0 var(--e5);
+  font-size: 1.05rem; line-height: 1.6; color: var(--tinta-2);
+  max-width: 82ch; text-wrap: pretty;
+}
+.respuesta b {
+  display: block; margin-bottom: var(--e2);
+  font-family: var(--mono); font-weight: 400;
+  font-size: .69rem; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--senal-txt);
+}
+
+.faq dl { margin: 0; }
+.faq dt {
+  font-weight: 700; font-size: 1.02rem; line-height: 1.3;
+  margin: var(--e5) 0 var(--e2); padding-top: var(--e3);
+  border-top: 1px solid var(--regla);
+}
+.faq dt:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.faq dd {
+  margin: 0; color: var(--tinta-2); font-size: .95rem;
+  line-height: 1.6; max-width: var(--medida);
+}
+
+/* --- 16. Movil: la tabla se convierte en anuncios por palabras ------------ */
+/* La regla de esta seccion: en movil no hay raton, hay un dedo de 9 mm y una mano
+   que sujeta el telefono. Nada que se pulse baja de 44 px, nada que se lea baja de
+   12 px y ninguna fila de la tabla se lee como media fila de tabla. */
+@media (max-width: 46rem) {
+  h2 { font-size: 1.8rem; }
+  /* La cabecera de movil son 343 px: el icono de cuenta y el del tema no pueden
+     comerse la marca entre los dos. */
+  header.sitio .envoltorio { padding-right: 2.8rem; }
+  .acceso-cabecera { width: 2.8rem; }
+  .disposicion-ficha h2 { font-size: 1.5rem; }
+
+  /* La marca y cuatro enlaces nunca han cabido en una linea de 343 px. En vez de
+     romper la cabecera en tres filas, en movil son tres cosas y una sola fila:
+     tres rayas, marca y tema. Las secciones se van al panel lateral. */
+  header.sitio .envoltorio {
+    min-height: 0; gap: .25rem; flex-wrap: nowrap; align-items: center;
+    padding-inline: var(--e2);
+  }
+  .tema { margin-left: auto; }
+  .hamburguesa {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: 0; color: var(--tinta);
+    min-height: 44px; min-width: 44px; cursor: pointer;
+  }
+  /* Las tres rayas son tres franjas de fondo en un solo <span>: ni pseudoelementos
+     ni un SVG que cargar. */
+  .hamburguesa span {
+    width: 20px; height: 14px;
+    background:
+      linear-gradient(currentColor, currentColor) 0 0    / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 50%  / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) 0 100% / 100% 2px no-repeat;
+  }
+
+  /* El mismo <nav> de escritorio, sacado a un panel que entra por la izquierda.
+     Fuera de pantalla con `translate` y no con `display`, para que la transicion
+     exista y para que el foco no salte a enlaces invisibles (de eso se encarga
+     `visibility`). */
+  nav.principal {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 60;
+    width: min(19rem, 82vw);
+    flex-direction: column; align-items: stretch; flex-wrap: nowrap;
+    background: var(--papel); border-right: 2px solid var(--tinta);
+    padding-top: var(--e5); overflow-y: auto;
+    visibility: hidden; transform: translateX(-100%);
+    transition: transform .22s ease, visibility .22s;
+  }
+  header.sitio[data-menu] nav.principal { visibility: visible; transform: none; }
+  /* La cortina: tapa la pagina y, al pincharla, el click cae en la cabecera, que es
+     "fuera del menu", que es lo que ya cierra el panel. */
+  header.sitio[data-menu]::after {
+    content: ""; position: fixed; inset: 0; z-index: 55;
+    background: rgba(20, 18, 16, .5);
+  }
+  /* Dentro del panel las pestanas son filas: el filete pasa de vertical a horizontal
+     y el naranja de "Comparar" vuelve, que aqui ya hay sitio para el. */
+  nav.principal > a, .menu-cat > summary {
+    border-left: 0; border-bottom: 1px solid var(--regla);
+    padding-inline: var(--e4); justify-content: space-between;
+  }
+  nav.principal > a.comparar { display: flex; border-bottom: 0; margin-top: var(--e3); }
+  .menu-cat { display: block; }
+  /* La segunda mitad del nombre no se esconde en movil: es parte de la marca, y
+     "FitnessSupplement" a secas no es el nombre de nada. Encoge, que es distinto. */
+  .marca-sitio { font-size: 1.15rem; gap: .4rem; min-height: 40px; }
+  .marca-sitio .fina { font-size: .55rem; padding-bottom: .18rem; }
+  .marca-sitio .glifo { width: 20px; height: 20px; }
+  /* El blanco de 74x28 px del menu lo fallaba el dedo una de cada tres veces. La
+     altura crece hasta 44; el texto no, que ahi no sobra sitio. */
+  nav.principal > a, .menu-cat > summary, .tema { min-height: 44px; }
+  /* En escritorio la lamina cuelga del <summary> como una hoja encima de la pagina.
+     Dentro del panel no cuelga de nada: es una lista mas, empujando lo que tiene
+     debajo, y el panel entero es el que hace scroll. */
+  .menu-cat .lamina {
+    position: static; width: auto; min-width: 0; max-width: none;
+    max-height: none; overflow: visible;
+    border: 0; border-bottom: 1px solid var(--regla); box-shadow: none;
+    background: var(--papel-2); padding: var(--e2) 0;
+    /* Dos columnas de 187 px parten "Aminoacidos esenciales" en dos lineas y
+       reparten treinta nombres en un damero. En una columna se leen de arriba
+       abajo, que es como se lee una lista. */
+    grid-template-columns: 1fr;
+  }
+  .lamina.laminas-grupos { grid-template-columns: 1fr; max-width: none; }
+  .menu-cat .lamina a { padding: .6rem 1rem; min-height: 44px; align-items: center; }
+  .rotulo-menu { font-size: .72rem; }
+
+  /* La tira desfila mas despacio: en 375 px la misma velocidad pasa el doble de
+     texto por segundo por delante del ojo. */
+  .tira > div { animation-duration: 34s; }
+  .tira span { padding: .45rem 1rem; }
+
+  /* Fuera de pantalla por la izquierda, no recortada: el recorte no quita las
+     celdas del ancho del documento y el movil acababa con scroll horizontal.
+     Sigue en el arbol, asi que el lector de pantalla conserva las cabeceras. */
+  table.apilable thead {
+    position: absolute; left: -9999px; top: auto;
+    width: 1px; height: 1px; overflow: hidden; white-space: nowrap;
+  }
+
+  /* Tres tablas distintas se apilan de tres maneras, porque llevan tres cosas
+     distintas dentro. Un solo formato para todas era lo que hacia que la de
+     productos pareciera media tabla rota.
+
+     (a) Base: prosa (metodologia, guias). Una celda por linea, rotulo encima:
+     una frase de tres lineas no cabe al lado de su rotulo en 375 px. */
+  table.apilable tbody tr {
+    display: block; padding: .85rem 0; border-bottom: 1px solid var(--regla);
+  }
+  table.apilable tbody td { display: block; border: 0; padding: .2rem 0; text-align: left; }
+  table.apilable tbody td.num { text-align: left; }
+  table.apilable tbody td[data-et]::before {
+    content: attr(data-et); display: block;
+    font-size: .69rem; font-weight: 700; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+    color: var(--tinta-3);
+  }
+  /* (b) Tablas cuyo primer dato es el nombre de la entrada (tiendas del producto,
+     certificaciones, productos): valores cortos, asi que caben al lado del rotulo.
+     Es la misma ficha tecnica de la pagina de producto, no un formato nuevo. */
+  table.fichas tbody td[data-et],
+  table.apilable:not(.fichas):has(td.principal) tbody td[data-et] {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: var(--e3); padding: .55rem 0; border-top: 1px solid var(--regla); font-size: .92rem;
+  }
+  table.fichas tbody td[data-et]::before,
+  table.apilable:not(.fichas):has(td.principal) tbody td[data-et]::before {
+    display: inline; flex: none;
+  }
+  table.apilable tbody td.principal { margin-bottom: var(--e2); }
+  /* Excepcion: la celda de producto de la tabla de la portada lleva foto, y una foto
+     de 55 px al lado de su rotulo y de dos lineas de nombre no cabe en 340 px. Esa
+     vuelve al formato (a): rotulo encima, contenido debajo. El selector repite la
+     base entera porque la regla de arriba pesa (0,4,4) y con menos no gana. */
+  .ponderador table.apilable:not(.fichas):has(td.principal) tbody td[data-et="Producto"] {
+    display: block; border-top: 1px solid var(--regla); padding: .55rem 0;
+  }
+  .ponderador table.apilable:not(.fichas):has(td.principal) tbody td[data-et="Producto"]::before {
+    display: block; margin-bottom: .35rem;
+  }
+  /* Celda que es solo un enlace (la tienda): el enlace ocupa el alto de su fila, no
+     24 px de texto en medio de 42. En las tablas de prosa no se aplica: una cita de
+     una fuente no es un boton. */
+  table.fichas tbody td[data-et]:has(> a:only-child),
+  table.apilable:not(.fichas):has(td.principal) tbody td[data-et]:has(> a:only-child) {
+    padding-block: 0;
+  }
+  table.fichas tbody td[data-et] > a:only-child,
+  table.apilable:not(.fichas):has(td.principal) tbody td[data-et] > a:only-child {
+    display: inline-flex; align-items: center; min-height: 42px;
+  }
+
+  /* (c) La tabla de productos: siete datos cortos por producto. La fila se
+     convierte en una entrada de anuncios por palabras: numeral colgando del
+     margen (como los de .desglose), nombre, la cifra que manda, y debajo el resto. */
+  table.fichas tbody tr {
+    display: grid; grid-template-columns: 2.4rem 1fr;
+    padding: var(--e4) 0 var(--e3);
+  }
+  table.fichas tbody td { padding: 0; }
+  table.fichas tbody td.puesto { grid-column: 1; grid-row: 1; padding-top: .1rem; font-size: 1.5rem; }
+  table.fichas tbody td.principal { grid-column: 2; grid-row: 1; }
+  table.fichas tbody td[data-et] { grid-column: 2; }
+  /* La foto ancla la ficha: a 55 px se perdia al lado de tres lineas de nombre. */
+  table.fichas .con-miniatura { align-items: flex-start; }
+  table.fichas .miniatura { width: 64px; height: 64px; flex-basis: 64px; }
+  /* El precio por unidad es el argumento entero de esta web: en la ficha de movil
+     no puede ser la tercera linea de una lista de cinco. Sube a la segunda fila y
+     se pinta al cuerpo de un titular, con la condensada. */
+  table.fichas tbody td.referencia {
+    grid-row: 2; border-top: 0; padding: 0 0 .5rem; align-items: center;
+    font-family: var(--display); font-size: 2.1rem; font-weight: 800;
+    letter-spacing: .01em; line-height: 1;
+  }
+  table.fichas tbody td.referencia::before { align-self: center; font-family: var(--texto); }
+  table.fichas tbody td.referencia .sutil { font-family: var(--texto); font-size: .8rem; }
+  /* El precio del envase va pegado al de por unidad: son el mismo dato en dos
+     unidades y separarlos obliga a compararlos de memoria. */
+  table.fichas tbody td[data-et="Envase"] { grid-row: 3; }
+  table.fichas tbody td.puntuacion { align-items: center; }
+  table.fichas tbody td.puntuacion .cifra { margin-left: auto; font-size: 1.8rem; }
+  table.fichas tbody td.puntuacion .barra.mini { width: 3.5rem; flex: none; margin: 0; }
+  table.fichas tbody td.alarma { box-shadow: none; border-left: 3px solid var(--alarma); padding-left: .5rem; }
+
+  .fila-categoria .guia { display: none; }
+  .fila-categoria .cuenta { min-width: 0; }
+
+  /* La banda en negativo sale a sangre: en 375 px, 32 px de papel a cada lado la
+     convierten en una caja, que es justo lo que no es. */
+  .negativo { padding: var(--e5) var(--margen); margin-inline: calc(var(--margen) * -1); }
+
+  /* Cinco campos apilados eran 261 px de formulario antes del primer producto: un
+     tercio de la pantalla gastada en filtros que casi nadie toca. En dos columnas
+     son 140, y el buscador sigue cruzando entero. */
+  .barra-filtros { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3) var(--e4); }
+  .barra-filtros .campo.ancho, .barra-filtros .campo.linea { grid-column: 1 / -1; }
+  .campo input[type="number"] { width: 100%; }
+  /* 16 px es el minimo que no dispara el zoom automatico de iOS al enfocar; 44 px
+     de alto es el minimo que acierta un dedo. */
+  .campo select, .campo input { font-size: 16px; min-height: 44px; }
+  .chip { padding: .72rem .8rem; }
+  /* Cinco chips en dos filas son 105 px de alto para el filtro menos usado de la
+     pagina. En una linea que rueda de lado son 44 y no se pierde ninguno. */
+  .campo.linea .grupo-chips {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    width: auto; border: 0;
+    margin-inline: calc(var(--margen) * -1); padding-inline: var(--margen);
+    scroll-snap-type: x proximity;
+  }
+  .campo.linea .grupo-chips::-webkit-scrollbar { display: none; }
+  .campo.linea .chip {
+    flex: none; scroll-snap-align: start;
+    border: 1px solid var(--regla-2); margin-right: -1px;
+  }
+
+}
+
+/* Pantallas de 320 px (el SE viejo): 21 caracteres de marca mas dos enlaces no caben
+   en una linea por mucho que se encoja la letra, asi que la cabecera pasa a dos filas. */
+@media (max-width: 22rem) {
+  header.sitio .envoltorio { flex-wrap: wrap; padding-block: .4rem; padding-right: var(--margen); }
+  .marca-sitio { margin-right: 0; }
+  nav.principal { width: 100%; }
+  nav.principal > *:first-child > summary, nav.principal > a:first-child { border-left: 0; }
+  /* Aqui el menu son dos filas de 44 px y la cabecera mide 147 de una pantalla de
+     700: un quinto del movil tapado en cada scroll. Las cuatro etiquetas no caben
+     en una fila a un cuerpo legible (harian falta 9,9 px), y esconder enlaces es
+     peor que no tenerlos, asi que lo que se va es el pegado: la cabecera sube con
+     la pagina y devuelve la pantalla entera al contenido. */
+  header.sitio { position: static; }
+  :target { scroll-margin-top: 1rem; }
+  .tabla-marco thead th { position: static; }
+}
+
+/* --- 17. Impresion ------------------------------------------------------- */
+@media print {
+  /* Tambien la tinta: si el lector tiene el sistema en oscuro, sin esto se imprime
+     papel blanco con letra casi blanca. */
+  :root { --papel: #fff; --papel-2: #fff; --papel-3: #eee;
+          --tinta: #000; --tinta-2: #333; --tinta-3: #666;
+          --neg: #fff; --neg-tinta: #000; --neg-tinta-2: #333; --neg-regla: #ccc;
+          --regla: rgba(0,0,0,.2); --regla-2: rgba(0,0,0,.4); }
+  header.sitio, footer.sitio, .tira, .barra-filtros, .acciones, .boton { display: none; }
+  body { font-size: 10pt; }
+  .tabla-scroll { overflow: visible; }
+  .seccion, h2, tbody tr { break-inside: avoid; }
+  .negativo { border: 1px solid #000; }
+  body::before, .buscador, .desplegable-peso { display: none; }
+}
+
+/* ============================================================================
+   18. Portada: la primera pagina del diario.
+   La regla del sistema no cambia (papel, filete, una sola tinta de senal), pero
+   la portada deja de ser una columna de parrafos: titular de cartel, un campo
+   que se puede escribir y una tabla que el lector puede reordenar.
+   ========================================================================= */
+
+/* Grano de papel: una imagen SVG en linea (sin peticion, sin fichero) al 4,5 %
+   de opacidad. A esa fuerza no se ve, se nota; sin ella el papel crudo se queda
+   liso como un fondo de plantilla. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+body > * { position: relative; z-index: 1; }
+
+/* --- 18a. Capa del buscador ---------------------------------------------- */
+/* La portada entera se pone por encima de lo que viene detras: cada seccion animada
+   abre su propia capa de pintado, y sin esto la lamina de resultados quedaba DEBAJO
+   del texto de la seccion siguiente y se veia transparente. */
+.portada { position: relative; z-index: 5; }
+.capa-buscador { position: relative; z-index: 10; margin-top: var(--e5); }
+.capa-buscador .buscador { margin: 0; }
+
+/* --- 18b. Buscador (isla React) ------------------------------------------ */
+.buscador { position: relative; margin: var(--e5) 0; max-width: 40rem; scroll-margin-top: 5.5rem; }
+.buscador-campo {
+  display: flex; align-items: center; gap: .7rem;
+  border: 2px solid var(--tinta);
+  background: var(--papel-2); padding: .1rem .9rem;
+  transition: background .15s ease;
+}
+.buscador-campo:focus-within { background: var(--papel); }
+.buscador-campo .lupa { color: var(--tinta); flex: none; }
+.buscador-campo:focus-within .lupa { color: var(--senal); }
+.buscador-campo input {
+  flex: 1; min-width: 0; font: inherit; font-size: 1rem; color: var(--tinta);
+  background: transparent; border: 0; outline: none; padding: .9rem 0;
+  appearance: none;
+}
+.buscador-campo input::placeholder { color: var(--tinta-3); }
+.buscador-campo input::-webkit-search-cancel-button { appearance: none; }
+.atajo {
+  font-family: var(--mono); font-size: .7rem; color: var(--tinta-3);
+  border: 1px solid var(--regla-2); padding: .05rem .45rem; line-height: 1.4;
+}
+.buscador-campo:focus-within .atajo { opacity: 0; }
+
+.buscador-lamina {
+  position: absolute; top: calc(100% + .4rem); left: 0; right: 0; z-index: 30;
+  background: var(--papel); border: 2px solid var(--tinta);
+  box-shadow: 9px 9px 0 rgba(20, 18, 16, .13);
+  max-height: min(60vh, 27rem); overflow-y: auto;
+  animation: entra .16s ease both;
+}
+.buscador-pista { padding: var(--e3) var(--e4) var(--e4); }
+.buscador-pista .rotulo { margin-bottom: var(--e2); }
+.buscador-pista .sutil { margin: var(--e3) 0 0; font-size: .78rem; }
+.buscador-vacio { padding: var(--e4); margin: 0; font-size: .9rem; color: var(--tinta-2); }
+
+.resultado {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--e3); padding: .6rem .9rem;
+  text-decoration: none; color: var(--tinta);
+  border-bottom: 1px solid var(--regla);
+  box-shadow: inset 4px 0 0 transparent;
+  transition: background .12s ease, box-shadow .12s ease, padding-left .12s ease;
+}
+.resultado:last-child { border-bottom: 0; }
+.resultado.activo {
+  background: var(--papel-3); box-shadow: inset 4px 0 0 var(--senal);
+  color: var(--tinta); padding-left: 1.35rem;
+}
+/* Las tres piezas llevan fila Y columna escritas. Con solo la fila, el reparto
+   automatico de grid coloca `.cola` en la PRIMERA pasada (los que traen fila
+   definida van antes que los que no traen nada), se queda con la columna 1 y
+   manda el nombre a la derecha: la lamina salia del reves y con el nombre
+   pisando la linea de abajo. */
+.resultado .linea1 {
+  grid-column: 1; grid-row: 1;
+  font-size: .95rem; line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.resultado .linea2 {
+  grid-column: 1; grid-row: 2;
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  font-size: .74rem; color: var(--tinta-3); margin-top: .2rem;
+  min-width: 0;
+}
+.resultado .cola {
+  grid-column: 2; grid-row: 1 / span 2;
+  display: flex; align-items: baseline; gap: .6rem;
+  align-self: center; justify-content: flex-end;
+  font-size: .8rem; font-variant-numeric: tabular-nums; color: var(--tinta-3);
+  white-space: nowrap;
+}
+/* La nota, al lado del precio y no debajo: en dos lineas la fila crecia a 60 px y
+   siete resultados no cabian en la lamina sin scroll. Vacia no ocupa (los
+   productos sin nota no dejan un hueco donde deberia haber un numero). */
+.resultado .cola b {
+  font-family: var(--display); font-weight: 800;
+  font-size: 1.55rem; line-height: .9; color: var(--tinta);
+}
+.resultado .cola b:empty { display: none; }
+.resultado.categoria { align-items: baseline; background: var(--papel-2); }
+.resultado.categoria .linea1 {
+  font-family: var(--display); font-size: 1.25rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .01em;
+}
+.resultado.categoria .cola { grid-row: 1 / -1; font-size: .76rem; }
+.resultado.categoria.activo { background: var(--papel-3); }
+
+/* --- 18c. Mando del score: plegado bajo el buscador ---------------------- */
+/* <details> nativo: abrir y cerrar sin una linea de JavaScript, igual que el menu de
+   categorias de la cabecera. Cerrado es una linea de nada; abierto, el mando. */
+.desplegable-peso { margin-top: var(--e3); }
+.desplegable-peso > summary {
+  display: inline-flex; align-items: center; gap: .55rem; flex-wrap: wrap;
+  list-style: none; cursor: pointer;
+  padding: .7rem 1rem; border: 2px solid var(--tinta); border-radius: 0;
+  background: transparent; color: var(--tinta);
+  transition: background .15s ease, color .15s ease;
+}
+.desplegable-peso > summary::-webkit-details-marker { display: none; }
+.desplegable-peso > summary::before {
+  content: "\25B8"; color: var(--senal); font-size: .8em;
+  transition: transform .18s ease; transform-origin: 40% 55%;
+}
+.desplegable-peso > summary:hover { background: var(--papel-3); }
+/* Abierto, el boton se queda pulsado: fondo tinta, para que se vea de un vistazo que
+   lo de debajo cuelga de el. */
+.desplegable-peso[open] > summary { background: var(--tinta); color: var(--papel); }
+.desplegable-peso[open] > summary::before { transform: rotate(90deg); color: var(--papel); }
+.desplegable-peso[open] > summary .pista-desplegable {
+  color: var(--papel-3); border-left-color: rgba(239, 237, 230, .35);
+}
+.titulo-desplegable {
+  font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+}
+.pista-desplegable {
+  font-family: var(--mono); font-size: .7rem; color: var(--tinta-3);
+  padding-left: .65rem; border-left: 1px solid var(--regla-2);
+  font-variant-numeric: tabular-nums;
+}
+.panel-peso {
+  margin-top: var(--e3);
+  padding: var(--e4) 0;
+  border-top: 1px solid var(--regla);
+  animation: entra .2s ease both;
+}
+.panel-peso .sutil { margin: 0 0 var(--e4); max-width: 44rem; }
+.panel-peso .grupo-chips { margin-top: var(--e4); }
+
+.mando { display: flex; align-items: center; gap: var(--e4); max-width: 34rem; }
+.mando .extremo {
+  font-size: var(--rotulo-tam); font-weight: 700;
+  letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  color: var(--tinta-3); line-height: 1.25; white-space: nowrap;
+}
+.mando .extremo.der { text-align: right; }
+.mando .extremo b {
+  font-family: var(--display); font-weight: 800; font-size: 2rem;
+  letter-spacing: .01em; text-transform: none;
+  color: var(--tinta); font-variant-numeric: tabular-nums;
+}
+.mando .extremo.der b { color: var(--senal); }
+/* Barra de reglaje: filete de 3px y pulsador rectangular. Ni pista redondeada ni
+   bolita azul del navegador; esto sigue siendo papel. */
+.mando input[type="range"] {
+  flex: 1; appearance: none; background: transparent; margin: 0; height: 28px;
+  cursor: ew-resize;
+}
+.mando input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: var(--regla-2); }
+.mando input[type="range"]::-moz-range-track { height: 3px; background: var(--regla-2); }
+.mando input[type="range"]::-webkit-slider-thumb {
+  appearance: none; width: 14px; height: 26px; margin-top: -12px;
+  background: var(--senal); border: 0; border-radius: 0;
+  transition: transform .12s ease;
+}
+.mando input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 26px; background: var(--senal); border: 0; border-radius: 0;
+}
+.mando input[type="range"]:hover::-webkit-slider-thumb { transform: scaleY(1.12); }
+
+/* La fila que cambia de lider se marca por dentro (fondo y filete interior) para
+   que la tabla no baile al mover la barra. */
+.tabla-marco tbody tr.cambiada { background: var(--senal-piel); }
+.tabla-marco tbody tr.cambiada td:first-child { box-shadow: inset 3px 0 0 var(--senal); }
+.marca-cambio {
+  margin-left: .5rem; font-family: var(--mono);
+  font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--senal-txt); vertical-align: .1em;
+}
+.ponderador .contador { margin-bottom: var(--e3); }
+
+/* --- 18d. Ficha de categoria dentro de la tabla de lideres --------------- */
+/* Antes esto era una segunda lista con las mismas treinta categorias debajo de la
+   tabla: los mismos nombres, dos veces, con el ojo yendo y viniendo entre las dos
+   para cruzar "quien gana" con "de que a que precio va la categoria". Ahora cada
+   categoria es un <tbody> de dos filas: el lider arriba y su horquilla debajo. */
+.ponderador tbody.grupo-cat { border-bottom: 1px solid var(--regla-2); }
+/* Las dos filas se subrayan juntas: son una sola ficha partida en dos. */
+.ponderador tbody.grupo-cat:hover tr { background: var(--papel-3); }
+/* Dentro del grupo no hay filete: el que separa esta en el <tbody>. Y el aire de
+   arriba y de abajo es lo que hace que treinta fichas seguidas no sean una pared. */
+.ponderador tbody td { border-bottom: 0; padding: .45rem .7rem; }
+.ponderador tbody .cabecera-cat td { padding: var(--e5) .7rem .55rem; }
+.ponderador tbody .detalle-cat td { padding: .35rem .7rem var(--e5); }
+
+/* El rotulo de la ficha: condensada de titular en versales, con un bloque de tinta
+   colgando por la izquierda que hace de numeral de imprenta. No lleva la tinta de
+   senal porque son treinta seguidos y el acento se gasta en un par de sitios, no en
+   treinta; la reserva para cuando el raton pasa por encima. */
+.ponderador .cabecera-cat a {
+  display: inline-flex; align-items: center; gap: .6rem;
+  text-decoration: none; color: var(--tinta);
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(1.5rem, 2.3vw, 2.05rem); line-height: 1;
+  text-transform: uppercase; letter-spacing: .01em;
+}
+.ponderador .cabecera-cat a i { width: 8px; height: 1em; background: var(--tinta); flex: none; }
+.ponderador .cabecera-cat a .flecha {
+  font-size: .55em; color: var(--tinta-3);
+  transition: transform .18s ease, color .18s ease;
+}
+.ponderador .cabecera-cat a:hover { color: var(--senal-txt); }
+.ponderador .cabecera-cat a:hover i { background: var(--senal); }
+.ponderador .cabecera-cat a:hover .flecha { transform: translateX(4px); color: var(--senal-txt); }
+.ponderador .cabecera-cat .marca-cambio { vertical-align: .5em; }
+.ponderador .detalle-cat .meta-cat { margin: 0 0 .55rem; }
+.ponderador .detalle-cat .horquilla { margin: 0; max-width: 42rem; }
+.meta-cat {
+  margin: .5rem 0 var(--e4); font-family: var(--mono);
+  font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+.meta-cat b { color: var(--tinta); font-weight: 700; }
+
+/* La horquilla: del mas barato al mas caro de la categoria, con la mediana marcada.
+   Es el argumento de esta web dibujado. El degradado va del verde del nivel 4 al
+   naranja de senal: barato a la izquierda, caro a la derecha. */
+.horquilla { margin: 0 0 var(--e4); }
+.regla { position: relative; height: 10px; }
+.regla .tramo {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, var(--n4), var(--n2) 52%, var(--senal));
+}
+.regla .marca-mediana {
+  position: absolute; top: -4px; width: 2px; height: 18px; background: var(--tinta);
+}
+.regla .marca-lider {
+  position: absolute; top: -6px; width: 4px; height: 22px; margin-left: -1px;
+  background: var(--tinta); box-shadow: 0 0 0 2px var(--papel);
+  transition: transform .18s ease;
+}
+.ponderador tbody.grupo-cat:hover .regla .marca-lider { transform: scaleY(1.2); }
+.horquilla .pies {
+  display: flex; justify-content: space-between; gap: var(--e2);
+  margin: .7rem 0 0; font-size: .76rem; color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+.horquilla .pies b { color: var(--tinta); font-weight: 700; }
+.horquilla .pies .sutil { font-size: .74rem; }
+
+/* --- 18f. Portada en movil ----------------------------------------------- */
+@media (max-width: 46rem) {
+  .capa-buscador { margin-top: var(--e4); }
+  /* Menos de 16px en un campo y iOS hace zoom al enfocarlo. */
+  .buscador-campo input { font-size: 16px; }
+  /* El atajo de teclado no existe en un movil: quitarlo devuelve el ancho al campo. */
+  .buscador-campo .atajo { display: none; }
+  .buscador-lamina { box-shadow: none; }
+  .resultado { padding: .7rem .9rem; }
+  .pista-desplegable { margin-left: 0; flex-basis: 100%; padding-left: 0; border-left: 0; }
+  .mando { flex-wrap: wrap; }
+  /* Un pulsador de 14x26 px se arrastra con el raton, no con el pulgar. */
+  .mando input[type="range"] { height: 36px; }
+  .mando input[type="range"]::-webkit-slider-thumb { width: 18px; height: 30px; margin-top: -14px; }
+  .mando input[type="range"]::-moz-range-thumb { width: 18px; height: 30px; }
+  .linea-destacado .cifra { font-size: 2.2rem; }
+}
+
+
+/* ============================================================================
+   19. Suelo movil: lo que ninguna regla de arriba puede bajar.
+
+   Va al final a proposito. Este bloque estaba dentro de la seccion 16 y las
+   secciones 17 y 18 (que van despues y tienen la misma especificidad) le pasaban
+   por encima: los rotulos del mando y del desplegable del peso se quedaban en
+   11 px y los blancos de toque en 20-39. Aqui gana el ultimo, que es este.
+
+   Dos reglas, y no son negociables:
+   - **Nada que se lea baja de 11,5 px.** En un 27" a medio metro un rotulo de
+     10 px se lee; en un movil a pulso y con sol, no.
+   - **Nada que se pulse baja de 44 px de alto.** Es el ancho de la yema de un
+     dedo adulto; por debajo se falla y se pulsa lo de al lado.
+   ========================================================================= */
+@media (max-width: 46rem) {
+  /* --- Suelo de tamano ---------------------------------------------------- */
+  .rotulo, .rotulo-destacado, .campo > span, .mando .extremo,
+  .edicion, .lema-portada, .cabecera-seccion .apunte, .antetitulo,
+  .titulo-desplegable, .pista-desplegable, .respuesta b, .migas,
+  .meta-cat, .resumen, .contador, .volver-arriba, .rotulo-menu,
+  .colofon .mono, .tira, .foto-producto figcaption, thead th,
+  table.apilable tbody td[data-et]::before { font-size: .72rem; }
+  .mono, .sutil .mono, td.num .sutil, .cifra .unidad, .sello,
+  .horquilla .pies, .horquilla .pies .sutil, .atajo, .marca-cambio { font-size: .74rem; }
+  footer.sitio h4, .seccion-doc h2 .num, .indice a::before { font-size: .72rem; }
+  /* Los botones y los chips llevan versalitas de .69rem: en escritorio se leen, a
+     pulso no. Suben con el resto. */
+  .boton, .chip, .enlace-accion, .titulo-desplegable { font-size: .73rem; }
+  /* La segunda mitad de la marca se quedaba en 8,8 px, que es un adorno, no una
+     palabra. Si no se puede leer, no es parte del nombre. */
+  .marca-sitio { font-size: 1.28rem; }
+  .marca-sitio .fina { font-size: .72rem; letter-spacing: .12em; padding-bottom: .16rem; }
+  /* Las pestanas del menu pierden las versalitas: "CATEGORIAS" con tracking mide
+     90 px y las cuatro no caben en una fila de 357. En caja baja miden 62 y caben
+     de sobra, con la flecha del desplegable puesta y a un cuerpo que se lee. */
+  nav.principal > a, .menu-cat > summary, .tema {
+    font-size: .78rem; letter-spacing: 0; text-transform: none; font-weight: 600;
+  }
+
+  /* --- Suelo de toque ----------------------------------------------------- */
+  /* El enlace de la categoria es el titular de su ficha y median 24 px de alto. */
+  .ponderador .cabecera-cat a { min-height: 44px; }
+  /* El nombre del producto. En la tabla de categoria el enlace cuelga de un div
+     (.celda-producto lleva ademas sabores, sello y aviso de infradosis) y en la de
+     la portada es el div mismo: los dos casos, un selector cada uno. */
+  .celda-producto > a,
+  a.celda-producto { display: flex; align-items: center; min-height: 44px; }
+  .enlace-accion { display: inline-flex; align-items: center; min-height: 44px; }
+  .chip { min-height: 44px; }
+  /* El pulsador del mando se arrastra con el pulgar, no con el raton. */
+  .mando input[type="range"] { height: 44px; }
+  .mando input[type="range"]::-webkit-slider-thumb { margin-top: -18px; }
+  /* Enlaces sueltos de lista (pie, indices, migas): la linea de texto mide 24. */
+  footer.sitio li a, .indice a, .fila-indice { display: flex; align-items: center; min-height: 44px; }
+}
+
+/* --- 19. Resenas de lectores (isla React) -------------------------------- */
+/* Unico bloque de la web donde el lector escribe. Se mantiene en la misma tinta y
+   los mismos filetes que el resto: es una seccion mas del diario, no un widget
+   pegado encima. Nada aqui inventa color: todo sale de los tokens. */
+.resenas { margin-top: var(--e4); }
+
+.media-lectores {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--e2) var(--e3);
+  border-bottom: 2px solid var(--tinta); padding-bottom: var(--e2); margin-bottom: var(--e4);
+}
+.num-media {
+  font-family: var(--display); font-size: clamp(2.4rem, 7vw, 3.4rem);
+  line-height: .8; font-weight: 700; letter-spacing: -.01em;
+}
+.de5 { font-family: var(--display); font-size: 1.3rem; color: var(--tinta-3); }
+.astros { color: var(--senal-txt); letter-spacing: .08em; }
+
+.form-resena {
+  border: 2px solid var(--regla-2); background: var(--papel-2);
+  padding: var(--e4); margin-bottom: var(--e5);
+}
+.form-resena .quien {
+  display: flex; gap: var(--e3); flex-wrap: wrap; align-items: center;
+  margin: 0 0 var(--e4); font-size: .92rem;
+}
+/* El "salir" y el "no tengo cuenta" son enlaces de accion, no botones de formulario:
+   comparten aspecto con los "ver en la tienda" de las tablas. */
+.form-resena .quien button {
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+}
+.rejilla-acceso { display: flex; flex-wrap: wrap; gap: var(--e4) var(--e5); }
+.form-resena .campo { margin-bottom: var(--e4); }
+.form-resena textarea {
+  font: inherit; font-size: .95rem; color: var(--tinta); background: var(--papel);
+  border: 1px solid var(--regla-2); border-radius: 0; padding: var(--e2); resize: vertical;
+}
+.form-resena textarea:focus-visible { outline: 2px solid var(--senal); outline-offset: 1px; }
+.form-resena input[type="file"] { font-size: .85rem; color: var(--tinta-2); }
+
+/* Cinco botones pegados, como el grupo de chips: es un mando, no cinco pastillas. */
+.mando-estrellas { display: flex; gap: 0; }
+.astro {
+  background: none; border: 0; padding: 0 .1rem; cursor: pointer;
+  font-size: 1.9rem; line-height: 1.2; color: var(--regla-2);
+  transition: color .12s ease, transform .12s ease;
+}
+.astro.on { color: var(--senal-txt); }
+.astro:hover { transform: translateY(-2px); }
+
+.fallo-form {
+  border-left: 3px solid var(--alarma); padding-left: var(--e2);
+  color: var(--alarma); font-size: .9rem; margin: var(--e3) 0;
+}
+
+.lista-resenas { list-style: none; margin: 0; padding: 0; }
+.resena { border-top: 1px solid var(--regla); padding: var(--e4) 0; }
+.cabecera-resena {
+  display: flex; gap: var(--e3); flex-wrap: wrap; align-items: baseline; margin: 0 0 var(--e2);
+}
+.marca-mia {
+  font-size: var(--rotulo-tam); letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+  font-weight: 700; color: var(--senal-txt);
+}
+.texto-resena { margin: 0 0 var(--e3); max-width: var(--medida); }
+/* La foto la sube el lector y llega en cualquier proporcion: se limita el alto para
+   que un retrato de movil no ocupe tres pantallas dentro de la lista. */
+.foto-resena {
+  max-width: min(100%, 22rem); max-height: 20rem; width: auto;
+  border: 1px solid var(--regla-2); display: block;
+}
+
+@media (max-width: 640px) {
+  .rejilla-acceso { flex-direction: column; gap: var(--e4); }
+  /* Suelo de toque: las estrellas se pulsan con el pulgar. */
+  .astro { min-width: 44px; min-height: 44px; }
+  .form-resena .quien button { min-height: 44px; }
+}
+
+/* --- 20. Paginas de acceso (/entrar y /registro) ------------------------- */
+/* Un carne de socio, no una caja de login centrada. La pagina se parte en dos como se
+   parte una hoja del diario: a la izquierda el margen impreso (rotulo, titular de
+   cartel y las tres cosas para las que sirve la cuenta, numeradas) y a la derecha la
+   ficha que se rellena, sobre papel y con la sombra dura de la casa.
+   En movil se apilan en el orden en que se leen: titular, ficha, y el sumario al
+   final, que es lo unico que se puede saltar.
+   Nada de esto inventa color ni forma: los mismos tokens, el mismo filete de 2px y el
+   mismo mando de botones pegados que la tabla. */
+.pagina-acceso { margin: var(--e5) 0 var(--e8); }
+.acceso-doble {
+  display: grid; align-items: start;
+  gap: var(--e5) var(--e7);
+  grid-template-columns: 1fr;
+  grid-template-areas: "titular" "ficha" "sumario";
+}
+@media (min-width: 64rem) {
+  .acceso-doble {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+    grid-template-areas: "titular ficha" "sumario ficha";
+  }
+}
+/* Ojo: `.acceso-cabecera` ya es el icono de cuenta de la cabecera, y va absoluto:
+   reusar ese nombre aqui sacaba la columna de la rejilla. */
+.acceso-titular { grid-area: titular; }
+.acceso-ficha    { grid-area: ficha; }
+.sumario-acceso  { grid-area: sumario; }
+
+.pagina-acceso h1 { font-size: clamp(3rem, 8vw, 5.2rem); line-height: .8; margin-bottom: var(--e3); }
+.pagina-acceso .entradilla { font-size: 1rem; max-width: 34rem; margin-bottom: 0; }
+
+/* El sumario: para que sirve la cuenta, en tres lineas numeradas. Las cifras van en la
+   condensada y en naranja, como las de las tablas: aqui tambien son el dato. */
+.sumario-acceso { list-style: none; margin: 0; padding: 0; border-top: 3px solid var(--tinta); }
+.sumario-acceso li {
+  display: grid; grid-template-columns: 2.9rem 1fr; gap: var(--e3);
+  padding: var(--e3) 0; border-bottom: 1px solid var(--regla);
+}
+.sumario-acceso .n {
+  font-family: var(--display); font-weight: 900; font-size: 2.1rem; line-height: .8;
+  color: var(--senal); font-variant-numeric: tabular-nums;
+}
+.sumario-acceso b {
+  display: block;
+  font-size: var(--rotulo-tam); font-weight: 700;
+  letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+}
+.sumario-acceso p { margin: .3rem 0 0; font-size: .88rem; color: var(--tinta-2); }
+
+/* La ficha: papel encima de papel, con la sombra dura y desplazada. En oscuro la
+   sombra clara no se ve, asi que ahi es negra: es la misma pieza, no otra. */
+.acceso-ficha {
+  position: relative;
+  border: 2px solid var(--tinta); background: var(--papel-2);
+  box-shadow: 9px 9px 0 rgba(20, 18, 16, .13);
+}
+:root[data-tema="oscuro"] .acceso-ficha { box-shadow: 9px 9px 0 rgba(0, 0, 0, .5); }
+
+/* El sello de la esquina: el unico elemento de la web que se sale de la cuadricula, y
+   por eso se gasta aqui y en ningun otro sitio. Se cae en movil, donde no hay margen
+   del que salirse sin tapar el titular. */
+.sello-acceso {
+  position: absolute; top: -1.05rem; right: -1.05rem; z-index: 2;
+  transform: rotate(-7deg);
+  font-family: var(--mono); font-size: .62rem; line-height: 1.25;
+  letter-spacing: .12em; text-transform: uppercase; text-align: center;
+  color: var(--senal-txt); background: var(--papel);
+  border: 2px solid var(--senal-txt); padding: .4rem .65rem;
+}
+@media (max-width: 63.99rem) { .sello-acceso { display: none; } }
+
+/* Las dos pestanas, pegadas y compartiendo filete como el grupo de chips. La activa va
+   en tinta llena, igual que el desplegable de categorias cuando esta abierto. */
+.mando-acceso { display: grid; grid-template-columns: 1fr 1fr; }
+.mando-acceso button {
+  font: inherit; font-size: .7rem; font-weight: 700;
+  letter-spacing: .11em; text-transform: uppercase;
+  min-height: 46px; padding: .9rem .6rem;
+  background: transparent; color: var(--tinta-3);
+  border: 0; border-bottom: 2px solid var(--tinta); border-radius: 0;
+  cursor: pointer; transition: background .16s ease, color .16s ease;
+}
+.mando-acceso button + button { border-left: 2px solid var(--tinta); }
+.mando-acceso button:hover { color: var(--tinta); }
+.mando-acceso button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); }
+
+.acceso-cuerpo { padding: var(--e4); }
+.acceso .campo { margin-bottom: var(--e4); }
+.acceso .campo input:focus-visible { outline: 2px solid var(--senal); outline-offset: 2px; }
+/* Sin este envoltorio el filete del campo se partiria en dos al meter el "Ver": el
+   borde pasa al envoltorio y el pulsador queda dentro de la misma linea. */
+.campo-clave {
+  display: flex; align-items: center; gap: .4rem;
+  border-bottom: 2px solid var(--tinta); transition: border-color .15s ease;
+}
+.campo-clave:hover, .campo-clave:focus-within { border-bottom-color: var(--senal); }
+.campo-clave input { flex: 1 1 auto; min-width: 0; border-bottom: 0; }
+.ver-clave {
+  flex: none; background: none; border: 0; cursor: pointer;
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--tinta-3); padding: .35rem .15rem;
+}
+.ver-clave:hover, .ver-clave[aria-pressed="true"] { color: var(--senal-txt); }
+
+/* Boton de Google. Lleva sus colores porque son los de Google: es el unico sitio de la
+   web donde el color no lo decide esta paleta, y cambiarlo hace que el boton deje de
+   reconocerse por lo que es. El resto (filete recto, versales) sigue siendo de la casa.
+   Sale siempre; sin credenciales sale apagado y con la razon debajo. */
+.boton-google {
+  display: flex; align-items: center; justify-content: center; gap: .7rem;
+  width: 100%; min-height: 46px; padding: .7rem 1rem;
+  background: var(--papel); color: var(--tinta);
+  border: 2px solid var(--tinta); border-radius: 0; text-decoration: none;
+  font: inherit; font-size: .72rem; font-weight: 700;
+  letter-spacing: .11em; text-transform: uppercase; cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+.boton-google:hover { background: var(--tinta); color: var(--papel); }
+.boton-google svg { flex: none; }
+.boton-google[disabled] { opacity: .55; cursor: not-allowed; }
+.boton-google[disabled]:hover { background: var(--papel); color: var(--tinta); }
+.nota-google { margin: var(--e2) 0 0; }
+
+/* "o con tu correo" partiendo un filete por la mitad. */
+.separador-o {
+  display: flex; align-items: center; gap: var(--e3);
+  margin: var(--e4) 0; color: var(--tinta-3);
+  font-size: var(--rotulo-tam); letter-spacing: var(--rotulo-esp); text-transform: uppercase;
+}
+.separador-o::before, .separador-o::after {
+  content: ""; flex: 1; height: 1px; background: var(--regla-2);
+}
+
+.acciones-acceso {
+  display: flex; align-items: center; gap: var(--e4); flex-wrap: wrap;
+  margin: 0 0 var(--e3);
+}
+.acciones-acceso button.enlace-accion {
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+}
+/* El de enviar ocupa la ficha entera: es la unica accion que queda dentro. */
+.acceso-cuerpo .acciones-acceso .boton.primario {
+  width: 100%; justify-content: center; min-height: 48px;
+}
+/* La letra pequena del registro, separada por un filete como el pie de una nota. */
+.acceso .letra-pequena {
+  margin: var(--e4) 0 0; padding-top: var(--e3); border-top: 1px solid var(--regla);
+}
+
+/* Los dos estados sin formulario: esperando a /api/yo y con la sesion ya abierta. */
+.acceso-espera, .acceso-dentro {
+  border: 2px solid var(--regla-2); background: var(--papel-2); padding: var(--e4);
+}
+.acceso-espera p, .acceso-dentro .acciones-acceso { margin-bottom: 0; }
+.nombre-dentro {
+  font-family: var(--display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: .85; margin: 0 0 var(--e4);
+}
+
+/* Suelo movil (ver seccion 19): esta seccion va detras, asi que se lo pone ella. */
+@media (max-width: 46rem) {
+  .mando-acceso button, .boton-google { font-size: .74rem; }
+  .ver-clave { font-size: .74rem; min-height: 44px; padding-inline: .5rem; }
+  .sumario-acceso b { font-size: .72rem; }
+}
+
+/* --- 24. Historico de precios y coste al mes ------------------------------- */
+/* El grafico se dibuja en el build (componentes/Historico.astro): dos trazos de SVG,
+   ninguna libreria. `preserveAspectRatio: none` en el SVG hace que la escalera se
+   estire con el ancho de la columna; el grosor del trazo se compensa con
+   vector-effect para que no engorde al estirarse. */
+.historico { margin: var(--e6) 0; }
+.grafico-precio {
+  width: 100%; height: 120px; display: block; margin: var(--e3) 0;
+  border: 2px solid var(--regla-2); background: var(--papel-2);
+}
+.grafico-precio .linea {
+  fill: none; stroke: var(--senal); stroke-width: 2.5; vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
+}
+.grafico-precio .suelo {
+  stroke: var(--regla-2); stroke-width: 1; stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+/* El coste al mes, debajo del boton de la tienda: el numero en el que piensa quien
+   compra, pegado a lo que va a pulsar. */
+.accion-lateral .sutil { display: block; margin-top: var(--e2); text-align: center; }
+/* El aviso de que los precios llevan dias sin refrescarse. Va sobre banda de senal
+   porque es lo unico de la pagina que el lector tiene que ver antes que el contenido:
+   comparar con precios viejos es justo lo que esta web promete no hacer. */
+.aviso-caducado {
+  margin: 0; padding: var(--e3) var(--e4); text-align: center; font-size: .86rem;
+  background: var(--senal-piel); color: var(--tinta);
+  border-bottom: 2px solid var(--senal);
+}
+
+/* La nube de precio contra calidad de cada categoria (componentes/Dispersion.astro).
+   Dibujada en el build: aqui solo viven los colores, para que cambie con el tema. */
+.dispersion { margin: var(--e5) 0; }
+.dispersion svg {
+  width: 100%; height: auto; display: block;
+  border: 2px solid var(--regla-2); background: var(--papel-2);
+}
+.dispersion .reja { stroke: var(--regla); stroke-width: 1; }
+.dispersion .rotulo {
+  fill: var(--tinta-3); font-family: var(--mono); font-size: 11px;
+}
+.dispersion .punto { fill: var(--tinta-2); opacity: .55; }
+.dispersion .punto.lider { fill: var(--senal); opacity: 1; }
+.dispersion figcaption {
+  font-size: .82rem; color: var(--tinta-3); margin-top: var(--e2); max-width: 62ch;
+}
+.dispersion figcaption b { color: var(--tinta); }
+
+/* --- 25. Guardar para comparar -------------------------------------------- */
+/* El boton de cada fila y la barra que aparece abajo cuando hay algo guardado. */
+.marcar {
+  display: inline-block; margin-top: var(--e1); padding: .15rem .45rem;
+  font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--tinta-3);
+  background: none; border: 1px solid var(--regla-2); cursor: pointer;
+}
+.marcar:hover { color: var(--senal-txt); border-color: var(--senal); }
+.marcar[aria-pressed="true"] {
+  color: var(--senal-sobre); background: var(--senal); border-color: var(--senal);
+}
+/* Fija abajo, centrada y por encima de todo: es el unico elemento de la pagina que
+   tiene que seguir al lector mientras recorre 200 filas. */
+.barra-comparar {
+  position: sticky; bottom: var(--e3); z-index: 20;
+  display: flex; gap: var(--e4); align-items: center; justify-content: space-between;
+  flex-wrap: wrap; margin: var(--e4) auto 0; max-width: 44rem;
+  padding: var(--e3) var(--e4);
+  background: var(--neg); color: var(--neg-tinta); border: 2px solid var(--tinta);
+}
+.barra-comparar b { font-family: var(--display); font-size: 1.4rem; line-height: 1; }
+.barra-comparar .boton { margin: 0; }
+
+/* La tabla de /comparar: una columna por producto, una fila por dato. */
+.bloque-comparativa { margin: var(--e6) 0; }
+table.comparativa th[scope="row"] {
+  text-align: left; font-family: var(--mono); font-size: .75rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--tinta-3); font-weight: 400; white-space: nowrap;
+}
+table.comparativa thead th { vertical-align: top; min-width: 11rem; }
+table.comparativa thead th a { display: block; margin-bottom: var(--e2); }
+table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
+/* El unico boton de la web que borra algo. Se distingue del resto por color, no por
+   tamano: tiene que verse lo que es, no invitar a pulsarlo. */
+.enlace-accion.peligro { color: var(--alarma); }
