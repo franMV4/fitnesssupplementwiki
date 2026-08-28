@@ -26,7 +26,6 @@ Python y 15 de JavaScript en verde):
        pagina mas pesada baja de 920 KB a 517 KB.
   4.2  referrerpolicy="no-referrer" en las fotos servidas por las tiendas.
   4.4  "Al mes (1 servicio/dia)" en 1.607 fichas y en /comparar.
-  4.6  Nube precio/calidad por categoria, SVG dibujado en el build, sin JS.
   5.2  La seleccion del lector se guarda en su navegador (localStorage).
   5.3  /comparar: hasta 4 productos enfrentados, agrupados por categoria.
   5.4  Grafica de precios en la ficha (se enciende sola al haber 2 lecturas).
@@ -53,6 +52,13 @@ NO HECHO, Y POR QUE:
        correo. Su requisito de datos (3.1) ya esta hecho, que era lo urgente.
   7.x  Paginas de marca, OG por categoria, boletin, display: el propio plan dice
        que no se tocan hasta que haya trafico. Se respeta.
+  4.6  Nube precio/calidad por categoria: se hizo y se QUITO el mismo dia, por
+       decision del dueno. Ademas el dato le daba la razon: casi todos los
+       productos de una categoria comparten nota de calidad (el 96,8 % esta en
+       nivel 1), asi que la nube salia como una raya horizontal. Un grafico donde
+       todos los puntos estan a la misma altura no informa de nada: ocupa media
+       pantalla para decir que no hay nada que ver. Volveria a tener sentido el
+       dia que la calidad discrimine, es decir, despues del punto B3.
 
 CORRECCION AL HALLAZGO B2 (la unica estimacion del plan que estaba mal):
   El plan calculaba recuperar entre el 60 y el 80 % de las 527 marcas perdidas

@@ -2,7 +2,6 @@
 import Base from '../layouts/Base.astro';
 import TablaProductos from '../componentes/TablaProductos.jsx';
 import Aviso from '../componentes/Aviso.astro';
-import Dispersion from '../componentes/Dispersion.astro';
 import Faq from '../componentes/Faq.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
@@ -116,10 +115,6 @@ const schema = [
       dosificado: no tenemos el dato y no nos lo inventamos.
     </p>
   )}
-
-  {/* La nube antes de la tabla: se ve de un vistazo si en esta categoria pagar mas
-      compra algo o no, que es la pregunta de la que cuelga todo lo demas. */}
-  <Dispersion productos={productos} unidad={unidad} lider={productos[0]} />
 
   <h2 id="tabla" class="titulo-bloque">Comparativa completa</h2>
   <div class="aparece d3 tabla-categoria">

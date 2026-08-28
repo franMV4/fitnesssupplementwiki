@@ -1881,23 +1881,6 @@ body > * { position: relative; z-index: 1; }
   border-bottom: 2px solid var(--senal);
 }
 
-/* La nube de precio contra calidad de cada categoria (componentes/Dispersion.astro).
-   Dibujada en el build: aqui solo viven los colores, para que cambie con el tema. */
-.dispersion { margin: var(--e5) 0; }
-.dispersion svg {
-  width: 100%; height: auto; display: block;
-  border: 2px solid var(--regla-2); background: var(--papel-2);
-}
-.dispersion .reja { stroke: var(--regla); stroke-width: 1; }
-.dispersion .rotulo {
-  fill: var(--tinta-3); font-family: var(--mono); font-size: 11px;
-}
-.dispersion .punto { fill: var(--tinta-2); opacity: .55; }
-.dispersion .punto.lider { fill: var(--senal); opacity: 1; }
-.dispersion figcaption {
-  font-size: .82rem; color: var(--tinta-3); margin-top: var(--e2); max-width: 62ch;
-}
-.dispersion figcaption b { color: var(--tinta); }
 
 /* --- 25. Guardar para comparar -------------------------------------------- */
 /* El boton de cada fila y la barra que aparece abajo cuando hay algo guardado. */

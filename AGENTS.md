@@ -67,7 +67,6 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `web/tabla.test.mjs` | El filtrado y el orden de la tabla, y que `paraTabla` no deje pasar campos que la isla no pinta. |
 | `web/src/datos/util.js` | Helpers compartidos **y** `filtrar`/`ORDENES` (fuera del componente para poder probarlos sin navegador), `paraTabla` (adelgaza las props de la isla) y la selección de `/comparar` en localStorage. |
 | `web/src/componentes/Historico.astro` | La serie de precios de la ficha, SVG dibujado en build. No pinta nada hasta que haya dos lecturas. |
-| `web/src/componentes/Dispersion.astro` | Precio contra calidad de una categoría, SVG en build. Se calla si hay menos de 8 productos. |
 | `web/src/componentes/Comparador.jsx` | `/comparar`: lo que el lector guarda con "+ comparar". Lee `localStorage` y pide `/datos/<categoria>.json`; no lleva datos en el HTML. |
 | `web/src/componentes/Acceso.jsx` | **Un solo formulario de acceso** para `/entrar`, `/registro` y el hueco de la ficha. Tres copias acaban siendo tres formularios distintos. |
 | `web/src/datos/evidencia.js` | **Guías de evidencia por ingrediente** (efectos con cifra + DOI, dosis, cuándo sí y cuándo no). **Lo edita una persona, nunca el código**, igual que `dosis_referencia.json`. |
