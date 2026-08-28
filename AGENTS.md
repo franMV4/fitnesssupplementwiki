@@ -68,7 +68,7 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `web/src/datos/util.js` | Helpers compartidos **y** `filtrar`/`ORDENES` (fuera del componente para poder probarlos sin navegador), `paraTabla` (adelgaza las props de la isla) y la selección de `/comparar` en localStorage. |
 | `web/src/componentes/Historico.astro` | La serie de precios de la ficha, SVG dibujado en build. No pinta nada hasta que haya dos lecturas. |
 | `web/src/componentes/Comparador.jsx` | `/comparar`: lo que el lector guarda con "+ comparar". Lee `localStorage` y pide `/datos/<categoria>.json`; no lleva datos en el HTML. |
-| `web/src/componentes/Acceso.jsx` | **Un solo formulario de acceso** para `/entrar`, `/registro` y el hueco de la ficha. Tres copias acaban siendo tres formularios distintos. |
+| `web/src/componentes/Acceso.jsx` | **Un solo formulario de acceso** para `/entrar` y `/registro`. En la ficha ya NO se monta: ahí solo hay un botón que lleva a `/entrar?volver=`, por decisión del dueño (el acceso vive en su página, no en las 2.665 fichas). |
 | `web/src/datos/evidencia.js` | **Guías de evidencia por ingrediente** (efectos con cifra + DOI, dosis, cuándo sí y cuándo no). **Lo edita una persona, nunca el código**, igual que `dosis_referencia.json`. |
 
 ## El front: sistema "Rotativa" (rediseñado el 2026-08-27)
@@ -457,6 +457,11 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
 - **`/entrar` y `/registro` llevan `noindex`** (prop `noindex` de `Base.astro`) y no entran
   en el sitemap. `seo_check.py` salta las páginas con noindex al comprobar el sitemap: pedir
   que se rastree lo que se marcó como no indexable es contradecirse.
+- **Sin borrado de cuenta en la web**, por decisión del dueño (28/08/2026): el derecho de
+  supresión del RGPD se ejerce escribiendo al correo de contacto, y `/legal` lo dice así.
+  Si algún día se vuelve a poner el botón, la ruta era `POST /api/borrarme`.
+- **Las páginas de acceso son el formulario y nada más**: sin columna de explicaciones ni
+  sumario de "para qué sirve la cuenta". También decisión del dueño; no volver a añadirlo.
 - **Sin recuperar clave, sin moderación y sin rate limit** a propósito: los tres se añaden el
   día que hagan falta, y los dos últimos se resuelven desde el panel de Cloudflare sin tocar
   código.

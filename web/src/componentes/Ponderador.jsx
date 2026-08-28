@@ -36,13 +36,17 @@ export default function Ponderador({ filas = [] }) {
 
   return (
     <div className="ponderador">
-      <p className="contador" aria-live="polite">
-        {w === OFICIAL
-          ? <>Peso oficial de la web: <b>50 % precio</b> y <b>50 % calidad verificable</b>.</>
-          : cambian === 0
+      {/* En el peso oficial no se dice nada: que la web pesa mitad y mitad ya lo cuentan
+          la portada, la metodologia y cada ficha, y repetirlo aqui era una linea mas de
+          ruido encima de la tabla. Esta frase solo aparece cuando el lector MUEVE el
+          mando, que es cuando dice algo que no sabia. */}
+      {w !== OFICIAL && (
+        <p className="contador" aria-live="polite">
+          {cambian === 0
             ? <>Con <b>{w} % precio</b> no cambia ni un lider: los de aqui lo son por las dos mitades.</>
             : <>Con <b>{w} % precio</b>, <b>{cambian}</b> de {filas.length} categorias cambian de lider.</>}
-      </p>
+        </p>
+      )}
 
       <div className="tabla-marco">
         <div className="tabla-scroll">

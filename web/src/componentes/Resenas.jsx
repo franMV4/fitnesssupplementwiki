@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import Acceso from './Acceso.jsx';
 
 // Resenas de lectores en la ficha de producto. Es la unica parte de la web que escribe
 // en una base de datos: el resto es HTML generado en build. Todo pasa por /api/*, que
@@ -79,6 +78,8 @@ export default function Resenas({ producto }) {
 
   if (!datos) return <p className="sutil">Cargando opiniones…</p>;
 
+  const vuelta = typeof location === 'undefined' ? '/' : location.pathname;
+
   return (
     <div className="resenas">
       <p className="media-lectores">
@@ -130,12 +131,13 @@ export default function Resenas({ producto }) {
           </p>
         </form>
       ) : (
-        <>
-          <p className="sutil">Entra o crea una cuenta para puntuar este producto.</p>
-          {/* El mismo formulario que /entrar, montado aqui dentro: quien entra desde la
-              ficha no se va de la ficha, solo se recargan las resenas. */}
-          <Acceso onListo={(u) => { setUsuario(u); recargar(); }} />
-        </>
+        // Un enlace a /entrar, no el formulario montado aqui: el acceso vive en su
+        // pagina y no en las 2.665 fichas. `volver` trae de vuelta a esta misma ficha.
+        <p className="accion-resena">
+          <a className="boton primario" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>
+            Entrar <span className="flecha">→</span>
+          </a>
+        </p>
       )}
 
       <ul className="lista-resenas">

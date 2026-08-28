@@ -399,7 +399,10 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
 .acceso-cabecera:hover { background: var(--tinta); color: var(--papel); }
 /* Con sesion abierta el dibujo se cambia por la inicial dentro de un cuadro de tinta:
    a un vistazo se distingue "puedo entrar" de "ya estoy dentro" sin leer nada. */
-.acceso-cabecera .inicial {
+/* `:not([hidden])` no es adorno: el atributo hidden del HTML lo pisa cualquier regla
+   de autor con display, asi que sin esto el cuadrado naranja salia VACIO al lado del
+   monigote incluso sin haber entrado. */
+.acceso-cabecera .inicial:not([hidden]) {
   display: inline-flex; align-items: center; justify-content: center;
   width: 1.75rem; height: 1.75rem;
   background: var(--senal-txt); color: var(--senal-sobre);
@@ -712,14 +715,28 @@ footer.sitio a:hover { color: var(--senal-neg); }
 .tabla-scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: .92rem; }
 caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+/* La cabecera de tabla, rehecha. Tres cosas fallaban a la vez y ninguna se arregla
+   anadiendo rayas, que es de lo que sobraba:
+     - NO PARECIA DE LA TABLA: era texto suelto sobre el mismo papel que el bloque de
+       arriba, pegado a el. Ahora es una franja con su propia superficie, cerrada por
+       arriba y por abajo. Los dos filetes no son dos lineas mas apiladas: son el borde
+       de la pieza, como el corondel que abre una tabla impresa.
+     - SE LEIA MAL: gris (--tinta-3) a 11 px. Ahora es la tinta plena de la banda
+       (--neg-tinta) y un pelin mas grande, con menos interletraje para que quepa igual.
+     - Y al hacer scroll, con `sticky`, las filas pasan por debajo de una franja opaca.
+   La superficie es --neg (un escalon por encima del papel), no tinta llena: el fondo
+   del sitio es una foto y una banda negra de lado a lado parte la pagina en dos. Esa
+   decision ya esta tomada en la seccion 1 de este fichero y aqui se respeta. */
 thead th {
-  background: var(--papel);
-  font-size: var(--rotulo-tam); font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
-  color: var(--tinta-3); text-align: left; padding: .7rem .7rem .55rem;
-  white-space: nowrap; border-bottom: 2px solid var(--tinta);
+  background: var(--neg);
+  font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--neg-tinta); text-align: left; padding: .8rem .7rem .75rem;
+  white-space: nowrap;
+  border-top: 2px solid var(--tinta); border-bottom: 2px solid var(--tinta);
 }
 /* ponytail: .tabla-scroll (overflow-x:auto) es el scrollport, no el viewport:
    un top distinto de 0 empuja la cabecera por encima de las filas. */
+.tabla-marco { margin-top: var(--e4); }
 .tabla-marco thead th { position: sticky; top: 0; z-index: 2; }
 tbody td { padding: 1.05rem .7rem; border-bottom: 1px solid var(--regla); vertical-align: middle; }
 tbody:last-of-type tr:last-child td { border-bottom: 2px solid var(--tinta); }
@@ -811,16 +828,19 @@ th button.orden {
   border-bottom: 1px dotted var(--regla-2);
 }
 th.num button.orden { float: right; }
-th button.orden:hover { color: var(--senal-txt); border-bottom-color: var(--senal); }
-th[aria-sort="ascending"] button.orden { color: var(--tinta); border-bottom: 2px solid var(--senal); }
+/* Quien cambia al ordenar es el filete, no la letra: la columna activa se marca sin
+   perder contraste en lo unico que hay que leer. */
+th button.orden:hover { color: var(--senal-neg); border-bottom-color: var(--senal); }
+th[aria-sort="ascending"] button.orden { border-bottom: 2px solid var(--senal); }
 th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--senal); }
 
 /* --- 12. Filtros (isla React) -------------------------------------------- */
 .barra-filtros {
   display: flex; gap: var(--e4) var(--e5); flex-wrap: wrap; align-items: flex-end;
   padding: var(--e3) 0 var(--e4);
-  border-bottom: 1px solid var(--regla-2);
-  margin-bottom: var(--e4);
+  /* Sin filete debajo: entre el titulo de la seccion y la primera fila habia cuatro
+     rayas horizontales en 150 px. Esta la hacia ya la banda de tinta de la tabla. */
+  margin-bottom: var(--e2);
 }
 .campo { display: flex; flex-direction: column; gap: .3rem; }
 .campo.ancho { flex: 1 1 13rem; }
@@ -1571,8 +1591,9 @@ body > * { position: relative; z-index: 1; }
   .edicion, .lema-portada, .cabecera-seccion .apunte, .antetitulo,
   .titulo-desplegable, .pista-desplegable, .respuesta b, .migas,
   .meta-cat, .resumen, .contador, .volver-arriba, .rotulo-menu,
-  .colofon .mono, .tira, .foto-producto figcaption, thead th,
+  .colofon .mono, .tira, .foto-producto figcaption,
   table.apilable tbody td[data-et]::before { font-size: .72rem; }
+  thead th { font-size: .76rem; }
   .mono, .sutil .mono, td.num .sutil, .cifra .unidad, .sello,
   .horquilla .pies, .horquilla .pies .sutil, .atajo, .marca-cambio { font-size: .74rem; }
   footer.sitio h4, .seccion-doc h2 .num, .indice a::before { font-size: .72rem; }
@@ -1918,3 +1939,8 @@ table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
 /* El unico boton de la web que borra algo. Se distingue del resto por color, no por
    tamano: tiene que verse lo que es, no invitar a pulsarlo. */
 .enlace-accion.peligro { color: var(--alarma); }
+
+/* La pagina de acceso es el formulario y nada mas: sin columna de explicaciones, la
+   caja se centra y se queda estrecha en vez de estirarse por una rejilla que ya no existe. */
+.acceso-solo { max-width: 26rem; margin: 0 auto; }
+.acceso-solo h1 { margin-bottom: var(--e4); }

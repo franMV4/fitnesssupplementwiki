@@ -103,7 +103,6 @@ export async function onRequest({ request, env, params }) {
     if (ruta === 'resenas' && metodo === 'GET') return await listar(request, env);
     if (ruta === 'resenas' && metodo === 'POST') return await publicar(request, env);
     if (ruta.startsWith('foto/') && metodo === 'GET') return await foto(ruta.slice(5), env);
-    if (ruta === 'borrarme' && metodo === 'POST') return await borrarme(request, env);
   } catch (e) {
     return error(`Error del servidor: ${e.message}`, 500);
   }
@@ -316,27 +315,3 @@ async function foto(clave, env) {
   });
 }
 
-
-// Derecho de supresion (RGPD art. 17). No es una cortesia: si esta web guarda un correo
-// y una foto, tiene que poder borrarlos, y una direccion a la que escribir para que lo
-// borre alguien a mano no es un mecanismo, es una promesa.
-//
-// Borra en el orden en que se puede borrar: primero las fotos de R2 (si falla una, se
-// sigue: una foto huerfana en un bucket es un problema menor que una cuenta que no se
-// deja borrar), luego las resenas y por ultimo el usuario. Y cierra la sesion.
-async function borrarme(request, env) {
-  const id = await sesion(request, env);
-  if (!id) return error('Hay que haber entrado.', 401);
-
-  const { results } = await env.DB.prepare(
-    'SELECT foto FROM resenas WHERE usuario = ? AND foto IS NOT NULL').bind(id).all();
-  for (const r of results ?? []) {
-    try {
-      await env.FOTOS?.delete(r.foto);
-    } catch { /* el objeto ya no esta, o R2 no responde: no bloquea el borrado */ }
-  }
-  await env.DB.prepare('DELETE FROM resenas WHERE usuario = ?').bind(id).run();
-  await env.DB.prepare('DELETE FROM usuarios WHERE id = ?').bind(id).run();
-  return json({ ok: true }, 200,
-    { 'set-cookie': 's=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0' });
-}

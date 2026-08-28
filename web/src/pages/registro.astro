@@ -13,33 +13,9 @@ const volver = Astro.url.searchParams.get('volver') ?? '/';
       descripcion="Crea una cuenta para puntuar productos y dejar tu resena."
       noindex>
   <div class="pagina-acceso">
-    <div class="acceso-doble">
-      <div class="acceso-titular aparece">
-        <p class="antetitulo">Alta de lector &middot; Un minuto</p>
-        <h1>Crear cuenta</h1>
-        <p class="entradilla">
-          Correo, un nombre publico y una contrasena. Nada mas: ni telefono, ni direccion,
-          ni tarjeta, porque esta web no vende nada.
-        </p>
-      </div>
-
-      <ol class="sumario-acceso aparece d2">
-        <li>
-          <span class="n">01</span>
-          <div><b>Se publica</b><p>Solo tu nombre publico y lo que escribas.</p></div>
-        </li>
-        <li>
-          <span class="n">02</span>
-          <div><b>No se publica</b><p>El correo no sale en ningun sitio y no recibiras boletines.</p></div>
-        </li>
-        <li>
-          <span class="n">03</span>
-          <div><b>La contrasena</b><p>Se guarda cifrada. Nadie, tampoco quien lleva esta web, puede leerla.</p></div>
-        </li>
-      </ol>
-
+    <div class="acceso-solo">
+      <h1 class="aparece">Crear cuenta</h1>
       <div class="acceso-ficha aparece d1">
-        <p class="sello-acceso">Sin coste<br />y sin correos</p>
         <Acceso client:load modo="registro" volver={volver} />
       </div>
     </div>

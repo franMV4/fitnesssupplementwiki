@@ -16,33 +16,9 @@ const volver = Astro.url.searchParams.get('volver') ?? '/';
       descripcion="Entra en tu cuenta para puntuar productos y dejar tu resena."
       noindex>
   <div class="pagina-acceso">
-    <div class="acceso-doble">
-      <div class="acceso-titular aparece">
-        <p class="antetitulo">Tu cuenta &middot; Gratis y sin correos</p>
-        <h1>Entrar</h1>
-        <p class="entradilla">
-          La cuenta sirve para una cosa: puntuar productos y dejar resenas que vean los
-          demas lectores. No hace falta para consultar precios ni rankings.
-        </p>
-      </div>
-
-      <ol class="sumario-acceso aparece d2">
-        <li>
-          <span class="n">01</span>
-          <div><b>Puntuar</b><p>De una a cinco estrellas en lo que hayas probado.</p></div>
-        </li>
-        <li>
-          <span class="n">02</span>
-          <div><b>Resenar</b><p>Tu experiencia, con foto del bote si quieres.</p></div>
-        </li>
-        <li>
-          <span class="n">03</span>
-          <div><b>Y nada mas</b><p>Ninguna cuenta mueve el orden de las tablas. Eso lo decide la formula.</p></div>
-        </li>
-      </ol>
-
+    <div class="acceso-solo">
+      <h1 class="aparece">Entrar</h1>
       <div class="acceso-ficha aparece d1">
-        <p class="sello-acceso">Solo para<br />puntuar y resenar</p>
         <Acceso client:load modo="entrar" volver={volver} />
       </div>
     </div>

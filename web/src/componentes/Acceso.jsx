@@ -62,16 +62,6 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
     setEstado({ ...estado, usuario: null });
   };
 
-  // Derecho de supresion (RGPD art. 17). Va aqui, a un clic de la sesion abierta, y no
-  // en una direccion de correo a la que escribir: borrar tiene que costar lo mismo que
-  // registrarse. El confirm() del navegador basta; una ventana propia para preguntar
-  // "seguro?" es una pantalla mas que mantener y dice exactamente lo mismo.
-  const borrarme = async () => {
-    if (!confirm('Se borra tu cuenta, tus resenas y tus fotos. No se puede deshacer.')) return;
-    const r = await fetch('/api/borrarme', { method: 'POST' });
-    if (r.ok) setEstado({ ...estado, usuario: null });
-    else setError('No se ha podido borrar la cuenta. Prueba otra vez.');
-  };
 
   if (!estado) {
     return (
@@ -92,16 +82,6 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
           <a className="boton primario" href={volver || '/'}>Volver <span className="flecha">→</span></a>
           <button type="button" className="enlace-accion" onClick={salir}>Salir de la cuenta</button>
         </p>
-        <p className="letra-pequena">
-          <button type="button" className="enlace-accion peligro" onClick={borrarme}>
-            Borrar mi cuenta y mis resenas
-          </button>
-          {' '}Se borra todo: el correo, las resenas y las fotos. Es inmediato y no se
-          puede deshacer.
-        </p>
-        {/* Si el borrado falla hay que decirlo AQUI: el aviso de error del formulario
-            esta en la otra rama del componente y esta pantalla no lo pinta. */}
-        {error && <p className="fallo-form" role="alert">{error}</p>}
       </div>
     );
   }
@@ -181,12 +161,6 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
               {!enviando && <span className="flecha">→</span>}
             </button>
           </p>
-          {registrando && (
-            <p className="sutil letra-pequena">
-              Solo se publica tu nombre, nunca el correo. La contraseña se guarda cifrada y nadie,
-              tampoco quien lleva esta web, puede leerla.
-            </p>
-          )}
         </form>
       </div>
     </div>
