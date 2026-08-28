@@ -21,11 +21,11 @@ const volver = Astro.url.searchParams.get('volver') ?? '/';
       <div class="acceso-ficha aparece d1">
         <Acceso client:load modo="entrar" volver={volver} />
       </div>
-    </div>
 
-    <p class="sutil">
+      <p class="sutil pie-acceso">
       Si aun no tienes cuenta, <a href={`/registro?volver=${encodeURIComponent(volver)}`}>crea una</a>.
       Como se tratan tus datos esta en el <a href="/legal">aviso legal</a>.
-    </p>
+      </p>
+    </div>
   </div>
 </Base>

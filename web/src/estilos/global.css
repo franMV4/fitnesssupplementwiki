@@ -1944,3 +1944,6 @@ table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
    caja se centra y se queda estrecha en vez de estirarse por una rejilla que ya no existe. */
 .acceso-solo { max-width: 26rem; margin: 0 auto; }
 .acceso-solo h1 { margin-bottom: var(--e4); }
+/* El pie va DENTRO de la columna del formulario y centrado con el. Fuera de ella se
+   iba al ancho del envoltorio y quedaba colgando a la izquierda de una caja centrada. */
+.pie-acceso { margin: var(--e4) 0 0; text-align: center; text-wrap: balance; }
