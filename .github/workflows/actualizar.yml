@@ -56,6 +56,16 @@ jobs:
           # El scraper es stdlib pura: no hay requirements.txt que instalar.
           python-version: '3.13'
 
+      # La MISMA version de Node que usa Cloudflare Pages, leida del mismo fichero.
+      # No es cosmetico: `npm ci` exige que el lock case al milimetro con lo que resuelve,
+      # y npm 10 y npm 11 no resuelven igual las dependencias opcionales por plataforma
+      # (el respaldo wasm de satteri y sus @emnapi). Con el Node del runner por defecto,
+      # este paso reventaba con "Missing: @emnapi/runtime from lock file" y el robot se
+      # quedaba sin confirmar los precios del dia.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.node-version
+
       # Aqui NO se cachea data/cache a proposito. La cache del scraper caduca a las 6
       # horas (CACHE_TTL_S en scraper/core.py) y esto corre una vez al dia: al arrancar,
       # todo lo guardado ya estaria caducado. Seria subir y bajar casi 1 GB diario para

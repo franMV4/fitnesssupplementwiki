@@ -17,6 +17,7 @@
 import datos from './dataset.json' with { type: 'json' };
 import { EVIDENCIA } from './evidencia.js';
 import { TIENDAS } from './util.js';
+import { titula } from './seo.js';
 
 // El peso de cada nivel para ordenar. Es el orden en el que se lee la lista, no una nota.
 const PESO = { alta: 0, media: 1, baja: 2 };
@@ -196,7 +197,10 @@ export function elObjetivo(o) {
     // Solo suma lo que tiene dosis publicada; la pagina dice cuantos son y cuantos no.
     conPrecio,
     alMes: conPrecio.length ? conPrecio.reduce((n, x) => n + x.alMes, 0) : null,
-    titulo: `${o.h1}: evidencia, dosis y cuanto cuesta al mes`,
+    // El H1 ya es largo de por si, asi que el sufijo lo elige `titula`: el primero que
+    // quepa en el tope de 65 caracteres, y si no cabe ninguno, el H1 solo. Sin esto,
+    // los seis titulos se iban a 90 y pico y seo_check tumbaba el build.
+    titulo: titula(o.h1, ': evidencia y dosis', ': con fuentes', ''),
   };
 }
 
