@@ -14,6 +14,11 @@
 # del repositorio cuando un workflow programado falla, y la propia web lo dice sola (el
 # layout avisa cuando los precios pasan de diez dias). Dos avisos ya son suficientes.
 
+# OJO: este robot NO se dispara al hacer push. Solo con el cron de abajo (una vez
+# al dia) o a mano desde la pestana Actions. Mientras no se haya ejecutado nunca,
+# la pantalla de Actions sale vacia aunque el workflow este bien: aparece en la
+# columna de la izquierda, no en el centro.
+
 name: Actualizar precios
 
 on:
