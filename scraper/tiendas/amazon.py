@@ -66,6 +66,27 @@ CONSULTA = {
     "curcuma": "curcuma capsulas",
     "glucosamina": "glucosamina condroitina capsulas",
     "carnitina": "l carnitina capsulas",
+    # --- ampliacion a los 50 mas vendidos (2026-08-31) ---
+    "taurina": "taurina en polvo",
+    "arginina": "arginina en polvo",
+    "hmb": "hmb capsulas",
+    "tribulus": "tribulus terrestris capsulas",
+    "maca": "maca andina capsulas",
+    "coenzima_q10": "coenzima q10 capsulas",
+    "espirulina": "espirulina comprimidos",
+    "te_verde": "te verde extracto capsulas",
+    "teanina": "l teanina capsulas",
+    "triptofano": "triptofano capsulas",
+    "colina": "colina alfa gpc capsulas",
+    "acido_hialuronico": "acido hialuronico capsulas",
+    "vitamina_e": "vitamina e capsulas",
+    "vitamina_k2": "vitamina k2 mk7 capsulas",
+    "calcio": "calcio capsulas",
+    "cla": "cla acido linoleico conjugado capsulas",
+    "selenio": "selenio capsulas",
+    "potasio": "potasio capsulas",
+    "complejo_b": "complejo vitaminico b capsulas",
+    "quemagrasas": "quemagrasas termogenico capsulas",
 }
 # Dos paginas por categoria (~96 resultados). A partir de la tercera lo que sale ya no
 # es de la categoria: son accesorios, libros y productos de relleno.

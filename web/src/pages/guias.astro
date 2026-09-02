@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { porFamilia } from '../datos/familias.js';
+import { OBJETIVOS } from '../datos/eficacia.js';
 import { abs } from '../sitio.js';
 
 // El indice del sitio en una pagina. Existe porque el pie tenia sesenta enlaces
@@ -34,6 +35,33 @@ const schema = [{
       su tabla ordenada por precio por kilo o por capsula. La <a href="#guias">guia</a>{' '}
       responde si te hace falta: que hace el ingrediente, cuanto y con que fuente detras.
     </p>
+  </section>
+
+  <section id="antes" class="seccion-doc">
+    <h2><span class="num">00</span> Antes de elegir categoria</h2>
+    <p class="sutil">
+      Las dos entradas de abajo dan por hecho que ya sabes que suplemento quieres. Estas tres
+      contestan lo de antes: si hace falta, para que objetivo y en que tienda.
+    </p>
+    <div class="lista-categorias">
+      <a class="fila-categoria" href="/suplementos-que-funcionan">
+        <span class="nombre">Que suplementos funcionan</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">por evidencia</span>
+      </a>
+      {OBJETIVOS.map((o) => (
+        <a class="fila-categoria" href={`/para/${o.slug}`}>
+          <span class="nombre">{o.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">por objetivo</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href="/tiendas">
+        <span class="nombre">Que tienda es mas barata</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">ranking</span>
+      </a>
+    </div>
   </section>
 
   <section id="categorias" class="seccion-doc">

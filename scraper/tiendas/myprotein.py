@@ -65,7 +65,8 @@ class Myprotein(Scraper):
 
         fuera = []
         for url in dict.fromkeys(urls):
-            for grupo in ld_json(fetch(url)):
+            pagina = fetch(url)
+            for grupo in ld_json(pagina):
                 if grupo.get("@type") != "ProductGroup":
                     continue
                 marca = (grupo.get("brand") or {}).get("name")
@@ -89,5 +90,8 @@ class Myprotein(Scraper):
                         unidades=u, precio_eur=float(precio), categoria=categoria,
                         servicios=serv,
                         texto_extra=desc,
-                        imagen=v.get("image") or grupo.get("image")))
+                        imagen=v.get("image") or grupo.get("image"),
+                        # La nota y la composicion son del grupo: las variantes solo
+                        # cambian el sabor y el tamano, no la formula ni las opiniones.
+                        ld=grupo, pagina=pagina))
         return fuera

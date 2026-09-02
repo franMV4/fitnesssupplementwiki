@@ -86,8 +86,15 @@ def revisa_ld(url, nodo, fallos=None):
         elif not (r.get("worstRating", 0) <= r["ratingValue"] <= r.get("bestRating", 5)):
             fallos.append(f"{url}: Review con ratingValue fuera de rango")
     if tipo == "AggregateOffer":
-        ofertas = nodo.get("offers") or []
-        if nodo.get("offerCount") != len(ofertas):
+        # `offers` es opcional en un AggregateOffer: sirve justamente para resumir una
+        # tabla de 162 filas sin serializarlas una a una (eso son 200 KB de HTML por
+        # pagina que ya paga la propia tabla). Cuando NO va la lista, `offerCount` es el
+        # dato y no hay nada con que cuadrarlo; cuando SI va, tienen que coincidir o
+        # estamos diciendo dos numeros distintos en el mismo nodo.
+        ofertas = nodo.get("offers")
+        if nodo.get("offerCount") is None:
+            fallos.append(f"{url}: AggregateOffer sin offerCount")
+        elif ofertas is not None and nodo["offerCount"] != len(ofertas):
             fallos.append(f"{url}: AggregateOffer con offerCount que no cuadra")
         if (nodo.get("lowPrice") or 0) > (nodo.get("highPrice") or 0):
             fallos.append(f"{url}: AggregateOffer con lowPrice > highPrice")
@@ -109,7 +116,7 @@ def main():
     fallos = []
     titulos, descripciones = {}, {}
     paginas = sorted(DIST.rglob("*.html"))
-    # Las paginas con noindex (entrar, registro) no van al sitemap A PROPOSITO: pedir
+    # Las paginas con noindex (entrar, registro, recuperar) no van al sitemap A PROPOSITO: pedir
     # que se rastree lo que se ha marcado como no indexable es contradecirse.
     sin_indexar = set()
 
@@ -143,8 +150,13 @@ def main():
         elif not es_404 and urllib.parse.urlparse(c.group(1)).path.rstrip("/") != url.rstrip("/"):
             fallos.append(f"{url}: canonical apunta a {c.group(1)}")
 
+        # Un H1 por pagina. La excepcion son las paginas noindex que se pintan enteras
+        # en el navegador (/admin): su H1 lo escribe React al montar la isla, asi que en
+        # el HTML de disco no hay ninguno. Y da igual, porque esta regla existe para lo
+        # que lee Google y Google no lee una pagina marcada noindex. Dos H1 siguen
+        # siendo un fallo en cualquier pagina: eso ya no es SEO, es marcado mal puesto.
         n_h1 = len(RE_H1.findall(texto))
-        if n_h1 != 1:
+        if n_h1 > 1 or (n_h1 == 0 and url not in sin_indexar):
             fallos.append(f"{url}: {n_h1} etiquetas h1 (tiene que haber una)")
 
         for i, bloque in enumerate(RE_LD.findall(texto)):

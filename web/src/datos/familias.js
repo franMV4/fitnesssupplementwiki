@@ -21,11 +21,14 @@ export const FAMILIAS = [
 export function porFamilia(categorias, filtro = () => true) {
   const cats = categorias.filter(filtro);
   const colocadas = new Set(FAMILIAS.flatMap((f) => f.slugs));
+  // Dentro del estante manda el alfabeto: FAMILIAS decide en que balda va cada una,
+  // no en que puesto. Asi el orden no depende de como se escribio la lista.
+  const alfabetico = (a, b) => a.nombre.localeCompare(b.nombre, 'es');
   const grupos = FAMILIAS.map((f) => ({
     nombre: f.nombre,
-    cats: f.slugs.map((s) => cats.find((c) => c.slug === s)).filter(Boolean),
+    cats: f.slugs.map((s) => cats.find((c) => c.slug === s)).filter(Boolean).sort(alfabetico),
   }));
-  const sueltas = cats.filter((c) => !colocadas.has(c.slug));
+  const sueltas = cats.filter((c) => !colocadas.has(c.slug)).sort(alfabetico);
   if (sueltas.length) grupos.push({ nombre: 'Otros', cats: sueltas });
   return grupos.filter((g) => g.cats.length);
 }

@@ -74,6 +74,13 @@ def main():
                 log.error("%s: fallo extrayendo (%s: %s)", s.tienda, type(e).__name__, e)
 
     for s, filas in sorted(cosecha, key=lambda x: x[0].tienda):
+        # Una tienda que pone la misma nota en todas sus fichas no esta puntuando el
+        # producto, esta enseñando la suya. Se tira entera, no ficha a ficha.
+        if core.valoracion_es_de_la_tienda(filas):
+            log.warning("%s: la valoracion es la de la TIENDA, no la del producto; se ignora",
+                        s.tienda)
+            for f in filas:
+                f["producto"]["valoracion"] = f["producto"]["n_valoraciones"] = None
         vistos = []
         for f in filas:
             # Un precio por kilo imposible no se guarda: es un error de extraccion

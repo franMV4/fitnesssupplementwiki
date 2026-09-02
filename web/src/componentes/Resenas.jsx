@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { pedir } from './api.js';
 
 // Resenas de lectores en la ficha de producto. Es la unica parte de la web que escribe
 // en una base de datos: el resto es HTML generado en build. Todo pasa por /api/*, que
@@ -37,12 +38,14 @@ export default function Resenas({ producto }) {
   const [archivo, setArchivo] = useState(null);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [visibles, setVisibles] = useState(5);
 
   const recargar = () => fetch(`/api/resenas?producto=${encodeURIComponent(producto)}`)
     .then((r) => r.json()).then(setDatos)
     .catch(() => setDatos({ resenas: [], total: 0, media: null }));
 
   useEffect(() => {
+    setVisibles(5);
     recargar();
     fetch('/api/yo').then((r) => r.json()).then((d) => setUsuario(d.usuario)).catch(() => {});
   }, [producto]);
@@ -69,11 +72,16 @@ export default function Resenas({ producto }) {
     f.set('puntuacion', String(nota));
     f.set('texto', texto);
     if (archivo) f.set('foto', await encoger(archivo), 'foto.jpg');
-    const r = await fetch('/api/resenas', { method: 'POST', body: f });
-    const d = await r.json();
-    setEnviando(false);
-    if (!r.ok) return setError(d.error);
-    setDatos(d); setArchivo(null);
+    // El mismo try/finally que el formulario de acceso, y por lo mismo: si la peticion
+    // fallaba, el boton se quedaba enviando para siempre sin explicar nada.
+    try {
+      const d = await pedir('/api/resenas', f);
+      setDatos(d); setArchivo(null);
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   if (!datos) return <p className="sutil">Cargando opiniones…</p>;
@@ -120,7 +128,12 @@ export default function Resenas({ producto }) {
 
           <div className="campo linea">
             <span>Foto del producto (opcional)</span>
-            <input type="file" accept="image/*" onChange={(e) => setArchivo(e.target.files[0] ?? null)} />
+            <label className="campo-foto">
+              <input type="file" accept="image/*"
+                     onChange={(e) => setArchivo(e.target.files[0] ?? null)} />
+              <span className="falso-boton">Elegir foto</span>
+              <span className="nombre-foto">{archivo ? archivo.name : 'Ningun archivo elegido'}</span>
+            </label>
           </div>
 
           {error && <p className="fallo-form">{error}</p>}
@@ -141,7 +154,7 @@ export default function Resenas({ producto }) {
       )}
 
       <ul className="lista-resenas">
-        {datos.resenas.map((r) => (
+        {datos.resenas.slice(0, visibles).map((r) => (
           <li className="resena" key={r.id}>
             <p className="cabecera-resena">
               <span className="astros" title={`${r.puntuacion} de 5`}>{estrellas(r.puntuacion)}</span>
@@ -158,6 +171,13 @@ export default function Resenas({ producto }) {
           </li>
         ))}
       </ul>
+      {datos.resenas.length > visibles && (
+        <p className="mas-resenas">
+          <button type="button" className="boton" onClick={() => setVisibles(visibles + 5)}>
+            Ver 5 opiniones mas <span className="cuantas">({datos.resenas.length - visibles} restantes)</span>
+          </button>
+        </p>
+      )}
     </div>
   );
 }

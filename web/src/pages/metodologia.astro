@@ -10,6 +10,8 @@ const secciones = [
   { id: 'dosis', titulo: 'Comparamos dosis, no gramos' },
   { id: 'niveles', titulo: 'Los cuatro niveles de verificacion' },
   { id: 'formula', titulo: 'La formula' },
+  { id: 'composicion', titulo: 'Que lleva de verdad cada bote' },
+  { id: 'requisitos', titulo: 'Los requisitos de cada categoria' },
   { id: 'referencias', titulo: 'De donde salen las dosis' },
   { id: 'sellos', titulo: 'Los sellos de recomendacion' },
   { id: 'afiliacion', titulo: 'Afiliacion' },
@@ -150,6 +152,7 @@ const secciones = [
           <p class="rotulo">La formula</p>
           <p class="formula">
             nota = <em>{pct(c.peso_coste)}</em> &middot; coste + <em>{pct(c.peso_calidad)}</em> &middot; calidad
+            + <em>{pct(c.peso_valoracion)}</em> &middot; opiniones
           </p>
         </div>
 
@@ -159,10 +162,11 @@ const secciones = [
             <span class="rotulo">Calidad</span>
             <span class="cifra l">{pct(c.peso_calidad)}</span>
             <p class="sutil">
-              Nivel de verificacion x forma quimica del activo x adecuacion de las dosis
-              (esta ultima solo cuando la tienda las publica; si no, no se afirma nada de la
-              formula). La forma estudiada puntua {pct(c.factor_forma_preferida)}, una forma
-              alternativa {' '}{pct(c.factor_forma_alternativa)} y una forma no declarada
+              Nivel de verificacion x forma quimica del activo x composicion real x adecuacion
+              de las dosis (las dos ultimas, solo cuando la tienda las publica; si no, no se
+              afirma nada de la formula). La forma estudiada puntua
+              {' '}{pct(c.factor_forma_preferida)}, una forma alternativa
+              {' '}{pct(c.factor_forma_alternativa)} y una forma no declarada
               {' '}{pct(c.factor_forma_desconocida)}.
             </p>
           </div>
@@ -171,7 +175,29 @@ const secciones = [
             <span class="cifra l">{pct(c.peso_coste)}</span>
             <p class="sutil">
               El precio por kilo (o por capsula) comparado con el mas barato de su categoria,
-              que se lleva el 100 %. Un producto sin formato declarado se queda sin esta mitad.
+              que se lleva el 100 %. Un producto sin formato declarado se queda sin esta parte.
+            </p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">Requisitos</span>
+            <span class="cifra l">{pct(c.peso_requisitos)}</span>
+            <p class="sutil">
+              De los requisitos de su categoria que se han podido comprobar en su ficha,
+              cuantos cumple. Es la pregunta que no contestan ni el precio ni la
+              certificacion: <a href="#requisitos">¿esto es lo que dice ser?</a>
+            </p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">Opiniones</span>
+            <span class="cifra l">{pct(c.peso_valoracion)}</span>
+            <p class="sutil">
+              La nota que le ponen los compradores en la tienda que lo vende, normalizada a 5
+              (hay tiendas que puntuan sobre 10). Pesa poco a proposito: son resenas sin
+              verificar y moderadas por la propia tienda. Y se amortigua con la media de su
+              categoria, como si cada producto empezara con
+              {' '}{c.opiniones_de_referencia} opiniones prestadas: asi una unica resena de
+              cinco estrellas no adelanta a un producto con cientos. Quien no tiene opiniones
+              cuenta como la media: no publicarlas no es una falta.
             </p>
           </div>
         </div>
@@ -189,11 +215,73 @@ const secciones = [
         </p>
       </section>
 
+      <section id="composicion" class="seccion-doc">
+        <h2><span class="num">04</span> Que lleva de verdad cada bote</h2>
+        <p>
+          Dos proteinas al mismo precio por kilo no son el mismo producto. Cuando la ficha
+          publica su tabla nutricional, se lee <strong>cuanto del bote es activo</strong>: si
+          declara 82 g de proteina por cada 100 g de polvo, esos son los gramos que se pagan, y
+          el coste por dosis efectiva se calcula con esa cifra y no con la media de la
+          categoria. Una composicion mejor que la tipica sube la calidad hasta un
+          {' '}{pct(c.factor_pureza_max - 1)} y una peor la baja hasta un
+          {' '}{pct(1 - c.factor_pureza_min)}.
+        </p>
+        <p>
+          De la lista de ingredientes de la etiqueta se leen ademas los
+          <strong> aditivos</strong>: edulcorantes artificiales, colorantes, rellenos y
+          antiaglomerantes. Cada uno resta un {pct(c.penalizacion_por_aditivo)} de la calidad,
+          y entre todos no pueden restar mas del {pct(1 - c.suelo_aditivos)}. No son ilegales
+          ni peligrosos: son lo que separa una etiqueta limpia de una que rellena y colorea.
+        </p>
+        <p>
+          <strong>Lo que la tienda no publica no resta.</strong> Un producto cuya ficha no trae
+          tabla nutricional ni lista de ingredientes se puntua como hasta ahora, con la pureza
+          tipica de su categoria y sin penalizacion ninguna. Castigarlo por lo que su tienda no
+          escribe seria inventarse el dato.
+        </p>
+      </section>
+
+      <section id="requisitos" class="seccion-doc">
+        <h2><span class="num">05</span> Los requisitos de cada categoria</h2>
+        <p>
+          El precio por kilo no distingue un kilo de creatina de un kilo de creatina con un
+          tercio de maltodextrina: <strong>el segundo sale mas barato y rinde menos</strong>.
+          La certificacion tampoco lo ve, porque certifica que no hay dopantes, no que no
+          haya relleno. Los requisitos son la tercera pregunta, y valen
+          {' '}{pct(c.peso_requisitos)} de la nota.
+        </p>
+        <p>
+          Cada categoria tiene los suyos y son publicos: estan en la ficha de cada producto,
+          uno a uno, con un si o un no y el motivo. Una whey tiene que traer al menos 70 g de
+          proteina por cada 100 g, no llevar aminoacidos sueltos anadidos ni proteinas mas
+          baratas mezcladas y no rebajarse con harinas. Un magnesio tiene que venir en una
+          forma que se absorba y no en oxido. Un probiotico tiene que identificar sus cepas y
+          declarar sus UFC. Un preentreno no puede esconder las dosis en una mezcla
+          propietaria.
+        </p>
+        <p>
+          <strong>Un requisito que no se puede comprobar no puntua.</strong> "No lleva
+          relleno" solo se puede afirmar leyendo la lista de ingredientes de la etiqueta: que
+          no salga en el nombre del producto no prueba nada, y darlo por bueno premiaria a la
+          tienda que menos publica. La nota es "de los que se han podido juzgar, cuantos
+          cumple", y a quien no se le ha podido juzgar ninguno se le pone la media de su
+          categoria: ni premio ni castigo.
+        </p>
+      </section>
+
       <section id="referencias" class="seccion-doc">
-        <h2><span class="num">04</span> De donde salen las dosis de referencia</h2>
+        <h2><span class="num">06</span> De donde salen las dosis de referencia</h2>
         <p>
           Cada cifra tiene su fuente citada y se revisa a mano. No se usa ninguna dosis sin
           referencia publicada.
+        </p>
+        <p>
+          <strong>Quien revisa esto.</strong> Nadie con un titulo sanitario. Estas cifras las
+          contrasta contra su fuente la misma persona que escribe la web, y no tiene
+          titulacion sanitaria. Por eso cada dosis lleva pegado el DOI del trabajo del que sale:
+          para que no haya que fiarse de quien la copio, sino leer el original. Aqui no vas a
+          encontrar un sello de "revisado por un profesional" mientras no haya un profesional
+          detras de verdad, con nombre y numero de colegiado.
         </p>
         <div class="tabla-marco">
           <div class="tabla-scroll">
@@ -216,7 +304,7 @@ const secciones = [
       </section>
 
       <section id="sellos" class="seccion-doc">
-        <h2><span class="num">05</span> Los sellos de recomendacion</h2>
+        <h2><span class="num">07</span> Los sellos de recomendacion</h2>
         <p>
           Un sello de esta web certifica un <strong>criterio editorial</strong>: que un producto
           cumple una condicion objetiva y publica. No promete ningun efecto sobre tu cuerpo, tu
@@ -251,7 +339,7 @@ const secciones = [
       </section>
 
       <section id="afiliacion" class="seccion-doc">
-        <h2><span class="num">06</span> Afiliacion</h2>
+        <h2><span class="num">08</span> Afiliacion</h2>
         {/* La seccion no se esconde cuando no hay programas: decir "hoy no ganamos nada
             con esto" es mas util para el lector que un hueco, y la regla de como
             funcionaria ya esta escrita antes de que haya dinero de por medio. */}
@@ -268,7 +356,7 @@ const secciones = [
       </section>
 
       <section id="principios" class="seccion-doc">
-        <h2><span class="num">07</span> Que no hacemos</h2>
+        <h2><span class="num">09</span> Que no hacemos</h2>
         <ul>
           <li>No decimos que un producto mejore nada. Los efectos son del ingrediente a la dosis
             estudiada, con su cita. Un producto solo "contiene X gramos de Y".</li>
@@ -280,7 +368,7 @@ const secciones = [
       </section>
 
       <section id="limitaciones" class="seccion-doc">
-        <h2><span class="num">08</span> Limitaciones conocidas</h2>
+        <h2><span class="num">10</span> Limitaciones conocidas</h2>
         <ul>
           <li>Los precios cambian a diario y las promociones distorsionan el ranking. La fecha de
             recogida esta al pie de cada pagina y en cada ficha.</li>

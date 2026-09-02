@@ -2,6 +2,8 @@ import datos from '../datos/dataset.json';
 import { abs } from '../sitio.js';
 import { EVIDENCIA, REVISADO } from '../datos/evidencia.js';
 import { RUTAS_LANDING } from '../datos/landings.js';
+import { RUTAS_EFICACIA } from '../datos/eficacia.js';
+import { RUTAS_TIENDAS } from '../datos/tiendas.js';
 
 // ponytail: 20 lineas de XML en vez de @astrojs/sitemap. Las URLs ya estan todas en el
 // dataset, y asi el lastmod es la fecha real de recogida de precios y no la del build:
@@ -26,6 +28,11 @@ export function GET() {
        .map((c) => url(`/guia/${c.slug}`, '0.8', REVISADO, 'monthly')),
     // Las landings de intencion van por delante de las fichas: responden una consulta de
     // compra entera, no un producto suelto.
+    // Los articulos de arriba del embudo ("que funciona", "para ganar masa muscular",
+    // "que tienda es mas barata"): responden la consulta que se hace ANTES de elegir
+    // categoria, asi que van con la misma prioridad que las categorias.
+    ...RUTAS_EFICACIA.map((r) => url(r, '0.9', REVISADO, 'weekly')),
+    ...RUTAS_TIENDAS.map((r) => url(r, '0.8')),
     ...RUTAS_LANDING.map((r) => url(r, '0.7')),
     ...datos.productos.map((p) => url(`/producto/${p.slug}`, '0.6')),
   ];

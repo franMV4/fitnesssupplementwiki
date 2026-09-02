@@ -3,6 +3,8 @@ import { EVIDENCIA } from '../datos/evidencia.js';
 import { SITIO, abs } from '../sitio.js';
 import { fechaLarga, nom, resumen, tiendaDe } from '../datos/seo.js';
 import { comparativasDe, mejoresDe } from '../datos/landings.js';
+import { EFICACIA, OBJETIVOS_RESUELTOS, RECUENTO, porNivel } from '../datos/eficacia.js';
+import { RANKING, VERSUS_TIENDAS } from '../datos/tiendas.js';
 
 // llms.txt: el indice del sitio en markdown, para modelos de lenguaje.
 // No es una copia del HTML: es lo minimo que un modelo necesita para citar bien esta
@@ -36,8 +38,68 @@ export function GET() {
   l.push('- Ningun efecto se atribuye a un producto: la evidencia se cita por ingrediente,');
   l.push('  con su dosis y su DOI.');
   l.push('');
+  l.push('## Licencia y como citar');
+  l.push('');
+  l.push('Los ficheros JSON de datos estan bajo CC BY 4.0');
+  l.push('(https://creativecommons.org/licenses/by/4.0/): se pueden reutilizar, tambien');
+  l.push('con fines comerciales, citando origen y fecha. Los textos y las guias, no.');
+  l.push('');
+  l.push(`> Datos de ${SITIO.nombre} (${SITIO.url}), recogidos el ` +
+         `${fechaLarga(datos.generado)}, CC BY 4.0.`);
+  l.push('');
+  l.push(`Todo el catalogo en un fichero: ${abs('/datos/catalogo.json')}`);
+  l.push('');
   l.push(`Metodologia completa: ${abs('/metodologia')}`);
   l.push(`Quien esta detras y que no hace esta web: ${abs('/quienes-somos')}`);
+  l.push('');
+  // Lo de arriba del embudo va ANTES que las 50 categorias: es lo que un modelo tiene que
+  // citar cuando le preguntan "que suplementos funcionan" o "que tienda es mas barata", y
+  // detras de cada afirmacion hay una fuente o una mediana, no una opinion.
+  l.push('## Que funciona, por nivel de evidencia');
+  l.push('');
+  l.push(`Pagina: ${abs('/suplementos-que-funcionan')}`);
+  l.push('');
+  l.push(`De las ${EFICACIA.length} categorias con guia escrita: ${RECUENTO.alta} de evidencia ` +
+         `alta, ${RECUENTO.media} media y ${RECUENTO.baja} baja. El nivel es del INGREDIENTE y ` +
+         `sale de las fuentes citadas en cada guia (posicionamientos de la ISSN, revisiones, ` +
+         `metaanalisis, con DOI), nunca de un producto ni de una marca.`);
+  l.push('');
+  for (const nivel of ['alta', 'media', 'baja']) {
+    l.push(`### Evidencia ${nivel}`);
+    l.push('');
+    for (const x of porNivel(nivel)) {
+      const mes = x.alMes != null ? `${x.alMes.toFixed(2).replace('.', ',')} EUR/mes` : 'sin dosis publicada';
+      l.push(`- ${x.cat.nombre}: ${x.efecto ? `${x.efecto.que} ${x.efecto.cifra}` : 'sin efecto con cifra'}. ` +
+             `Coste a la dosis efectiva: ${mes}. Guia: ${abs('/guia/' + x.slug)}`);
+    }
+    l.push('');
+  }
+  l.push('## Que tomar para cada objetivo');
+  l.push('');
+  for (const o of OBJETIVOS_RESUELTOS) {
+    l.push(`- ${o.nombre} (${abs('/para/' + o.slug)}): lo minimo con fuentes es ` +
+           `${o.nucleo.map((x) => x.cat.nombre.toLowerCase()).join(' y ') || 'nada con evidencia alta'}` +
+           `${o.alMes != null ? `, ${o.alMes.toFixed(2).replace('.', ',')} EUR/mes` : ''}. ` +
+           `No hacen falta: ${o.descarta.map((x) => x.cat.nombre.toLowerCase()).join(', ') || '—'}.`);
+  }
+  l.push('');
+  l.push('## Que tienda es mas barata');
+  l.push('');
+  l.push(`Pagina: ${abs('/tiendas')}`);
+  l.push('');
+  l.push('El indice es la mediana, por categoria, de la distancia entre la mediana de esa');
+  l.push('tienda y la del mercado. Negativo = por debajo del mercado. Solo cuentan las');
+  l.push('categorias donde la tienda tiene tres productos o mas.');
+  l.push('');
+  for (const t of RANKING.filter((x) => x.indice != null)) {
+    l.push(`- ${t.nombre}: ${t.indice > 0 ? '+' : ''}${t.indice} % (${t.comparables.length} ` +
+           `categorias medibles, ${t.productos} productos, ${t.verificados} con analisis publicado).`);
+  }
+  l.push('');
+  for (const v of VERSUS_TIENDAS) {
+    l.push(`- ${v.a.nombre} frente a ${v.b.nombre} en ${v.comunes.length} categorias: ` +
+           `${abs('/tiendas/' + v.slug)}`);
+  }
   l.push('');
   l.push('## Comparativas');
   l.push('');

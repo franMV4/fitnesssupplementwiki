@@ -95,8 +95,13 @@ export default function Ponderador({ filas = [] }) {
                                loading="lazy" decoding="async" width="55" height="55" />
                         )}
                         <a href={`/producto/${f.p.s}`} className="celda-producto">
+                          {/* En Amazon la marca no viene en ningun campo y el scraper la deja
+                              en "Desconocida". Es lo honesto en la BD, pero pintarla delante
+                              del nombre llena la columna de una palabra que no es un dato.
+                              La tabla de categoria ya lo hacia asi; esta no, y se notaba. */}
                           <span className="enlace-producto">
-                            <span className="marca">{f.p.marca}</span> {f.p.nombre}
+                            {f.p.marca !== 'Desconocida' && <span className="marca">{f.p.marca} </span>}
+                            {f.p.nombre}
                           </span>
                         </a>
                       </div>

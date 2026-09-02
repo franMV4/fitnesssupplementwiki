@@ -1,14 +1,15 @@
 ---
 import Base from '../../layouts/Base.astro';
-import TablaProductos from '../../componentes/TablaProductos.jsx';
+import TablaProductos from '../../componentes/TablaProductos.astro';
 import Cifras from '../../componentes/Cifras.astro';
 import Destacados from '../../componentes/Destacados.astro';
+import CaraACara from '../../componentes/CaraACara.astro';
 import Aviso from '../../componentes/Aviso.astro';
 import Faq from '../../componentes/Faq.astro';
 import datos from '../../datos/dataset.json';
 import { abs } from '../../sitio.js';
 import { eur, paraTabla } from '../../datos/util.js';
-import { fechaLarga, listaLd, resumen } from '../../datos/seo.js';
+import { agregadoLd, fechaLarga, listaLd, resumen } from '../../datos/seo.js';
 import {
   MEJORES, comparativasDe, descripcionMejores, faqsMejores, mejoresDe, respuestaMejores,
 } from '../../datos/landings.js';
@@ -29,8 +30,15 @@ const canonica = abs(`/mejores/${l.slug}`);
 // Hermanas: las otras landings de la misma categoria y sus versus. El enlace interno con
 // texto que dice la consulta vale mas que un "ver mas", y aqui sale gratis.
 const hermanas = mejoresDe(cat.slug).filter((o) => o.slug !== l.slug);
+// En la landing de una tienda, el contrario natural es el resto del mercado: la pregunta
+// de "creatina de HSN" es la misma que la del versus ("por que la suya cuesta esto") solo
+// que contra todos a la vez. En las landings de sello o de precio no hay dos partes que
+// comparar, asi que la seccion no sale.
+const resto = l.tienda
+  ? datos.productos.filter((p) => p.categoria === cat.slug && p.tienda !== l.tienda) : [];
 const versus = comparativasDe(cat.slug);
 
+const agregado = agregadoLd(l.titulo, productos, canonica);
 const schema = [
   {
     '@type': 'CollectionPage',
@@ -40,8 +48,10 @@ const schema = [
     description: descripcionMejores(l),
     inLanguage: 'es-ES',
     dateModified: datos.generado,
-    isPartOf: { '@id': abs('/#sitio') },
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
     publisher: { '@id': abs('/#editor') },
+    // La horquilla de la tabla entera, no solo la de los diez de la ItemList.
+    ...(agregado ? { mainEntity: agregado } : {}),
   },
   {
     '@type': 'BreadcrumbList',
@@ -79,8 +89,14 @@ const schema = [
   <div class="aparece d3 tabla-categoria">
     <Cifras n={productos.length} min={r.barato?.precio_referencia}
             max={r.caro?.precio_referencia} unidad={r.unidad} dec={r.dec} nivel4={r.nivel4} />
-    <TablaProductos productos={productos.map(paraTabla)} client:visible />
+    <TablaProductos productos={productos.map(paraTabla)} />
   </div>
+
+  {resto.length > 0 && (
+    <CaraACara cat={cat}
+               ladoA={{ nombre: l.nombreTienda, productos }}
+               ladoB={{ nombre: 'El resto de tiendas', productos: resto }} />
+  )}
 
   <p class="nota">
     <strong>Esto es un filtro, no otro ranking.</strong> El score que ordena esta tabla es

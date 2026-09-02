@@ -55,6 +55,29 @@ def test_url_imagen_normaliza_las_tres_formas():
     assert u(None) is None and u([]) is None and u("") is None
 
 
+def test_url_imagen_escapa_los_espacios():
+    """Zumub publica ficheros con espacios ("zumub_egg white powder_LRG.jpg"): sin
+    escapar, urllib los rechaza y el navegador pide una URL partida."""
+    assert core.url_imagen("https://www.zumub.com/images/large/a b_LRG.jpg") == (
+        "https://www.zumub.com/images/large/a%20b_LRG.jpg")
+    # Ya escapada, no se vuelve a escapar (%20 -> %2520).
+    assert core.url_imagen("https://x.es/a%20b.jpg") == "https://x.es/a%20b.jpg"
+
+
+def test_zumub_repone_la_carpeta_de_marca():
+    """Su JSON-LD da /images/large/X.jpg y el fichero esta en /images/large/<marca>/X.jpg."""
+    from scraper.tiendas.zumub import CARPETA_IMG, _imagen
+    html = '<img src="https://www.zumub.com/images/large/zumub/Casein_1kg_front_LRG.jpg">'
+    carpeta = CARPETA_IMG.search(html).group(1)
+    assert carpeta == "zumub"
+    assert _imagen("https://www.zumub.com/images/large/Casein_2kg_LRG.jpg", carpeta) == (
+        "https://www.zumub.com/images/large/zumub/Casein_2kg_LRG.jpg")
+    # Sin carpeta detectada o sin imagen, se deja lo que haya.
+    assert _imagen("https://www.zumub.com/images/large/a.jpg", None) == (
+        "https://www.zumub.com/images/large/a.jpg")
+    assert _imagen(None, "zumub") is None
+
+
 def test_item_normaliza():
     s = Hsn()
     fila = s.item(marca="raw series", nombre="Creatina Monohidrato 1Kg &amp; Creapure",
@@ -109,6 +132,7 @@ def test_variantes_hsn_usan_el_bloque_del_producto():
 # --- fase 3: motor de scoring ---------------------------------------------------
 
 from scoring.motor import evaluar, puntuar_categoria      # noqa: E402
+from scoring import config as cfg_scoring                # noqa: E402
 
 DOSIS_REF = {
     "creatina_monohidrato": {"dosis_efectiva_min_mg": 3000, "dosis_efectiva_max_mg": 5000,
@@ -564,18 +588,28 @@ def test_una_creatina_sin_forma_declarada_se_puntua_penalizada():
 from scoring.motor import precio_referencia                                # noqa: E402
 
 
-def test_el_precio_por_kilo_manda_la_mitad_del_score():
+def test_el_precio_por_kilo_manda_su_parte_del_score():
     """Misma calidad y distinto precio por kilo: gana el barato, y el mas caro pierde
-    exactamente la proporcion en la que es mas caro."""
+    exactamente la proporcion en la que es mas caro.
+
+    Se comprueba contra los pesos de config.py y no contra un numero escrito aqui: el
+    reparto se ha movido dos veces y lo que este test defiende no es el 50 %, es que el
+    precio pese lo que la metodologia publicada dice que pesa."""
     barato = dict(formato_gramos=1000, precio_eur=20.0, servicios_por_envase=None,
-                  forma="monohidrato", categoria="creatina")
+                  forma="monohidrato", categoria="creatina", nombre="Creatina monohidrato",
+                  marca="Marca")
     caro = dict(barato, precio_eur=40.0)
     ing = [dict(ingrediente="creatina_monohidrato", dosis_por_servicio_mg=None)]
     ev = [evaluar(p, ing, 1, DOSIS_REF) for p in (barato, caro)]
     assert [e["precio_referencia"] for e in ev] == [20.0, 40.0]
+    # Con nota en los dos, la parte de opiniones es identica y no enturbia la resta.
+    for e in ev:
+        e["valoracion"], e["n_valoraciones"] = 4.5, 100
     puntuar_categoria(ev)
-    # Calidad identica (60), precio 100 % vs 50 %: 0.5*60+0.5*100 = 80 y 0.5*60+0.5*50 = 55.
-    assert ev[0]["score_final"] == 80.0 and ev[1]["score_final"] == 55.0
+    assert ev[0]["score_calidad"] == ev[1]["score_calidad"]
+    # El caro cuesta el doble: se lleva la mitad de la parte del precio y nada mas.
+    esperado = cfg_scoring.PESO_COSTE * 100 * 0.5
+    assert abs((ev[0]["score_final"] - ev[1]["score_final"]) - esperado) < 0.11
     assert any("20.00 EUR por kilo" in d for d in ev[0]["desglose"])
 
 
@@ -601,8 +635,14 @@ def test_sin_formato_declarado_no_hay_media_nota():
              forma=None, categoria="preentreno")
     e = evaluar(p, [], 1, DOSIS_REF)
     assert e["precio_referencia"] is None
+    e["valoracion"], e["n_valoraciones"] = 4.5, 100
     puntuar_categoria([e])
-    assert e["score_final"] == round(0.5 * e["score_calidad"], 1)
+    # Sin precio comparable, su parte de la nota es cero: el resto lo aportan la calidad,
+    # los requisitos y las opiniones, nunca el precio.
+    sin_precio = (e["score_final"] - cfg_scoring.PESO_CALIDAD * e["score_calidad"]
+                  - cfg_scoring.PESO_VALORACION * 100 * 0.9
+                  - cfg_scoring.PESO_REQUISITOS * (e["score_requisitos"] or 0))
+    assert abs(sin_precio) < 5, sin_precio
     assert any("sin precio comparable" in d for d in e["desglose"])
 
 
@@ -901,6 +941,573 @@ def test_la_serie_exportada_solo_guarda_los_dias_en_que_cambia_el_precio():
     h = historicos(con)[pid]
     assert h["n"] == 5 and h["min"] == 17.5 and h["max"] == 20.0
     assert [x[1] for x in h["serie"]] == [20.0, 17.5]      # cinco lecturas, dos puntos
+
+
+
+def test_ediciones_del_panel():
+    """Lo que se corrige en /admin sobrevive a la pasada siguiente del scraper.
+
+    Es la razon de ser de ediciones.py: `guardar_producto` hace upsert por (tienda, url)
+    y machacaria cada correccion manual a la manana siguiente, en silencio.
+    """
+    import json
+    import sqlite3
+
+    import ediciones
+    from data import db
+
+    con = db.connect(":memory:")
+    db.init(con)
+    db.guardar_producto(con, dict(marca="Marca Mal Escrita", nombre="Creatina 1 kg",
+                                  categoria="creatina", tienda="demo",
+                                  url="https://demo.invalid/1",
+                                  formato_gramos=1000, precio_eur=25.0))
+    con.commit()
+    clave = "demo|https://demo.invalid/1"
+    fila = lambda ambito, k, campo, valor: {
+        "ambito": ambito, "clave": k, "campo": campo,
+        "valor": json.dumps(valor), "motivo": "", "autor": "yo", "fecha": "2026-08-31"}
+
+    correcciones = [
+        fila("producto", clave, "marca", "Marca Bien Escrita"),
+        fila("producto", clave, "precio_eur", 19.9),
+        fila("producto", clave, "id", 999),            # no editable: se ignora
+        fila("producto", "demo|https://demo.invalid/9", "oculto", True),
+        fila("categoria", "creatina", "termino", "creatina micronizada"),
+        fila("categoria", "creatina", "filtro", "."),  # no editable: se ignora
+    ]
+
+    assert ediciones.aplicar_productos(con, correcciones) == 2
+    p = con.execute("SELECT marca, precio_eur, precio_por_kg, id FROM producto").fetchone()
+    assert p["marca"] == "Marca Bien Escrita" and p["precio_eur"] == 19.9
+    # La columna generada se recalcula sola: corregir el precio corrige el EUR/kg, que es
+    # por lo que se ordena la tabla.
+    assert p["precio_por_kg"] == 19.9
+    assert p["id"] != 999                              # `id` no esta en CAMPOS_PRODUCTO
+
+    # Simula la pasada siguiente del scraper: el upsert devuelve el precio viejo...
+    db.guardar_producto(con, dict(marca="Marca Mal Escrita", nombre="Creatina 1 kg",
+                                  categoria="creatina", tienda="demo",
+                                  url="https://demo.invalid/1",
+                                  formato_gramos=1000, precio_eur=25.0))
+    con.commit()
+    assert con.execute("SELECT precio_eur FROM producto").fetchone()[0] == 25.0
+    # ...y volver a aplicar las correcciones lo deja otra vez bien, sin tocar nada.
+    ediciones.aplicar_productos(con, correcciones)
+    assert con.execute("SELECT precio_eur FROM producto").fetchone()[0] == 19.9
+
+    assert ediciones.ocultos(correcciones) == {"demo|https://demo.invalid/9"}
+    assert ediciones.textos_categoria(correcciones) == {
+        "creatina": {"termino": "creatina micronizada"}}
+
+    # Una edicion con el JSON corrupto se salta, no tumba la publicacion entera.
+    rotas = correcciones + [{"ambito": "producto", "clave": clave, "campo": "nombre",
+                             "valor": "{esto no es json", "motivo": "", "autor": "",
+                             "fecha": ""}]
+    assert ediciones.por_ambito(rotas, "producto")[clave]["marca"] == "Marca Bien Escrita"
+
+    con.close()
+
+
+def test_ediciones_de_pesos():
+    """Los pesos se pueden corregir, pero no romper la invariante del motor."""
+    import json
+    import types
+
+    import ediciones
+
+    cfg = types.SimpleNamespace(PESO_CALIDAD=0.35, PESO_COSTE=0.35,
+                                PESO_REQUISITOS=0.20, PESO_VALORACION=0.10,
+                                UMBRAL_INFRADOSAJE=0.6,
+                                INGREDIENTES_IGNORADOS={"aroma"})
+    fila = lambda campo, valor: {"ambito": "config", "clave": "scoring", "campo": campo,
+                                 "valor": json.dumps(valor)}
+
+    assert ediciones.aplicar_config([fila("peso_calidad", 0.4), fila("peso_coste", 0.3)], cfg) == 2
+    assert cfg.PESO_CALIDAD == 0.4 and cfg.PESO_COSTE == 0.3
+
+    # Lo que no es un peso numerico no se pisa: una constante que es un conjunto no se
+    # puede editar desde un campo de texto sin dejar el motor sin arrancar.
+    assert ediciones.aplicar_config([fila("ingredientes_ignorados", "aroma")], cfg) == 0
+    assert cfg.INGREDIENTES_IGNORADOS == {"aroma"}
+    assert ediciones.aplicar_config([fila("umbral_infradosaje", "mucho")], cfg) == 0
+    assert cfg.UMBRAL_INFRADOSAJE == 0.6
+
+    # Y si la suma deja de ser 1, la publicacion se para en vez de reordenar las 30
+    # tablas con una formula que no cuadra.
+    try:
+        ediciones.aplicar_config([fila("peso_calidad", 0.9)], cfg)
+    except SystemExit as e:
+        assert "sumar 1" in str(e)
+    else:
+        raise AssertionError("un peso que no suma 1 tenia que parar la publicacion")
+
+
+import json                                                               # noqa: E402
+
+
+def test_shopify_hace_una_ficha_por_variante():
+    """Un producto de Shopify con dos formatos son dos precios, no uno.
+
+    Si las variantes se aplastan en un solo producto, la tabla ensena el bote de 1 kg al
+    precio del de 500 g (o al reves), que es el error de emparejamiento que mas dano
+    hace: sale primero en el ranking.
+    """
+    from scraper.tiendas import shopify
+    catalogo = json.dumps({"products": [{
+        "title": "Creatina Monohidrato", "handle": "creatina-mono", "vendor": "Marca",
+        "images": [{"src": "https://ejemplo.com/foto.jpg"}],
+        "variants": [{"id": 1, "title": "500 g", "price": "19.90"},
+                     {"id": 2, "title": "1 kg", "price": "32.90"},
+                     {"id": 3, "title": "250 g", "price": "0.00"}]}]})
+    antes = shopify.fetch
+    shopify.fetch = lambda url, **kw: catalogo
+    try:
+        filas = shopify.Hollandbarrett().extraer("creatina")
+    finally:
+        shopify.fetch = antes
+    formatos = sorted((f["producto"]["formato_gramos"], f["producto"]["precio_eur"])
+                      for f in filas)
+    # La de 250 g no entra: un precio de 0 es una variante agotada, no una ganga.
+    assert formatos == [(500.0, 19.9), (1000.0, 32.9)], formatos
+    # Y las dos fichas tienen URL distinta, o el upsert por (tienda, url) las fundiria.
+    assert len({f["producto"]["url"] for f in filas}) == 2
+    assert all(f["producto"]["marca"] == "Marca" for f in filas)
+
+
+def test_el_slug_de_la_ficha_se_lee_aunque_la_url_acabe_en_un_identificador():
+    """Promofarma termina sus fichas en /p-30376: ahi no hay nombre que filtrar."""
+    from scraper.tiendas.catalogo_sitemap import _texto_de_url
+    assert _texto_de_url("https://www.promofarma.com/es/sotya-creatina-350gr/p-30376") \
+        == "sotya creatina 350gr p 30376"
+    assert core.es_valido(
+        _texto_de_url("https://www.promofarma.com/es/sotya-creatina-350gr/p-30376"),
+        "creatina")
+    # Y la que si lleva el nombre al final sigue leyendose igual.
+    assert core.es_valido(
+        _texto_de_url("https://www.dosfarma.com/hivital-creatina-3000-mg-1-kg.html"),
+        "creatina")
+
+
+def test_un_precio_por_tramos_es_el_de_comprar_uno():
+    """DosFarma publica un AggregateOffer con descuento por cantidad.
+
+    El comparador ensena lo que cuesta UN bote: coger el lowPrice (el de cinco unidades)
+    pondria esa tienda primera en la tabla con un precio que el lector no puede pagar
+    comprando uno.
+    """
+    from scraper.tiendas.catalogo_sitemap import _precio
+    agregada = {"@type": "AggregateOffer", "lowPrice": 22.8, "highPrice": 24,
+                "offers": [
+                    {"price": 22.8, "priceSpecification": {
+                        "eligibleQuantity": {"minValue": 5}}},
+                    {"price": 24, "priceSpecification": {
+                        "eligibleQuantity": {"minValue": 1, "maxValue": 2}}}]}
+    assert _precio(agregada) == 24
+    assert _precio({"@type": "Offer", "price": 17.44}) == 17.44
+    assert _precio(None) is None
+
+
+def test_vitobest_no_se_queda_con_el_precio_sin_iva():
+    """Su listado publica 30,27 y el comprador paga 33,30: el precio va en la ficha."""
+    from scraper.tiendas import listado
+    assert listado.TIENDAS["vitobest"]["precio_en_ficha"] is True
+    assert not listado.TIENDAS["tiendaculturista"].get("precio_en_ficha")
+    # Y el formato viaja en el fragmento de PrestaShop, con guion bajo.
+    assert core.medida("Creatine Premium",
+                       "/1192-creatine-premium.html#/38-tamano-500_g".replace("_", " "),
+                       categoria="creatina") == (500.0, None)
+
+
+def test_una_categoria_sin_filtro_no_se_saca_de_un_sitemap():
+    """El preentreno no tiene filtro de nombre: lo acota el listado de la tienda.
+
+    En las tres tiendas que se leen por sitemap no hay listado que lo acote, asi que sin
+    este corte `es_valido` deja pasar las 35.000 URLs del sitemap y se guardan quince
+    fichas al azar como si fueran preentrenos.
+    """
+    from scraper.tiendas import catalogo_sitemap
+    def no_deberia_llamarse(url, **kw):
+        raise AssertionError("se salio a la red para una categoria que no se puede acotar")
+    antes = catalogo_sitemap.fetch
+    catalogo_sitemap.fetch = no_deberia_llamarse
+    try:
+        assert catalogo_sitemap.Dosfarma().extraer("preentreno") == []
+    finally:
+        catalogo_sitemap.fetch = antes
+    assert categorias.CATEGORIAS["preentreno"].get("filtro") is None
+
+
+
+# --- fase 14: composicion real, aditivos y nota de los compradores ---------------
+
+
+def test_la_nota_de_la_tienda_se_normaliza_a_cinco():
+    """Prozis puntua sobre 10 y HSN sobre 5. Sin normalizar, media tabla saldria doble."""
+    assert core.valoracion({"aggregateRating": {"ratingValue": "9.6", "bestRating": "10",
+                                                "reviewCount": "40"}}) == (4.8, 40)
+    assert core.valoracion({"aggregateRating": {"ratingValue": 4.8, "bestRating": 5,
+                                                "reviewCount": 16}}) == (4.8, 16)
+    # Sin opiniones no hay media, y una media de cero votos no es una media.
+    assert core.valoracion({"aggregateRating": {"ratingValue": 5, "reviewCount": 0}}) == (None, None)
+    assert core.valoracion({}) == (None, None)
+    # Zumub y Myprotein cuelgan la nota del ProductGroup, no de cada variante.
+    assert core.valoracion([{"name": "500 g"},
+                            {"aggregateRating": {"ratingValue": 4.5,
+                                                 "reviewCount": 27}}]) == (4.5, 27)
+
+
+def test_la_nota_de_la_tienda_entera_no_es_la_del_producto():
+    """DosFarma publica su 4,86 con 36.502 opiniones en TODAS sus fichas, de toda marca."""
+    marcas = ["Nutrisport", "226ers", "Hypertrophy"]
+    misma = [{"producto": {"marca": marcas[i % 3], "valoracion": 4.86,
+                           "n_valoraciones": 36502}} for i in range(20)]
+    assert core.valoracion_es_de_la_tienda(misma)
+    distintas = [{"producto": {"marca": "M%d" % i, "valoracion": 4.0 + i / 10,
+                               "n_valoraciones": i + 1}} for i in range(20)]
+    assert not core.valoracion_es_de_la_tienda(distintas)
+    # Dos productos con la misma nota son normales: no hay catalogo del que sospechar.
+    assert not core.valoracion_es_de_la_tienda(misma[:3])
+    # Y los ocho formatos de la MISMA ficha de Zumub comparten la nota del producto con
+    # todo el derecho: una sola marca no es un catalogo entero.
+    variantes = [{"producto": {"marca": "Zumub", "valoracion": 4.5,
+                               "n_valoraciones": 2504}} for _ in range(17)]
+    assert not core.valoracion_es_de_la_tienda(variantes)
+
+
+def test_la_pureza_sale_de_la_columna_por_cien_gramos():
+    assert core.pureza_declarada("<td>Proteinas</td><td>22 g</td><td>74g</td>") == 0.74
+    # Con la columna del servicio sola no se puede saber la pureza sin inventarse
+    # cuanto pesa el servicio.
+    assert core.pureza_declarada("<td>Proteinas</td><td>22 g</td>") is None
+    assert core.pureza_declarada("<p>sin tabla</p>") is None
+
+
+def test_una_etiqueta_limpia_no_se_confunde_con_una_sucia():
+    """"Sin colorantes ni edulcorantes" es lo contrario de llevarlos."""
+    limpia = "Ingredientes de calidad, sin colorantes, sin edulcorantes ni aromas artificiales"
+    assert core.aditivos(limpia) == []
+    sucia = ("Ingredientes: proteina de suero, cacao, colorante (caramelo amonico), "
+             "edulcorante (sucralosa), lactasa.")
+    assert core.aditivos(sucia) == ["edulcorante_artificial", "colorante"]
+    # None y [] no son lo mismo: uno es "no lleva", el otro "no lo dice".
+    assert core.aditivos("<p>ni una lista por aqui</p>") is None
+
+
+def test_el_relleno_ya_no_es_un_aditivo_sino_un_requisito():
+    """Endulzar un bote es una preferencia; rebajarlo con maltodextrina es dinero.
+
+    Por eso el relleno salio de los aditivos (que se miran igual en toda la web) y se
+    fue a los requisitos de cada categoria, donde el mismo carbohidrato puede ser un
+    relleno en una whey y ser exactamente lo que has comprado en un ganador de peso."""
+    lista = "Ingredientes: maltodextrina, dextrosa, aroma natural, sal"
+    assert core.aditivos(lista) == []            # ni edulcorantes ni colorantes: limpia
+    whey = dict(marca="M", nombre="Whey protein 1kg", categoria="proteina_whey",
+                pureza_real=0.80, lista_ingredientes=lista)
+    _, detalle = reqs.evaluar(whey, "proteina_whey")
+    assert "sin_relleno" in [r["id"] for cumple, r in detalle if not cumple]
+    # En carbohidratos el requisito no es ese: lo que se mira es que no sea azucar de mesa.
+    _, detalle = reqs.evaluar(dict(marca="M", nombre="Maltodextrina 1kg",
+                                   categoria="carbohidratos", lista_ingredientes=lista),
+                              "carbohidratos")
+    assert not [r["id"] for cumple, r in detalle if not cumple]
+
+
+REF_PROTEINA = {"proteina_whey_concentrada": {"dosis_efectiva_min_mg": 20000,
+                                              "pureza_tipica": 0.75,
+                                              "forma_preferida": None}}
+
+
+def _whey(pureza, aditivos):
+    return evaluar(dict(categoria="proteina_whey", formato_gramos=1000, precio_eur=25.0,
+                        servicios_por_envase=33, forma=None, pureza_real=pureza,
+                        aditivos=aditivos),
+                   [dict(ingrediente="proteina_whey_concentrada",
+                         dosis_por_servicio_mg=20000)], 2, REF_PROTEINA)
+
+
+def test_la_pureza_real_manda_sobre_la_tipica_de_la_categoria():
+    """Dos whey al mismo precio por kilo no rinden lo mismo si una lleva 82 % y otra 52 %."""
+    buena, mala = _whey(0.82, []), _whey(0.52, [])
+    assert buena["score_calidad"] > mala["score_calidad"]
+    # El coste por dosis efectiva se calcula con la pureza REAL, no con la tipica.
+    assert buena["coste_por_dosis_efectiva"] < mala["coste_por_dosis_efectiva"]
+    sin_dato = _whey(None, [])
+    # sin dato propio se sigue usando la pureza tipica de la categoria (75 %)
+    assert abs(sin_dato["coste_por_dosis_efectiva"] - 25.0 / (1000 * 0.75 / 20)) < 1e-3
+
+
+def test_no_publicar_la_lista_no_penaliza():
+    """Solo se resta por aditivos que la ficha DECLARA. Lo que no dice no cuenta."""
+    muda, limpia = _whey(0.80, None), _whey(0.80, [])
+    assert muda["score_calidad"] == limpia["score_calidad"]
+    sucia = _whey(0.80, ["edulcorante_artificial", "colorante"])
+    assert sucia["score_calidad"] < limpia["score_calidad"]
+    # Y la penalizacion tiene suelo: cinco aditivos no dejan la nota en cero.
+    todos = _whey(0.80, ["edulcorante_artificial", "colorante", "aroma_artificial",
+                         "relleno", "antiaglomerante"])
+    assert todos["score_calidad"] >= limpia["score_calidad"] * cfg_scoring.SUELO_ADITIVOS - 0.1
+
+
+def test_una_sola_resena_de_cinco_estrellas_no_decide_el_ranking():
+    """La media bayesiana: con una opinion mandas poco; con cuatrocientas, casi del todo."""
+    veterano = dict(_whey(0.80, []), valoracion=4.6, n_valoraciones=400)
+    novato = dict(_whey(0.80, []), valoracion=5.0, n_valoraciones=1)
+    veterano, novato = puntuar_categoria([veterano, novato])
+    # Sin amortiguar, medio punto de estrella valdria casi un punto de nota final.
+    bruto = cfg_scoring.PESO_VALORACION * 100 * (5.0 - 4.6) / 5
+    assert bruto > 0.5
+    # Con una sola opinion se queda en calderilla: el ranking lo siguen decidiendo la
+    # composicion, la certificacion y el precio.
+    assert abs(novato["score_final"] - veterano["score_final"]) < bruto / 4
+
+
+def test_con_opiniones_de_sobra_la_nota_si_cuenta():
+    """Amortiguar no es ignorar: con datos suficientes, la nota mueve el ranking."""
+    querida = dict(_whey(0.80, []), valoracion=4.8, n_valoraciones=500)
+    odiada = dict(_whey(0.80, []), valoracion=2.5, n_valoraciones=500)
+    querida, odiada = puntuar_categoria([querida, odiada])
+    assert querida["score_final"] - odiada["score_final"] > 2
+
+
+def test_no_tener_opiniones_no_resta():
+    """Que una tienda no publique resenas no puede costarle la nota al producto."""
+    con_media = dict(_whey(0.80, []), valoracion=4.5, n_valoraciones=50)
+    sin_nada = dict(_whey(0.80, []), valoracion=None, n_valoraciones=None)
+    con_media, sin_nada = puntuar_categoria([con_media, sin_nada])
+    # Sin nota se cuenta como la media de la categoria: ni premio ni castigo.
+    assert abs(sin_nada["score_final"] - con_media["score_final"]) < 0.2
+    assert any("no publica opiniones" in d for d in sin_nada["desglose"])
+
+
+
+
+# --- fase 15: requisitos de cada categoria ---------------------------------------
+
+from scoring import requisitos as reqs                     # noqa: E402
+
+
+def test_todas_las_categorias_tienen_requisitos():
+    """Una categoria sin requisitos se puntua sin el 20 % que dice la metodologia."""
+    sin = [c for c in categorias.CATEGORIAS if not reqs.REQUISITOS.get(c)]
+    assert not sin, "categorias sin requisitos escritos: %s" % ", ".join(sin)
+
+
+def test_cada_requisito_se_puede_publicar():
+    """Todos llevan que comprueban y por que: /metodologia y la ficha los publican."""
+    for cat, lista in reqs.REQUISITOS.items():
+        ids = [r["id"] for r in lista]
+        assert len(ids) == len(set(ids)), "%s repite un id de requisito" % cat
+        for r in lista:
+            assert r["que"] and r["porque"], "%s/%s sin texto" % (cat, r["id"])
+            assert r["fuente"] in ("ficha", "declara", "lista", "tabla", "dosis"), r["fuente"]
+            # "ficha" es el nombre del producto, y con el nombre solo se puede PROHIBIR:
+            # ver la palabra es la prueba, no verla no lo es. Un exige sobre el nombre
+            # suspende a todo el que no lleve su forma quimica en el titulo.
+            assert not (r["fuente"] == "ficha" and r["exige"]),                 "%s/%s exige un dato al nombre del producto" % (cat, r["id"])
+
+
+def _creatina(nombre, lista=None):
+    return dict(marca="Marca", nombre=nombre, categoria="creatina",
+                lista_ingredientes=lista)
+
+
+def test_una_creatina_con_relleno_puntua_menos_que_una_pura():
+    pura, _ = reqs.evaluar(_creatina("Creatina monohidrato 1kg",
+                                     "creatina monohidrato, nada mas"), "creatina")
+    rebajada, _ = reqs.evaluar(_creatina("Creatina monohidrato 1kg",
+                                         "creatina monohidrato, maltodextrina, aroma"),
+                               "creatina")
+    assert pura > rebajada, (pura, rebajada)
+
+
+def test_sin_lista_de_ingredientes_ese_requisito_no_cuenta():
+    """No se puede afirmar que un bote lleva relleno porque su tienda no diga que lleva."""
+    nota, detalle = reqs.evaluar(_creatina("Creatina monohidrato 1kg"), "creatina")
+    ids = [r["id"] for _, r in detalle]
+    assert "sin_relleno" not in ids, "juzgo el relleno sin leer la etiqueta"
+    # Y lo que si se puede juzgar con el nombre, se juzga.
+    assert "sin_mezcla" in ids
+
+
+def test_una_whey_rebajada_con_colageno_no_cumple():
+    whey = dict(marca="M", nombre="Whey protein 1kg", categoria="proteina_whey",
+                pureza_real=0.75,
+                lista_ingredientes="proteina concentrada de suero, colageno hidrolizado, aroma")
+    nota, detalle = reqs.evaluar(whey, "proteina_whey")
+    fallan = [r["id"] for cumple, r in detalle if not cumple]
+    assert "sin_proteina_barata" in fallan, fallan
+
+
+def test_el_amino_spiking_se_detecta():
+    whey = dict(marca="M", nombre="Whey protein 1kg", categoria="proteina_whey",
+                pureza_real=0.80,
+                lista_ingredientes="proteina de suero, glicina, taurina, aroma")
+    _, detalle = reqs.evaluar(whey, "proteina_whey")
+    assert "sin_amino_spiking" in [r["id"] for cumple, r in detalle if not cumple]
+
+
+def test_un_magnesio_en_oxido_puntua_menos_que_uno_en_bisglicinato():
+    bueno, _ = reqs.evaluar(dict(marca="M", nombre="Magnesio bisglicinato 120 caps",
+                                 categoria="magnesio"), "magnesio")
+    malo, _ = reqs.evaluar(dict(marca="M", nombre="Oxido de magnesio 120 caps",
+                                categoria="magnesio"), "magnesio")
+    assert bueno > malo, (bueno, malo)
+
+
+def test_una_categoria_sin_ficha_suficiente_no_es_un_cero():
+    """None significa "no se ha podido juzgar", y el motor lo trata como la media."""
+    nota, detalle = reqs.evaluar(dict(marca="M", nombre="Algo", categoria="inventada"),
+                                 "inventada")
+    assert nota is None and detalle == []
+
+
+def test_la_creatina_no_paga_dos_veces_por_no_declarar_la_forma():
+    """El factor de forma de la calidad ya la penaliza: cobrarla otra vez la hunde doble."""
+    ids = [r["id"] for r in reqs.REQUISITOS["creatina"]]
+    assert "activo_nombrado" not in ids
+    # Pero donde la calidad NO mira la forma (la glutamina no tiene forma preferida),
+    # el requisito si tiene que estar.
+    assert "activo_nombrado" in [r["id"] for r in reqs.REQUISITOS["glutamina"]]
+
+
+def test_los_requisitos_valen_el_veinte_por_ciento():
+    assert cfg_scoring.PESO_REQUISITOS == 0.20
+    assert abs(cfg_scoring.PESO_CALIDAD + cfg_scoring.PESO_COSTE
+               + cfg_scoring.PESO_REQUISITOS + cfg_scoring.PESO_VALORACION - 1) < 1e-9
+
+
+def test_cumplir_los_requisitos_sube_el_score_final():
+    """Igual de caro y de certificado, pero uno cumple su categoria y el otro no."""
+    base = dict(_whey(0.80, []), valoracion=None, n_valoraciones=0)
+    cuatro = [(True, {})] * 4          # cuatro requisitos juzgados: cuentan casi enteros
+    cumple = dict(base, score_requisitos=100.0, requisitos=cuatro)
+    incumple = dict(base, score_requisitos=25.0, requisitos=cuatro)
+    cumple, incumple = puntuar_categoria([cumple, incumple])
+    # Amortiguadas contra la media de la categoria (62,5) con dos requisitos prestados:
+    # 87,5 y 37,5 sobre 100, o sea 10 puntos de nota final entre uno y otro.
+    esperado = cfg_scoring.PESO_REQUISITOS * (87.5 - 37.5)
+    assert abs((cumple["score_final"] - incumple["score_final"]) - esperado) < 0.2
+
+
+
+def test_un_requisito_sin_donde_comprobarse_no_suspende():
+    """El fallo que enseno la primera pasada: cinco categorias con un 0 % de cumplimiento.
+
+    No medía el mercado, medía que se le estaba pidiendo el peso molecular al NOMBRE del
+    producto. Sin descripcion donde buscarlo, ese requisito no cuenta."""
+    sin_ficha = dict(marca="M", nombre="Acido hialuronico 60 capsulas",
+                     categoria="acido_hialuronico")
+    nota, detalle = reqs.evaluar(sin_ficha, "acido_hialuronico")
+    assert nota is None and detalle == []
+    # Con la descripcion de la tienda delante, ya se puede juzgar.
+    con_ficha = dict(sin_ficha, descripcion="Acido hialuronico de bajo peso molecular "
+                                            "(50 kDa), 120 mg por capsula.")
+    nota, detalle = reqs.evaluar(con_ficha, "acido_hialuronico")
+    assert nota == 100.0, [(c, r["id"]) for c, r in detalle]
+
+
+def test_un_solo_requisito_no_vale_los_veinte_puntos():
+    """Con una sola comprobacion posible, la nota se queda cerca de la media: la ficha
+    no ha dado pruebas suficientes para mover 20 puntos con un si o un no."""
+    def con(n_req, nota):
+        return dict(_whey(0.80, []), valoracion=None, n_valoraciones=0,
+                    score_requisitos=nota, requisitos=[(False, {})] * n_req)
+    uno, cuatro, referencia = con(1, 0.0), con(4, 0.0), con(4, 100.0)
+    uno, cuatro, referencia = puntuar_categoria([uno, cuatro, referencia])
+    # Los dos suspenden, pero el que enseno cuatro cartas pierde mas que el que enseno una.
+    assert cuatro["score_final"] < uno["score_final"] < referencia["score_final"]
+
+
+def test_la_descripcion_sale_igual_de_un_dict_que_de_una_lista():
+    """Zumub y Myprotein pasan la variante y su ProductGroup: la descripcion cuelga del
+    grupo, y sin mirar la lista media tienda se quedaba sin requisitos juzgables."""
+    class Tienda(core.Scraper):
+        tienda = "t"
+    hacer = lambda ld, u: Tienda().item(
+        marca="M", nombre="Magnesio 120 caps", url=u, precio_eur=10.0, unidades=120,
+        categoria="magnesio", ld=ld)["producto"]["descripcion"]
+    grupo = {"description": "Magnesio bisglicinato, 200 mg por capsula."}
+    assert hacer([{"name": "variante"}, grupo], "https://x/1") == grupo["description"]
+    assert hacer(grupo, "https://x/2") == grupo["description"]
+    assert hacer(None, "https://x/3") is None
+
+
+def test_los_activos_nuevos_se_leen_de_la_etiqueta():
+    """Once activos mas: vitaminas, minerales, ashwagandha, curcuma y glucosamina.
+
+    Sin esto, veinte categorias se publicaban sin coste por dosis y sin poder decir si un
+    bote llega a la dosis de referencia: la tabla comparaba precios de capsulas sin saber
+    que lleva dentro cada capsula."""
+    casos = {
+        "Magnesio (de citrato de magnesio) 375 mg por dosis diaria": ("magnesio", 375),
+        "Zinc 25 mg por comprimido": ("zinc", 25),
+        "Vitamina C 1000 mg con escaramujo": ("vitamina_c", 1000),
+        "Hierro bisglicinato 14 mg": ("hierro", 14),
+        "Calcio 600 mg + vitamina D": ("calcio", 600),
+        "Ashwagandha KSM-66 600 mg por capsula": ("ashwagandha", 600),
+        "Extracto de curcuma con 500 mg de curcuminoides": ("curcuminoides", 500),
+    }
+    for texto, (ing, mg) in casos.items():
+        leido = {d["ingrediente"]: d["dosis_por_servicio_mg"]
+                 for d in core.dosis_en_texto(texto)}
+        assert leido.get(ing) == mg, (texto, leido)
+
+
+def test_la_dosis_de_al_lado_no_se_lee_como_propia():
+    """"Glucosamina 1500 mg y condroitina 1200 mg": cada una con la suya.
+
+    La cifra puede ir delante o detras del nombre, y antes ganaba siempre la forma que se
+    probaba primero: la condroitina se quedaba con los 1500 de su vecina. Ahora gana la
+    cifra mas pegada al nombre."""
+    leido = {d["ingrediente"]: d["dosis_por_servicio_mg"]
+             for d in core.dosis_en_texto("Glucosamina 1500 mg y condroitina 1200 mg")}
+    assert leido == {"glucosamina": 1500, "condroitina": 1200}, leido
+
+
+def test_la_sal_de_un_mineral_no_se_lee_como_dosis():
+    """"Citrato de magnesio 1490 mg" no son 1490 mg de magnesio: son unos 240.
+
+    El citrato pesa seis veces mas que el magnesio que lleva dentro. Leer esa cifra ponia
+    "en rango efectivo" en la ficha de un producto que no llega ni a la mitad de la dosis
+    de referencia, y lo subia en la tabla por encima de los que si llegan."""
+    assert core.dosis_en_texto("Citrato de magnesio 1490 mg 30 tabletas") == []
+    assert core.dosis_en_texto("Oxido de magnesio 1500 mg") == []
+    assert core.dosis_en_texto("Gluconato de zinc 50 mg") == []
+    # El elemento declarado a secas si vale: es lo que pide la etiqueta europea.
+    assert core.dosis_en_texto("Magnesio 375 mg (100% VRN)") == [
+        {"ingrediente": "magnesio", "dosis_por_servicio_mg": 375}]
+
+
+def test_la_cifra_del_titulo_no_es_la_dosis_de_una_planta():
+    """"Ashwagandha 9000mg" no lleva 9000 mg de nada: es la equivalencia de un extracto.
+
+    Lo mismo "Curcuma 20.000mg" y "Onagra + Vitamina E 660 mg" (660 de aceite de onagra,
+    no de vitamina E). Esas cifras del nombre comercial ponian "en rango efectivo" en
+    productos que no llegan, asi que estos activos solo se leen de la ficha."""
+    assert core.dosis_en_texto("Ashwagandha 9000mg 180 capsulas", ficha="") == []
+    assert core.dosis_en_texto("Curcuma 20.000mg 60 Tabletas", ficha="") == []
+    assert core.dosis_en_texto("Ashwagandha 9000mg", ficha="300 mg de extracto de ashwagandha") == [
+        {"ingrediente": "ashwagandha", "dosis_por_servicio_mg": 300}]
+    # Los de siempre siguen saliendo del titulo: ahi la cifra si es la dosis.
+    assert core.dosis_en_texto("Preentreno con 200 mg de cafeina", ficha="") == [
+        {"ingrediente": "cafeina", "dosis_por_servicio_mg": 200}]
+
+
+def test_ninguna_dosis_de_referencia_sin_fuente():
+    """La regla del proyecto, comprobada: ni una cifra sin cita y sin enlace.
+
+    Es la unica tabla del repositorio que puede hacer dano a una persona, y la que mas
+    crece cada vez que se abre una categoria."""
+    import json
+    dosis = json.loads(pathlib.Path("data/dosis_referencia.json").read_text(encoding="utf-8"))
+    for d in dosis["dosis"]:
+        assert d.get("dosis_efectiva_min_mg"), d["ingrediente"]
+        assert d.get("nivel_evidencia") in {"alta", "media", "baja"}, d["ingrediente"]
+        assert d.get("fuentes"), d["ingrediente"]
+        for f in d["fuentes"]:
+            assert f.get("cita"), d["ingrediente"]
+            assert f.get("url", "").startswith("http"), d["ingrediente"]
 
 
 def main():

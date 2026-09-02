@@ -52,6 +52,25 @@ CATEGORIA_URL = {
     "curcuma": "https://www.hsnstore.com/ingredientes/curcuma",
     "glucosamina": "https://www.hsnstore.com/ingredientes/glucosamina",
     "carnitina": "https://www.hsnstore.com/ingredientes/carnitina",
+    # --- ampliacion a los 50 mas vendidos (2026-08-31) ---
+    # Las cuatro que faltan (hmb, tribulus, vitamina_k2, quemagrasas) no tienen
+    # pagina de ingrediente en HSN: no vende la categoria y run_scraper se la salta.
+    "taurina": "https://www.hsnstore.com/ingredientes/taurina",
+    "arginina": "https://www.hsnstore.com/ingredientes/arginina",
+    "maca": "https://www.hsnstore.com/ingredientes/maca",
+    "coenzima_q10": "https://www.hsnstore.com/ingredientes/coenzima-q10",
+    "espirulina": "https://www.hsnstore.com/ingredientes/espirulina",
+    "te_verde": "https://www.hsnstore.com/ingredientes/te-verde",
+    "teanina": "https://www.hsnstore.com/ingredientes/teanina",
+    "triptofano": "https://www.hsnstore.com/ingredientes/triptofano",
+    "colina": "https://www.hsnstore.com/ingredientes/colina",
+    "acido_hialuronico": "https://www.hsnstore.com/ingredientes/acido-hialuronico",
+    "vitamina_e": "https://www.hsnstore.com/ingredientes/vitamina-e",
+    "calcio": "https://www.hsnstore.com/ingredientes/calcio",
+    "selenio": "https://www.hsnstore.com/ingredientes/selenio",
+    "potasio": "https://www.hsnstore.com/ingredientes/potasio",
+    "cla": "https://www.hsnstore.com/ingredientes/cla",
+    "complejo_b": "https://www.hsnstore.com/ingredientes/vitamina-b",
 }
 
 # Filas de la tabla "Cantidad de nutrientes": el sangrado (ml-1, ml-3, ml-6) dice si la
@@ -143,7 +162,8 @@ class Hsn(Scraper):
                     # En capsulas el servicio es la capsula: el envase rinde tantas tomas
                     # como unidades trae.
                     servicios=round(g / gramos_dosis) if (g and gramos_dosis) else u,
-                    ingredientes=ingredientes, imagen=prod.get("image")))
+                    ingredientes=ingredientes, imagen=prod.get("image"),
+                    ld=prod, pagina=pagina))
         return fuera
 
     def _ingredientes(self, pagina):

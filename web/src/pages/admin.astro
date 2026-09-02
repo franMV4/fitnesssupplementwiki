@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import Admin from '../componentes/Admin.jsx';
+
+// El panel. La pagina es una cascara de 3 KB: todo lo que hay dentro lo decide la API
+// segun quien seas, y sin sesion de administrador aqui no se pinta ni un dato.
+//
+// `ancho` porque una tabla de productos con doce columnas no cabe en la medida de
+// lectura, y `noindex` + Disallow en robots.txt porque no hay nada que indexar.
+---
+<Base titulo="Panel | FitnessSupplementWiki"
+      descripcion="Administracion del catalogo, las resenas y las cuentas."
+      ancho noindex>
+  <Admin client:load />
+</Base>

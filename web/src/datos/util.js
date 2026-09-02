@@ -1,5 +1,21 @@
 // Helpers compartidos por las paginas .astro y la isla React.
 
+import datos from './dataset.json' with { type: 'json' };
+
+/** Como se reparte el score, en prosa y desde la config que de verdad puntua.
+ *
+ * Seis paginas mencionan el reparto en su texto. Escrito a mano en cada una, el dia que
+ * cambian los pesos cinco se quedan mintiendo; escrito aqui, cambian las seis solas.
+ */
+export const reparto = (unidad) => {
+  const c = datos.config;
+  const pct = (n) => `${Math.round(n * 100)} %`;
+  return `${pct(c.peso_coste)} precio${unidad ? ` por ${unidad}` : ''} frente al mas ` +
+    `barato de la categoria, ${pct(c.peso_calidad)} calidad verificable (certificacion, ` +
+    `pureza y aditivos), ${pct(c.peso_requisitos)} los requisitos de la categoria y ` +
+    `${pct(c.peso_valoracion)} la nota de los compradores en la tienda`;
+};
+
 export const NIVEL = {
   4: { etiqueta: 'Verificado', clase: 'n4' },
   3: { etiqueta: 'Analisis de marca', clase: 'n3' },
@@ -49,6 +65,11 @@ export const paraTabla = (p) => ({
   nivel_verificacion: p.nivel_verificacion, flag_infradosaje: p.flag_infradosaje,
   sabores: p.sabores, sellos: p.sellos, categoria: p.categoria,
   servicios_por_envase: p.servicios_por_envase,
+  // La nota de la tienda y la pureza real SI las pinta la tabla, en la celda del nombre.
+  valoracion: p.valoracion, n_valoraciones: p.n_valoraciones, pureza_real: p.pureza_real,
+  // Solo el recuento: la tabla pinta "3/4 requisitos" y el detalle vive en la ficha.
+  requisitos_cumple: p.requisitos?.filter((r) => r.cumple).length,
+  requisitos_total: p.requisitos?.length,
   // De la certificacion solo se lee el tipo (los chips "solo Creapure" / "solo IFOS").
   certificaciones: p.certificaciones?.map((c) => ({ tipo: c.tipo })),
 });
@@ -57,6 +78,13 @@ export const TIENDAS = {
   hsn: 'HSN', myprotein: 'Myprotein', nutritienda: 'Nutritienda',
   lifepro: 'Life Pro', prozis: 'Prozis', masmusculo: 'MASmusculo',
   amazon: 'Amazon', zumub: 'Zumub', iogenix: 'iO.GENIX', demo: 'Demo',
+  // Sin nombre aqui, una tienda sale con su clave interna ("tiendaculturista") en la
+  // columna Tienda de las 30 tablas y dentro del titulo de sus fichas.
+  bulevip: 'Bulevip', dosfarma: 'DosFarma', promofarma: 'PromoFarma',
+  tiendaculturista: 'Tienda Culturista', usafitness: 'USA Fitness',
+  vitobest: 'VitOBest', quamtrax: 'Quamtrax', sotya: 'Sotya',
+  crown: 'Crown Sport Nutrition', hollandbarrett: 'Holland & Barrett',
+  '226ers': '226ERS',
 };
 
 // --- La seleccion para comparar -------------------------------------------------

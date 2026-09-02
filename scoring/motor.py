@@ -22,6 +22,7 @@ from datetime import date
 
 import categorias
 from . import config as cfg
+from . import requisitos as reqs
 
 # --- logica pura: dicts entran, dicts salen. Sin BD, sin red, testeable. ---------
 
@@ -65,6 +66,46 @@ def _factor_verificacion(nivel, tipo=None):
     return cfg.FACTOR_VERIFICACION[nivel], etiqueta
 
 
+def _factor_pureza(pureza_real, pureza_tipica):
+    """Cuanto sube o baja la calidad por lo que la TABLA de esta ficha declara.
+
+    Sin tabla no hay factor: se sigue usando la pureza tipica de la categoria, que es lo
+    que se hacia antes, y el desglose lo dice. Ningun producto pierde nota porque su
+    tienda publique menos.
+    """
+    if not pureza_real:
+        return 1.0, None
+    if not pureza_tipica:
+        # Hay dato pero no con que compararlo (la categoria no declara pureza tipica).
+        # Se cuenta, no se puntua.
+        return 1.0, "la ficha declara %.0f%% de activo por cada 100 g" % (pureza_real * 100)
+    factor = min(cfg.FACTOR_PUREZA_MAX,
+                 max(cfg.FACTOR_PUREZA_MIN, pureza_real / pureza_tipica))
+    return factor, ("%.0f%% de activo por cada 100 g segun su tabla, frente al %.0f%% "
+                    "tipico de la categoria" % (pureza_real * 100, pureza_tipica * 100))
+
+
+NOMBRE_ADITIVO = {"edulcorante_artificial": "edulcorantes artificiales",
+                  "colorante": "colorantes", "aroma_artificial": "aromas artificiales",
+                  "relleno": "rellenos", "antiaglomerante": "antiaglomerantes"}
+
+
+def _factor_aditivos(aditivos):
+    """Penalizacion por los aditivos que la ETIQUETA declara. 1.0 si no la publica.
+
+    `aditivos` es None cuando la tienda no publica la lista de ingredientes y una lista
+    vacia cuando la publica y no lleva ninguno de los penalizados. No son lo mismo y no
+    se puntuan igual.
+    """
+    if aditivos is None:
+        return 1.0, "la ficha no publica la lista de ingredientes"
+    if not aditivos:
+        return 1.0, "etiqueta limpia: ningun edulcorante artificial, colorante ni relleno"
+    factor = max(cfg.SUELO_ADITIVOS, 1.0 - cfg.PENALIZACION_POR_ADITIVO * len(aditivos))
+    return factor, "lleva %s en su lista de ingredientes" % ", ".join(
+        NOMBRE_ADITIVO.get(a, a) for a in aditivos)
+
+
 def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certificacion=None):
     """Calidad, precio de referencia y coste por dosis efectiva de UN producto.
 
@@ -73,21 +114,50 @@ def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certific
     dosis_ref: {ingrediente: {dosis_efectiva_min_mg, dosis_efectiva_max_mg, forma_preferida}}
     """
     precio, unidad = precio_referencia(producto)
+    # Una cifra por encima del techo de credibilidad no es la dosis de ese activo: es una
+    # equivalencia de extracto, el peso de la sal o el de la capsula. Se tira aqui y no en
+    # el scraper a proposito: el scraper apunta lo que dice la etiqueta y el motor decide
+    # que puede usar. Ver cfg.TECHO_DOSIS_MG.
+    ingredientes = [i for i in ingredientes
+                    if not (i.get("dosis_por_servicio_mg")
+                            and i["dosis_por_servicio_mg"] > cfg.TECHO_DOSIS_MG.get(
+                                i["ingrediente"], float("inf")))]
     claves = [i for i in ingredientes
               if i["ingrediente"] in dosis_ref
               and i["ingrediente"] not in cfg.INGREDIENTES_IGNORADOS]
+    # La composicion se juzga igual haya dosis o no: la pureza y los aditivos salen de la
+    # tabla y de la etiqueta, no de saber que lleva cada activo.
+    pureza_real = producto.get("pureza_real")
+    pureza_tipica = (dosis_ref[claves[0]["ingrediente"]].get("pureza_tipica")
+                     if claves else None)
+    f_pureza, motivo_pureza = _factor_pureza(pureza_real, pureza_tipica)
+    f_aditivos, motivo_aditivos = _factor_aditivos(producto.get("aditivos"))
+    f_composicion = f_pureza * f_aditivos
+    motivos_composicion = [m for m in (motivo_pureza, motivo_aditivos) if m]
+
+    # Los requisitos de la categoria van en su propia parte de la nota, no multiplicando
+    # a la calidad: son una pregunta distinta ("¿es esto lo que dice ser?") y el lector
+    # tiene que poder ver por separado cuanto pesa cada una.
+    nota_requisitos, detalle_requisitos = reqs.evaluar(
+        producto, producto.get("categoria"), n_dosis=len(claves))
+    motivos_requisitos = [
+        ("cumple: %s" % r["que"]) if cumple else ("no cumple: %s" % r["que"])
+        for cumple, r in detalle_requisitos]
     if not claves:
         # La tienda no publica que lleva cada dosis. El producto se compara igual por
         # precio y por lo comprobable que sea su certificacion, pero de su formula no se
         # afirma nada: ni bien ni mal dosificado.
         f_verif, motivo = _factor_verificacion(nivel_verificacion, tipo_certificacion)
-        return {"score_calidad": round(100.0 * f_verif, 1),
+        return {"score_calidad": round(100.0 * f_verif * f_composicion, 1),
                 "coste_por_dosis_efectiva": None, "flag_infradosaje": False,
                 "modo": "sin_dosis",
                 "precio_referencia": round(precio, 4) if precio else None,
                 "unidad_precio": unidad,
+                "score_requisitos": nota_requisitos,
+                "requisitos": detalle_requisitos,
                 "desglose": [motivo, "la ficha no publica las dosis de sus activos: la "
-                                     "nota solo mira certificacion y precio"]}
+                                     "nota solo mira certificacion, composicion y precio"]
+                            + motivos_composicion + motivos_requisitos}
 
     # El modo lo manda la CATEGORIA, no cuantos ingredientes sepamos juzgar. Un
     # preentreno del que solo hayamos podido leer la cafeina sigue siendo una formula:
@@ -117,11 +187,13 @@ def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certific
         dosis_min = ref["dosis_efectiva_min_mg"]
         # Un kilo de concentrado de suero no es un kilo de proteina: la pureza tipica de
         # la categoria (citada en la tabla de dosis) descuenta lo que no es activo.
-        pureza = ref.get("pureza_tipica") or 1.0
+        # Manda la pureza REAL de la tabla de esta ficha cuando la tienda la publica: la
+        # tipica de la categoria es una estimacion y esta es el dato del bote.
+        pureza = pureza_real or ref.get("pureza_tipica") or 1.0
         mg_envase = (producto["formato_gramos"] or 0) * 1000 * pureza
         dosis_por_envase = mg_envase / dosis_min if dosis_min else None
         coste = (producto["precio_eur"] / dosis_por_envase) if dosis_por_envase else None
-        calidad = 100.0 * f_verif * f_forma
+        calidad = 100.0 * f_verif * f_forma * f_composicion
         infradosaje = False
         if dosis_por_envase:
             desglose.append(
@@ -160,7 +232,7 @@ def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certific
 
         adecuacion = sum(ratios) / len(ratios)
         infradosaje = any(r < cfg.UMBRAL_INFRADOSAJE for r in ratios)
-        calidad = 100.0 * adecuacion * f_verif * f_forma
+        calidad = 100.0 * adecuacion * f_verif * f_forma * f_composicion
         if infradosaje:
             calidad *= cfg.PENALIZACION_INFRADOSAJE
 
@@ -179,6 +251,8 @@ def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certific
             coste = None
             desglose.append("sin servicios por envase no se puede calcular el coste por dosis")
 
+    desglose.extend(motivos_composicion)
+    desglose.extend(motivos_requisitos)
     for ing in sin_referencia:
         desglose.append("%s: sin dosis de referencia publicada, no cuenta en la nota"
                         % ing.replace("_", " "))
@@ -192,6 +266,8 @@ def evaluar(producto, ingredientes, nivel_verificacion, dosis_ref, tipo_certific
             "modo": modo,
             "precio_referencia": round(precio, 4) if precio else None,
             "unidad_precio": unidad,
+            "score_requisitos": nota_requisitos,
+            "requisitos": detalle_requisitos,
             "desglose": desglose}
 
 
@@ -225,6 +301,24 @@ def puntuar_categoria(evaluaciones):
     los €/capsula contra los €/capsula. Comparar 30 €/kg con 0,07 €/capsula no da un
     ranking, da un numero sin sentido.
     """
+    # --- nota de los compradores en la tienda -----------------------------------
+    # Media bayesiana contra la media de la categoria: una nota con tres opiniones
+    # todavia es casi la media de todos, y con cuatrocientas es casi la suya. Asi la
+    # ficha nueva con un unico cinco estrellas no adelanta a la que lleva anos vendiendo.
+    # Quien no tiene nota se queda EN la media: no publicar opiniones no es una falta.
+    notas = [(e.get("valoracion"), e.get("n_valoraciones") or 0) for e in evaluaciones
+             if e.get("valoracion")]
+    media = (sum(v * n for v, n in notas) / sum(n for v, n in notas)
+             if notas and sum(n for _, n in notas) else None)
+
+    # --- requisitos de la categoria ---------------------------------------------
+    # Misma regla que con las opiniones: a quien no se le ha podido juzgar ni un
+    # requisito (su ficha no publica ni la lista de ingredientes ni la forma) se le pone
+    # la media de su categoria. No es un aprobado regalado: es no afirmar nada de lo que
+    # su tienda no cuenta, que es lo que hace el resto del proyecto.
+    juzgados = [e["score_requisitos"] for e in evaluaciones
+                if e.get("score_requisitos") is not None]
+    media_req = sum(juzgados) / len(juzgados) if juzgados else None
     mas_barato = {}
     for e in evaluaciones:
         precio, unidad = e.get("precio_referencia"), e.get("unidad_precio")
@@ -243,8 +337,53 @@ def puntuar_categoria(evaluaciones):
             e["desglose"] = e["desglose"] + [
                 "la ficha no dice cuanto producto trae el envase: sin precio comparable "
                 "se queda sin la mitad de la nota"]
+        nota, n = e.get("valoracion"), e.get("n_valoraciones") or 0
+        if media is None:
+            # Nadie en la categoria publica opiniones: el peso vuelve a calidad y precio
+            # repartido como estan, en vez de darle a todo el mundo el mismo regalo.
+            valoracion_rel = (cfg.PESO_CALIDAD * e["score_calidad"] / 100.0
+                              + cfg.PESO_COSTE * precio_rel) / (cfg.PESO_CALIDAD
+                                                                + cfg.PESO_COSTE)
+        elif nota:
+            m = cfg.OPINIONES_DE_REFERENCIA
+            bayes = (n * nota + m * media) / (n + m)
+            valoracion_rel = bayes / 5.0
+            e["desglose"] = e["desglose"] + [
+                "%.1f sobre 5 con %d opiniones en la tienda (la media de la categoria es "
+                "%.1f)" % (nota, n, media)]
+        else:
+            valoracion_rel = media / 5.0
+            e["desglose"] = e["desglose"] + [
+                "la tienda no publica opiniones de este producto: cuenta como la media de "
+                "la categoria, ni suma ni resta"]
+        req = e.get("score_requisitos")
+        if req is not None and media_req is not None:
+            # Amortiguada contra la media de su categoria segun cuantos se le hayan
+            # podido juzgar: con uno solo, la nota apenas se mueve de la media; con
+            # cuatro, manda casi entera la suya. Un si o un no no puede valer 20 puntos.
+            n_req = len(e.get("requisitos") or [])
+            k = cfg.REQUISITOS_DE_REFERENCIA
+            req = (n_req * req + k * media_req) / (n_req + k)
+        if req is None:
+            # Nadie en la categoria publica lo suficiente: el peso vuelve a las partes
+            # que si tienen datos, repartido como estan.
+            req = media_req if media_req is not None else (
+                100.0 * (cfg.PESO_CALIDAD * e["score_calidad"] / 100.0
+                         + cfg.PESO_COSTE * precio_rel)
+                / (cfg.PESO_CALIDAD + cfg.PESO_COSTE))
+            e["desglose"] = e["desglose"] + [
+                "su ficha no publica lo suficiente para juzgar los requisitos de la "
+                "categoria: cuenta como la media, ni suma ni resta"]
+        else:
+            cumplidos = sum(1 for cumple, _ in e.get("requisitos") or [] if cumple)
+            total = len(e.get("requisitos") or [])
+            e["desglose"] = e["desglose"] + [
+                "cumple %d de los %d requisitos de su categoria que su ficha permite "
+                "comprobar" % (cumplidos, total)]
         e["score_final"] = round(
-            cfg.PESO_CALIDAD * e["score_calidad"] + cfg.PESO_COSTE * 100.0 * precio_rel, 1)
+            cfg.PESO_CALIDAD * e["score_calidad"] + cfg.PESO_COSTE * 100.0 * precio_rel
+            + cfg.PESO_REQUISITOS * req
+            + cfg.PESO_VALORACION * 100.0 * valoracion_rel, 1)
     return evaluaciones
 
 
@@ -297,6 +436,17 @@ def _nivel_verificacion(con, producto_id):
     return fila["n"], tipo
 
 
+def _producto(fila):
+    """La fila de la BD como dict, con `aditivos` ya des-serializado.
+
+    En la BD es un JSON (o NULL si la ficha no publica la lista); el motor trabaja con
+    una lista de Python, y None sigue significando "no lo dice".
+    """
+    p = dict(fila)
+    p["aditivos"] = json.loads(p["aditivos"]) if p.get("aditivos") else p.get("aditivos")
+    return p
+
+
 def recalcular(con, categoria=None):
     ref = _dosis_referencia(con)
     sql = "SELECT * FROM producto" + (" WHERE categoria=?" if categoria else "")
@@ -308,23 +458,32 @@ def recalcular(con, categoria=None):
             "SELECT ingrediente, dosis_por_servicio_mg FROM ingrediente_producto "
             "WHERE producto_id=?", (p["id"],)).fetchall()]
         nivel, tipo_cert = _nivel_verificacion(con, p["id"])
-        e = evaluar(dict(p), ingredientes, nivel, ref, tipo_cert)
+        e = evaluar(_producto(p), ingredientes, nivel, ref, tipo_cert)
         e["producto_id"] = p["id"]
+        e["valoracion"] = p["valoracion"]
+        e["n_valoraciones"] = p["n_valoraciones"]
         por_categoria.setdefault(p["categoria"], []).append(e)
 
     hoy = date.today().isoformat()
     total = 0
     for evaluaciones in por_categoria.values():
         for e in puntuar_categoria(evaluaciones):
+            # Los requisitos se guardan con su texto: la ficha los enseña uno a uno con
+            # un si o un no, y ese texto se escribe una sola vez, en requisitos.py.
+            detalle = [{"id": r["id"], "que": r["que"], "porque": r["porque"],
+                        "cumple": cumple} for cumple, r in (e.get("requisitos") or [])]
             con.execute(
                 "INSERT INTO score (producto_id, score_calidad, coste_por_dosis_efectiva,"
-                " flag_infradosaje, score_final, desglose, fecha_calculo) VALUES (?,?,?,?,?,?,?) "
+                " flag_infradosaje, score_final, score_requisitos, requisitos, desglose,"
+                " fecha_calculo) VALUES (?,?,?,?,?,?,?,?,?) "
                 "ON CONFLICT(producto_id) DO UPDATE SET score_calidad=excluded.score_calidad,"
                 " coste_por_dosis_efectiva=excluded.coste_por_dosis_efectiva,"
                 " flag_infradosaje=excluded.flag_infradosaje, score_final=excluded.score_final,"
+                " score_requisitos=excluded.score_requisitos, requisitos=excluded.requisitos,"
                 " desglose=excluded.desglose, fecha_calculo=excluded.fecha_calculo",
                 (e["producto_id"], e["score_calidad"], e["coste_por_dosis_efectiva"],
-                 int(e["flag_infradosaje"]), e["score_final"],
+                 int(e["flag_infradosaje"]), e["score_final"], e.get("score_requisitos"),
+                 json.dumps(detalle, ensure_ascii=False),
                  json.dumps(e["desglose"], ensure_ascii=False), hoy))
             total += 1
     con.commit()

@@ -1,0 +1,129 @@
+---
+// Las dos secciones que contestan "por que una es mas barata": que lleva dentro cada
+// bote (ingrediente a ingrediente, con la dosis por servicio) y de donde sale la
+// diferencia de precio (formato, pureza, marca propia, aditivos, analitica).
+//
+// Vive en un componente y no dentro de la pagina porque lo usan las dos rutas que
+// comparan tiendas: el versus (/comparativa/a-vs-b) y la landing de una sola tienda
+// (/mejores/<cat>-de-<tienda>, que compara esa tienda con el resto del mercado).
+//
+// Todo el calculo esta en datos/porque.js; aqui solo se pinta lo que venga. Si una
+// categoria no tiene el dato, la fila no existe: no hay celdas rellenas con supuestos.
+import { ingredientesCaraACara, mg, porQuePrecio } from '../datos/porque.js';
+
+const { cat, ladoA, ladoB } = Astro.props;
+const { intro, factores } = porQuePrecio(cat, ladoA, ladoB);
+const ingredientes = ingredientesCaraACara(ladoA, ladoB);
+const na = ladoA.nombre;
+const nb = ladoB.nombre;
+
+// Lo que se pinta en la celda de un ingrediente: la dosis mediana por servicio y, debajo,
+// cuantos de esa tienda lo declaran y cuantos llegan a la dosis con evidencia detras.
+// "No lo declara" y "no llega" son cosas distintas y se dicen distinto.
+const linea = (l) => {
+  if (!l.llevan) return null;
+  const partes = [`${l.llevan} de ${l.total} lo llevan`];
+  if (l.cumplen != null) partes.push(`${l.cumplen} llegan a la dosis`);
+  else if (l.llevan && !l.conDosis) partes.push('ninguno publica la dosis');
+  return partes.join(' · ');
+};
+---
+{ingredientes.length > 0 && (
+  <section class="seccion" id="ingredientes">
+    <div class="cabecera-seccion">
+      <h2>Que lleva dentro cada bote</h2>
+      <p class="apunte">Dosis mediana por servicio</p>
+    </div>
+    <p class="sutil">
+      El precio por kilo no dice cuanto activo hay dentro del kilo. Esta tabla si: por cada
+      ingrediente, la dosis mediana de un servicio en cada tienda y cuantos productos llegan
+      a la dosis que tiene estudios detras (la misma referencia con la que puntua esta web).
+    </p>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>Ingredientes y dosis por servicio en {na} y {nb}, en {cat.termino}</caption>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th class="num">{na}</th>
+              <th class="num">{nb}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ingredientes.map((f) => (
+              <tr>
+                <td class="principal marca">
+                  {f.nombre}
+                  {f.min != null && (
+                    <span class="explica">Dosis con evidencia: desde {mg(f.min)} por toma</span>
+                  )}
+                </td>
+                {[f.a, f.b].map((l, i) => (
+                  <td class="num" data-et={i === 0 ? na : nb}>
+                    {l.llevan ? (
+                      <>
+                        <span class={l.dosis != null && f.min != null && l.dosis >= f.min ? 'destacado' : ''}>
+                          {mg(l.dosis)}
+                        </span>
+                        <span class="explica">{linea(l)}</span>
+                      </>
+                    ) : <span class="sutil">no lo lleva</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>La dosis es por servicio, no por bote.</strong> Un bote grande con la dosis
+      corta obliga a tomar dos cazos para llegar a lo mismo, y entonces dura la mitad: por eso
+      el precio por dosis de la seccion siguiente no coincide con el precio por kilo.
+    </p>
+  </section>
+)}
+
+{factores.length > 0 && (
+  <section class="seccion" id="por-que">
+    <div class="cabecera-seccion">
+      <h2>Por que una es mas barata que la otra</h2>
+      <p class="apunte">Factor a factor, con el dato de las dos</p>
+    </div>
+    {intro && <p class="entradilla">{intro}</p>}
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>De donde sale la diferencia de precio entre {na} y {nb} en {cat.termino}</caption>
+          <thead>
+            <tr>
+              <th>Factor</th>
+              <th class="num">{na}</th>
+              <th class="num">{nb}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {factores.map((f) => (
+              <tr>
+                <td class="principal marca">
+                  {f.titulo}
+                  <span class="explica">{f.texto}</span>
+                </td>
+                <td class="num" data-et={na}>{f.a}</td>
+                <td class="num" data-et={nb}>{f.b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>Ninguno de estos factores es una acusacion.</strong> Son medianas de lo que
+      cada tienda publica en sus fichas el dia de la recogida de precios: donde una ficha no
+      declara un dato, esa tienda no cuenta en esa fila en vez de contar como un cero.
+      Un producto concreto puede desmentir la mediana de su tienda, y para eso esta la tabla
+      completa. <a href="/metodologia">Como se calcula todo esto</a>.
+    </p>
+  </section>
+)}

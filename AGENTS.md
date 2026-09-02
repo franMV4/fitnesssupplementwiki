@@ -11,37 +11,58 @@ dosis **se sigue calculando y se enseña en la ficha del producto**, pero no mue
 sale en las tablas. Si esto se revierte, hay que revertir con ello los textos de `/metodologia`,
 la portada, el pie de `Base.astro` y la cabecera de la tabla.
 
-**Categorías** (2026-08-25): **30**, los suplementos más vendidos del sector. Las 9
+**Categorías** (2026-08-31): **50**, los suplementos más vendidos del sector. Las 9
 originales (creatina, preentreno, proteína whey, proteína aislada, BCAA, glutamina, colágeno,
-omega 3, multivitamínicos) + 21 nuevas: proteína vegana, caseína, ganadores de peso, EAA,
-beta-alanina, citrulina, carbohidratos, magnesio, zinc, hierro, vitamina D, vitamina C,
+omega 3, multivitamínicos) + 21 del 2026-08-25 (proteína vegana, caseína, ganadores de peso,
+EAA, beta-alanina, citrulina, carbohidratos, magnesio, zinc, hierro, vitamina D, vitamina C,
 vitamina B12, ZMA, ashwagandha, melatonina, cafeína, probióticos, cúrcuma, glucosamina y
-L-carnitina. **21 de las 30 no se puntúan por dosis** (`modo="formula"` con
+L-carnitina) + **20 del 2026-08-31**: taurina, arginina, HMB, tribulus, maca, coenzima Q10,
+espirulina, té verde, L-teanina, triptófano y 5-HTP, colina y alfa-GPC, ácido hialurónico,
+vitamina E, vitamina K2, calcio, CLA, selenio, potasio y electrolitos, complejo B y
+quemagrasas. **41 de las 50 no se puntúan por dosis** (`modo="formula"` con
 `ingredientes=()`), igual que ya pasaba con los multivitamínicos: no hay dosis efectiva
-citable para un mineral o un extracto, y se dice en su página en vez de inventarla.
+citable para un mineral o un extracto, y se dice en su página en vez de inventarla. Las 20
+nuevas van todas así: ninguna trae dosis inventada, y por eso ninguna promete la consulta
+`dosis` (el test lo exige: prometerla sin fuente en `dosis_referencia.json` rompe la suite).
+Las 20 nuevas tampoco tienen guía de evidencia todavía —`web/src/datos/evidencia.js` lo
+escribe una persona— y `/guia/<categoría>` solo se genera para las que la tienen, así que
+no aparecen ahí y no hay hueco que rellenar con prosa automática.
 
-**Tiendas** (2026-08-28): **9**. Las 5 de siempre (HSN, Myprotein, Nutritienda, Life Pro,
-Prozis) + **Amazon** (HTML de resultados de búsqueda; no publica datos estructurados),
-**Zumub** (`ProductGroup` JSON-LD con un `hasVariant` por formato) y **iO.GENIX** (tienda
-oficial de la marca, PrestaShop: la rejilla de categoría trae nombre, precio e imagen en
-atributos, una petición por categoría). MASmusculo sigue bloqueada y solo tiene creatina
-mapeada.
+**Tiendas** (2026-08-31): **20**, las que más venden a clientes de España entre las que
+publican precio de forma legible. Las 9 de antes (HSN, Myprotein, Nutritienda, Life Pro,
+Prozis, Amazon, Zumub, iO.GENIX y MASmusculo bloqueada) + 11 nuevas, agrupadas por **cómo**
+publican y no una por módulo:
+
+| Módulo | Tiendas | Cómo se lee |
+|---|---|---|
+| `scraper/tiendas/shopify.py` | Holland & Barrett ES, Crown Sport Nutrition, Quamtrax, Sotya, 226ERS | `/collections/<handle>/products.json`: una petición por categoría, con una variante por formato y su precio. Los handles salen de `/collections.json?limit=250`. |
+| `scraper/tiendas/listado.py` | USA Fitness, Vitobest, TiendaCulturista | PrestaShop con microdatos. TiendaCulturista trae el producto entero en el listado; USA Fitness solo nombre y URL (hay que abrir la ficha); Vitobest trae el precio **sin IVA** en el listado, así que también va a la ficha (`precio_en_ficha`). |
+| `scraper/tiendas/catalogo_sitemap.py` | DosFarma, Bulevip, Promofarma | Listado pintado por JS: no hay nada que leer. Se recorre el **sitemap**, se filtran las URLs con el filtro de la categoría aplicado al slug y solo se abren las que pasan (tope `LIMITE = 15` fichas por categoría y tienda). |
+
+Tres tiendas grandes se probaron y **no entran**, y conviene no volver a intentarlo sin un
+motivo nuevo: **Weider.es** contesta con todo su catálogo a 0,00 EUR (es escaparate de
+marca, no vende al público); **Decathlon** y **El Corte Inglés** devuelven 403 hasta en el
+`robots.txt`; **Bulk** y **GymBeam** redirigen su tienda española a un dominio internacional
+cuyo sitemap no lista fichas. MASmusculo sigue con su 307 en bucle.
 
 **Stack**: Python 3 **solo stdlib** (sin requests, sin bs4, sin ORM) + SQLite + Astro
-estático con una isla React. `npm` solo dentro de `web/`.
+estático. `npm` solo dentro de `web/`. React solo en las páginas que de verdad tienen una
+aplicación dentro (buscador de la portada, `/admin`, `/entrar`, `/comparar`, reseñas de
+ficha); las tablas de comparativa se pintan en el build y las mueve un script de ~130
+líneas (`componentes/tabla.js`).
 
 ## Pipeline (orden fijo)
 
 ```
-run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → scoring/motor.py
-   tiendas         certificaciones      normaliza marcas y congela el precio    tabla score
-
-  →  exportar.py  →  astro build
-     dataset.json     web/dist
+run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → ediciones.py
+   tiendas         certificaciones      normaliza marcas y congela el precio    correcciones
+                                                                               de /admin
+  →  scoring/motor.py  →  exportar.py  →  astro build
+     tabla score          dataset.json     web/dist
 ```
 
 - `python actualizar.py` — hace los 4 primeros pasos de todas las categorías.
-- `python tests.py` — 63 asserts, sin red ni framework. Correr siempre antes de terminar.
+- `python tests.py` — 72 asserts, sin red ni framework. Correr siempre antes de terminar.
 - `cd web && node --test` — 15 asserts de la API y del filtrado de la tabla.
 - `cd web && npm run dev` (puerto 4322) / `npm run build`.
 
@@ -56,10 +77,14 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `data/afiliados.json` | Enlaces de afiliado. El scoring NO lo importa. |
 | `scraper/core.py` | fetch educado (robots/delay/caché), `ld_json`, normalizadores, clase `Scraper`. |
 | `scraper/tiendas/*.py` | Una tienda por módulo, autodescubiertos. Añadir tienda = fichero nuevo. |
+| `scraper/tiendas/shopify.py`, `listado.py`, `catalogo_sitemap.py` | Las 11 tiendas del 2026-08-31, **agrupadas por cómo publican, no una por fichero**: la clase de cada tienda se fabrica con `type()` al final del módulo (una clase base a medias la instanciaría `run_scraper.descubre` como si fuera una tienda). Añadir tienda de esas familias = una entrada en su tabla `TIENDAS`. |
 | `verificar.py` | CLI: `auto`, `pendientes`, `qs`, `analisis`, `bajar`. |
 | `scoring/config.py` | **Todos** los pesos. Cambiar aquí cambia ranking y página /metodologia. |
 | `scoring/motor.py` | `evaluar()` puro + `puntuar_categoria()` + `sellos_de()`. |
 | `exportar.py` | BD → `web/src/datos/dataset.json` (agrupa sabores, aplica afiliados y sellos). |
+| `ediciones.py` | Las correcciones de `/admin`: las baja de D1 con wrangler y las aplica a la BD **antes del scoring**. Existe porque el upsert del scraper machacaría cada corrección manual. |
+| `web/src/componentes/Admin.jsx` | El panel entero, ocho pestañas. Distingue en pantalla lo que se edita en vivo (reseñas, cuentas) de lo que va en cola hasta la próxima publicación (catálogo). |
+| `web/src/pages/datos/catalogo.json.js` | El volcado que lee el panel: campos editables, sin históricos ni desglose. |
 | `web/functions/api/[[ruta]].js` | **Toda la API** (cuentas y reseñas de lectores), una sola Pages Function. Sin dependencias: PBKDF2 y HMAC de WebCrypto. |
 | `web/schema.sql` | Tablas de D1 (`usuarios`, `resenas`). Ojo: NO es `data/schema.sql`, que es la de SQLite del catálogo. |
 | `web/wrangler.toml` | Bindings de D1 y R2. Existe para que `wrangler pages deploy` suba también las funciones. |
@@ -70,6 +95,8 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `web/src/componentes/Historico.astro` | La serie de precios de la ficha, SVG dibujado en build. No pinta nada hasta que haya dos lecturas. |
 | `web/src/componentes/Comparador.jsx` | `/comparar`: lo que el lector guarda con "+ comparar". Lee `localStorage` y pide `/datos/<categoria>.json`; no lleva datos en el HTML. |
 | `web/src/componentes/Acceso.jsx` | **Un solo formulario de acceso** para `/entrar` y `/registro`. En la ficha ya NO se monta: ahí solo hay un botón que lleva a `/entrar?volver=`, por decisión del dueño (el acceso vive en su página, no en las 2.665 fichas). |
+| `web/src/componentes/Recuperar.jsx` | **Los dos pasos de recuperar contrasena en un componente**: sin `?t=` pide el correo, con `?t=` escribe la clave nueva. Dos paginas para dos pantallas del mismo tramite serian dos cosas que mantener. |
+| `web/src/componentes/api.js` | `pedir()` (la unica forma de llamar a `/api` desde el navegador, con los fallos ya convertidos en mensajes) y `destino()`/`seguro()` para el `?volver=`. |
 | `web/src/datos/evidencia.js` | **Guías de evidencia por ingrediente** (efectos con cifra + DOI, dosis, cuándo sí y cuándo no). **Lo edita una persona, nunca el código**, igual que `dosis_referencia.json`. |
 
 ## El front: sistema "Rotativa" (rediseñado el 2026-08-27)
@@ -97,6 +124,20 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   sobre papel; en oscuro **no se invierten** (un bloque blanco en una pagina oscura deslumbra):
   son un escalon de superficie (`#231e17`) con filete. Los tokens `--neg*` lo resuelven en un
   sitio, no lo escribas a mano.
+- **Cabecera y panel lateral en movil (rediseno del 2026-08-31, decision del dueno)**: en
+  la barra quedan **tres rayas, marca y perfil**, nada mas. El boton de tema se MUEVE
+  dentro del `<nav>` (no se duplica): en escritorio sigue siendo el ultimo hueco de la
+  barra y en movil cae solo al pie del panel, con su nombre escrito al lado. El panel deja
+  de ser "el menu de escritorio en vertical": titulo arriba, filas iguales de 52 px y un
+  pie pegado abajo con `margin-top: auto`. Entrar en Categorias o Guias **no despliega un
+  acordeon, cambia de pantalla**: `nav.principal:has(.menu-cat[open])` esconde todo lo
+  demas y el `<summary>` abierto se vuelve cabecera pegajosa con una flecha de vuelta;
+  cero JS, el `<details>` ya guarda cual esta abierto. `cerrarMenu()` cierra los
+  `<details>` para que el panel vuelva a su primera pantalla. El enlace a `/admin` sale
+  del `admin` que ya devuelve `/api/yo` (la cabecera lo llama en las 2.978 paginas:
+  preguntarlo aparte seria doblar esa llamada para ensenar un enlace).
+  **La tipografia de las filas la decide la seccion 19 y solo ella**: cuando estuvo en dos
+  sitios, las secciones salieron en caja baja y el pie en versales, en la misma columna.
 - **Movil (seccion 19 de `global.css`, va la ULTIMA a proposito)**: dos suelos que no se
   negocian, **11,5 px** para lo que se lee y **44 px de alto** para lo que se pulsa. Estaban
   en la seccion 16 y las secciones 17-18 (que van despues, misma especificidad) los pisaban:
@@ -118,7 +159,7 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   "mejor certificado" **solo sale si hay nivel 4**: en proteinas el techo es el analisis
   de la propia marca y llamar a eso certificado seria vender la palabra del fabricante.
   Si un producto gana dos, se funde en una tarjeta con las dos razones.
-- **Filtros de la tabla** (`TablaProductos.jsx`): el tope de precio es por **unidad de
+- **Filtros de la tabla** (`TablaProductos.astro` + `tabla.js`): el tope de precio es por **unidad de
   venta** (€/kg o €/capsula), no por envase; filtrar por el precio del bote deja fuera
   justo los formatos grandes, que son los baratos por kilo. Los chips "Solo Creapure" y
   "Solo IFOS" solo aparecen si esa tabla tiene esos sellos.
@@ -306,7 +347,7 @@ categoria, un producto o una tienda.**
   datos, no menos.
 - **`run_scraper` descarga en paralelo, una tienda por hilo** (2026-08-25). El delay de
   `core` es por host, así que esperar a que HSN conteste para empezar con Prozis no hacía la
-  descarga más educada, solo más larga: con 8 tiendas y 30 categorías, en serie son horas.
+  descarga más educada, solo más larga: con 20 tiendas y 50 categorías, en serie son días.
   Los hilos **solo descargan**; los `INSERT` siguen siendo secuenciales en el hilo principal,
   que es lo único que sqlite no lleva bien.
 - **La melatonina es la única dosis por debajo de 10 mg** (`core.MIN_MG`). El suelo general de
@@ -372,6 +413,25 @@ categoria, un producto o una tienda.**
   nombre ni en el slug, así que esas dos categorías salen vacías en esta tienda. Es correcto:
   sin unidades no hay nada que comparar.
   Sus URLs de categoría no se adivinan: salen de `/es/sitemap/categories/N.xml`.
+- **Las 11 tiendas del 2026-08-31, trampas ya pagadas**:
+  - **Vitobest** publica en su listado el precio **sin IVA** (30,27 donde el comprador
+    paga 33,30). El bueno está en los microdatos de la ficha, así que su módulo abre la
+    ficha (`precio_en_ficha`). Multiplicar por 1,10 sería adivinar el tipo de cada
+    producto, y esa tienda también vende cosmética.
+  - **Promofarma** termina sus URLs de ficha en un identificador
+    (`.../sotya-creatina-350gr/p-30376`). El último tramo del slug es "p 30376" y deja al
+    filtro de la categoría sin nada que leer: `_texto_de_url` coge los **dos** últimos.
+  - **Bulevip** tiene el sitemap anidado en **dos** niveles (`sitemap.xml` →
+    `sitemap-products-es_ES.xml` → `..._1.xml`). Quedarse en el primero devuelve cero
+    fichas y ni un solo error. Su ficha tampoco publica marca: sale del tramo de la URL,
+    capitalizado (si no, "amix" sería otra marca distinta de "Amix" y tendría su página).
+  - **Shopify** da una variante por formato con su precio, y hay que hacer **una ficha
+    por variante** con URL distinta (`?variant=`), o el upsert por `(tienda, url)` funde
+    el bote de 1 kg con el de 500 g. Una variante a 0,00 no es una ganga: está agotada.
+  - **Las clases de esos tres módulos se fabrican con `type()`** al final del fichero, a
+    propósito: `run_scraper.descubre` instancia toda subclase de `Scraper` que encuentre
+    en el módulo, así que dejar una clase base a medias crea una tienda fantasma con
+    `tienda="?"`.
 - **Myprotein**: sus slugs de categoría están en inglés aunque la tienda sea española
   (`/c/nutrition/protein/whey-protein/`), menos el omega 3, que cuelga de
   `/c/ranges/myvitamins/`. Y hay productos que no dicen los gramos en ninguna parte
@@ -425,7 +485,7 @@ categoria, un producto o una tienda.**
 Lo único dinámico de la web. El catálogo sigue siendo estático y se genera cada noche;
 esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
 
-- **Dónde**: `web/functions/api/[[ruta]].js`, siete rutas bajo `/api/`. Un fichero: ninguna
+- **Dónde**: `web/functions/api/[[ruta]].js`, nueve rutas bajo `/api/`. Un fichero: ninguna
   ruta llega a veinte líneas.
 - **Datos**: D1 (`DB`) para usuarios y reseñas, R2 (`FOTOS`) para las imágenes, servidas por
   `/api/foto/<uuid>` y nunca desde un bucket público.
@@ -440,7 +500,26 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
   `aggregateRating` diría la nota de hace horas. Lo que Google lee sigue siendo la reseña
   editorial. Está escrito también en la cabecera de `Resenas.jsx`, que es donde tienta
   cambiarlo.
-- **Desplegar**: `cd web; npx wrangler pages deploy`. Desde la carpeta de arriba se sube el
+- **Limite de peticiones (2026-08-31)**: `dentroDelLimite()` cuenta por IP
+  (`cf-connecting-ip`) y tramo en la tabla `intentos` de D1. Va en `onRequest`, **antes**
+  de repartir por rutas y solo para POST: dentro de cada handler habria que acordarse de
+  ponerlo en la siguiente ruta que se anada, y la que se olvide es justo la que se lleva
+  la fuerza bruta. Topes generosos a proposito (entrar 20/15 min, registro y olvide 5/h,
+  resenas 20/h): una oficina o un movil con CGNAT comparten IP. **Falla abierto**: si D1
+  se cae, la gente entra igual, porque un contador roto no puede volverse "nadie puede
+  iniciar sesion". Sin cabecera de IP (servidor de desarrollo) no se limita, o todo
+  contaria bajo la misma clave vacia. Ventana fija, no deslizante: el precio conocido es
+  que en el salto de tramo caben dos veces el tope seguidos, y para frenar fuerza bruta
+  da igual. El escalon siguiente, si hace falta, es una regla del WAF de Cloudflare, que
+  corta antes de llegar aqui y no cuesta una escritura. Probado en `api.test.mjs` con una
+  D1 de mentira: si deja de contar, la web se ve igual de bien y se queda abierta.
+- **Desplegar**: `cd web; npx wrangler pages deploy --branch main`. **La bandera no es
+  opcional**: la rama de produccion del proyecto es `main` y el repo local esta en
+  `master`; wrangler detecta la rama de git y sin `--branch main` publica una vista previa
+  (`master.*.pages.dev`) mientras produccion se queda con el build viejo. Y ademas las
+  vistas previas usan los secretos del entorno preview, que estan vacios, asi que la API
+  contesta 503 y parece que el codigo esta roto cuando lo que falla es donde se subio.
+  Desde la carpeta de arriba se sube el
   sitio sin la API. Ver `PUBLICAR.md` paso 9 para crear D1, R2 y el secreto.
 - **Entrar con Google**: flujo de código de autorización escrito a mano (dos redirecciones
   y una llamada). El `id_token` llega de Google por TLS en la misma petición, no a través
@@ -455,7 +534,28 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
   `header.sitio`: el envoltorio está limitado a 82rem y centrado, así que su borde derecho
   no es el de la ventana. Quién ha entrado lo resuelven diez líneas de JS suelto en
   `Base.astro`, no otra isla de React en las 2.996 páginas.
-- **`/entrar` y `/registro` llevan `noindex`** (prop `noindex` de `Base.astro`) y no entran
+- **Recuperar contraseña (28/08/2026)**: `POST /api/olvide` + `POST /api/restablecer`, y
+  `/recuperar` con los dos pasos en la misma URL (sin `?t=` pide el correo, con `?t=` deja
+  escribir la clave). **Sin tabla de tokens**: el enlace es `id.caduca.firma` y la firma se
+  calcula sobre el hash de la clave actual, así que cambiar la clave lo invalida solo. Dura
+  una hora. `olvide` contesta `{ok:true}` siempre, exista la cuenta o no: lo contrario es un
+  comprobador de correos registrados. Las cuentas de Google (`clave = ''`) quedan fuera. El
+  envío es Resend por `fetch`, opcional: sin `RESEND_KEY` y `CORREO_DESDE` el enlace sale por
+  el log del servidor, que es lo que se lee en local. Ver `PUBLICAR.md` 9.7.
+- **`pedir()` de `web/src/componentes/api.js` es la única forma de hablar con la API desde
+  el navegador.** Existe por un fallo real: `await r.json()` sin `catch` reventaba la promesa
+  a medias cuando la respuesta no era JSON, el `setEnviando(false)` de después no llegaba a
+  ejecutarse y el botón se quedaba en *"Un momento…"* para siempre, sin decir nada. Todo
+  formulario nuevo va con `try/catch/finally` alrededor de `pedir()`, no con un
+  `setEnviando(false)` suelto detrás del `fetch`.
+- **En local, `npm run dev` (4322) NO ejecuta `functions/`.** `astro.config.mjs` lleva un
+  proxy de `/api` a `http://127.0.0.1:8788`, o sea que hace falta `npm run api` en otra
+  terminal. Sin él, `/api/entrar` devolvía la página 404 de Astro en HTML: ese era el
+  camino por el que se llegaba al cuelgue de arriba.
+- **El `?volver=` se lee en el navegador, no en el `.astro`.** Las páginas son estáticas:
+  `Astro.url.searchParams` corre al generar el HTML, cuando no hay ninguna petición, y
+  devolvía siempre `/`. Lo resuelve `destino()` de `componentes/api.js`.
+- **`/entrar`, `/registro` y `/recuperar` llevan `noindex`** (prop `noindex` de `Base.astro`) y no entran
   en el sitemap. `seo_check.py` salta las páginas con noindex al comprobar el sitemap: pedir
   que se rastree lo que se marcó como no indexable es contradecirse.
 - **Sin borrado de cuenta en la web**, por decisión del dueño (28/08/2026): el derecho de
@@ -466,6 +566,76 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
 - **Sin recuperar clave, sin moderación y sin rate limit** a propósito: los tres se añaden el
   día que hagan falta, y los dos últimos se resuelven desde el panel de Cloudflare sin tocar
   código.
+
+
+## Panel de administración `/admin` (añadido el 2026-08-31)
+
+Ver, corregir y quitar cualquier cosa de la web sin abrir el código. Vive desplegado, no en
+local: decisión del dueño.
+
+**La tensión que resuelve, y que hay que entender antes de tocar nada.** Las reseñas y las
+cuentas están en D1 y se editan en vivo. El catálogo NO: sale de `data/suplementos.sqlite` y
+de `categorias.py`, `dosis_referencia.json` y `scoring/config.py`, y se hornea en 2.984
+páginas estáticas. Un panel desplegado no puede cambiar en caliente una página que ya está
+escrita en disco. Así que hay **dos mecanismos distintos y la interfaz lo dice en cada
+pestaña**: en vivo (D1) y en cola (tabla `ediciones` → pipeline). Un panel que dijera
+"guardado" y dejara la ficha igual sería un panel roto.
+
+- **Quién entra**: el secreto `ADMINS` (correos separados por comas), no una columna de
+  roles. Sin el secreto no hay administradores, que es el único valor por defecto que no
+  abre el panel por olvidarse de configurar algo. `esAdmin()` está probado en `api.test.mjs`.
+- **Rutas**: `/api/admin/*` en el mismo `[[ruta]].js`, todas detrás de `quienAdmin()`.
+  401 sin sesión, 403 con sesión pero sin permiso.
+- **`ediciones` (D1)**: `(ambito, clave, campo)` con el valor serializado en JSON. Ámbitos:
+  `producto | categoria | dosis | config | evidencia | texto`. La clave de un producto es
+  **`tienda|url`**, no el slug: el slug se calcula del nombre y cambia en cuanto corriges el
+  nombre, y `(tienda, url)` es el UNIQUE del que ya depende el upsert.
+- **`ediciones.py`**: baja la tabla con `wrangler d1 execute --remote --json` a
+  `data/ediciones.json` y la aplica. Si wrangler falla (sin red, sin sesión) **no revienta la
+  pasada**: avisa y usa la copia en disco.
+- **Dónde encaja en el pipeline** (`actualizar.py`):
+  `scraper → verificar → mantenimiento → **ediciones** → scoring → exportar`.
+  Va **antes del scoring** a propósito: la decisión del dueño fue corregir el dato de entrada
+  y dejar que el motor recalcule la nota. Si fuera después, un precio corregido seguiría
+  puntuando con el precio viejo y `/metodologia` estaría mintiendo.
+- **Por qué se reaplica en cada pasada**: `guardar_producto` hace upsert por `(tienda, url)`.
+  Una corrección aplicada una sola vez duraría hasta la mañana siguiente. Por eso las
+  correcciones se guardan aparte y se vuelven a aplicar siempre, hasta que se deshagan desde
+  el panel.
+- **`exportar.py`** aplica lo que no es un dato de la BD: filtra los productos marcados
+  `oculto` y pisa los textos de categoría. Y vuelve a llamar a `aplicar_config`, porque
+  `python exportar.py` se puede correr suelto y en ese proceso nadie ha tocado `config.py`.
+- **Ocultar y no borrar**: un `DELETE` en `producto` se lleva por cascada su
+  `precio_historico`, que es el único dato del proyecto que no se puede reconstruir. Ocultar
+  es reversible desde el panel.
+- **Listas blancas de campos, en `ediciones.py` y no en la API**: es el pipeline quien
+  escribe en la BD, así que una columna que no esté en `CAMPOS_PRODUCTO` /`CAMPOS_DOSIS` /
+  `CAMPOS_CATEGORIA` no se puede tocar aunque alguien inserte la fila a mano en D1.
+- **`aplicar_config` toca el módulo en memoria, no el fichero.** `scoring/config.py` es
+  código con un comentario que defiende cada número; un script que lo reescriba se lleva por
+  delante los comentarios. Y comprueba que los cuatro pesos (`PESO_CALIDAD`, `PESO_COSTE`,
+  `PESO_REQUISITOS`, `PESO_VALORACION`) suman 1:
+  mejor parar la publicación que reordenar 30 tablas con una fórmula que no cuadra.
+- **`/datos/catalogo.json`**: el volcado que lee el panel (productos con los campos
+  editables, categorías, dosis y config; sin históricos ni desglose). No expone nada nuevo:
+  son los mismos datos de los 30 `/datos/<categoria>.json`, que existen para que otros los
+  citen.
+- **Lo que el panel NO deja hacer, y por qué**: escribir una nota a mano (`/metodologia`
+  promete que sale de la fórmula), tocar `filtro`/`excluye` de una categoría (una regex mal
+  escrita deja la tabla en cero productos sin un error en el log), verificar una
+  certificación (eso es `verificar.py` contra la fuente) y editar `evidencia.js` (1.700
+  líneas de prosa con DOIs que revisa una persona). Está escrito en la propia pantalla, que
+  es donde tienta cambiarlo.
+- **Estado real del despliegue (2026-08-31)**: montar el panel destapo que el paso 9 nunca
+  se hizo en produccion. No existia ninguna D1, R2 no estaba activado y faltaba `SECRETO`,
+  asi que `/api/*` contestaba 503 en el sitio publicado y las cuentas solo funcionaban en
+  local. Se creo la D1 `suplementos` (id ya en `wrangler.toml`) y se aplico el esquema en
+  remoto. Despues se activo R2 y se creo el bucket `suplementos-fotos`. El binding se
+  llama **FOTOS**, no el `suplementos_fotos` que sugiere wrangler al crear el bucket: el
+  nombre del binding es el contrato con `env.FOTOS` de la API. `SECRETO` y `ADMINS` los
+  pone el dueno, que para eso son secretos.
+- **`/admin` va con `noindex` y `Disallow` en robots.txt**, y sin sesión de admin no pinta
+  un solo dato.
 
 ## Pendiente (decisiones del dueño, no del agente)
 

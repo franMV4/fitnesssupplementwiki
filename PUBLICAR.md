@@ -293,8 +293,17 @@ páginas → validar el SEO.
 para dar permiso):
 
 ```powershell
-cd web; npx wrangler pages deploy; cd ..
+cd web; npx wrangler pages deploy --branch main; cd ..
 ```
+
+> **Por qué `--branch main`:** la rama de producción del proyecto en Cloudflare se llama
+> `main`, pero tu repositorio local está en `master`. Wrangler mira en qué rama estás y,
+> si no coinciden, publica una **vista previa** en vez de producción: te dice
+> `Deployment alias URL: https://master.…pages.dev` y el sitio de verdad se queda como
+> estaba. Peor todavía, las vistas previas usan los secretos del entorno *preview*, que
+> están vacíos, así que la API contesta *"La base de datos aun no esta configurada"*.
+> Con la bandera se publica donde toca. (La alternativa permanente es renombrar la rama
+> local a `main`, o cambiar la rama de producción a `master` en el panel de Cloudflare.)
 
 > **Por qué `cd web`:** desde el paso 9 la web lleva una pequeña API (cuentas y
 > reseñas) que vive en `web/functions/`. El comando tiene que ejecutarse dentro de
@@ -415,7 +424,7 @@ lo escribe el vendedor, así que la web **no** concede el nivel 4 automático po
 | `python tests.py` | 2 segundos | Siempre, antes de subir |
 | `npm run build` | ~1 min | Siempre |
 | `python seo_check.py` | ~20 segundos | Siempre, antes de subir |
-| `cd web; npx wrangler pages deploy` | 20 s - 3 min | Al subir |
+| `cd web; npx wrangler pages deploy --branch main` | 20 s - 3 min | Al subir |
 
 La carpeta `data/cache/` crece hasta cerca de **1 GB**. Es normal y está fuera del
 repositorio: son las páginas descargadas, caducan a las 6 horas y se pueden borrar enteras
@@ -623,7 +632,7 @@ vez de gastarte la cuota del mes.
 | Una categoría sale con **0 productos** y sin errores | Un filtro de `categorias.py` que se come lo que debía dejar pasar (le pasó a la cafeína con "café") o un listado de tienda que no trae `ItemList` en su primera página | Prueba `python run_scraper.py --categoria <slug>` y mira el log tienda por tienda |
 | El log dice `pasada parcial, no se retira nada` | Una tienda cortó a media categoría (429) | Es el comportamiento correcto: lo que no se llegó a mirar no es lo mismo que lo que ha dejado de venderse. Se arregla solo en la siguiente pasada |
 | `amazon: sigue pidiendo esperar` | Amazon está limitando por ratio | La pasada se marca parcial y no borra nada. Si se repite todos los días, baja la frecuencia |
-| La subida a Cloudflare se corta a media barra | 3.066 ficheros por el navegador | Usa `cd web; npx wrangler pages deploy` |
+| La subida a Cloudflare se corta a media barra | 3.066 ficheros por el navegador | Usa `cd web; npx wrangler pages deploy --branch main` |
 | `python actualizar.py` tarda 5 minutos en vez de 25 | La caché del scraper (6 h) sigue caliente de la pasada anterior | No es un error: no se vuelve a pedir lo que ya se pidió hoy |
 
 ---
@@ -646,6 +655,9 @@ vez de gastarte la cuota del mes.
 ---
 
 ## Paso 9 · Cuentas y reseñas de lectores
+
+> **Estado (2026-08-31):** D1 creada y con su esquema aplicado; faltan los secretos y R2.
+> El detalle de lo que queda está en el **paso 10.1**, que es donde se descubrió.
 
 Hasta aquí la web era un folleto: se genera cada noche y se sirve igual para todo el
 mundo. Este paso añade lo único que **escribe**: quien se registra puede puntuar un
@@ -727,13 +739,19 @@ cd web; npm run build; npx wrangler pages dev
 Abre <http://127.0.0.1:8788>, entra en cualquier producto y baja hasta *Opiniones de los
 lectores*. Crea una cuenta, pon estrellas, escribe algo y sube una foto.
 
-Las cuentas tienen tres puertas, y las tres usan el mismo formulario:
+Las cuentas tienen estas puertas, y todas usan el mismo formulario:
 
 | Dónde | Qué es |
 |---|---|
 | El icono de la esquina superior derecha | Lleva a `/entrar` y vuelve a donde estabas. Con sesión abierta enseña tu inicial |
 | `/entrar` y `/registro` | Las páginas de acceso. Llevan `noindex`: son una utilidad, no contenido, y no salen en Google |
-| Dentro de la ficha de producto | El mismo formulario, para no tener que salir de la página que estabas leyendo |
+| `/recuperar` | Los dos pasos de "he olvidado mi contraseña" en la misma dirección. Ver 9.7 |
+| Desde la ficha de producto | Un botón que lleva a `/entrar?volver=` y trae de vuelta a la misma ficha |
+
+> **Si prefieres `npm run dev` (puerto 4322)** para ver cambios al vuelo, deja
+> `npm run api` corriendo **en otra terminal**: el servidor de Astro no ejecuta la API, y
+> el de al lado se la sirve. Sin esa segunda terminal, entrar y registrarse contestan
+> *"La API no responde"*.
 
 > **Qué tienes que ver:** la reseña aparece bajo el formulario y la media de arriba
 > cambia. Los datos van a una base de datos local, no a la de internet.
@@ -741,7 +759,7 @@ Las cuentas tienen tres puertas, y las tres usan el mismo formulario:
 ### 9.5 · Subirlo
 
 ```powershell
-cd web; npx wrangler pages deploy
+cd web; npx wrangler pages deploy --branch main
 ```
 
 Este comando, ejecutado **dentro de `web`**, sube el sitio y la API. Si lo lanzas desde
@@ -795,29 +813,225 @@ Una cuenta creada con Google **no tiene clave**: siempre entra por ese botón. S
 misma persona ya tenía cuenta con ese correo y clave, Google la reconoce y entra en la
 que ya existía; no se duplica.
 
+### 9.7 · Enviar el correo de "he olvidado mi contraseña" (opcional)
+
+Sin esto, la recuperación **funciona pero no llega a ningún buzón**: el enlace se escribe
+en la terminal donde corre `wrangler`, que en tu ordenador es justo donde lo puedes leer
+para probar. Para que le llegue a la gente hace falta un servicio que envíe correos.
+
+Con [Resend](https://resend.com) el plan gratis da 3.000 correos al mes, que para esto
+sobra:
+
+1. Crea la cuenta en <https://resend.com> y verifica tu dominio (**Domains → Add
+   Domain**): te da tres registros DNS que hay que copiar en Cloudflare, en el DNS de
+   `fitnesssupplementwiki.com`. Sin dominio verificado solo puedes escribirte a ti mismo.
+2. **API Keys → Create API Key**, permiso *Sending access*. Empieza por `re_`.
+3. Guárdala en Cloudflare junto con la dirección desde la que se envía:
+
+   ```powershell
+   npx wrangler pages secret put RESEND_KEY --project-name fitnesssupplementwiki
+   npx wrangler pages secret put CORREO_DESDE --project-name fitnesssupplementwiki
+   ```
+
+   `CORREO_DESDE` es algo como `FitnessSupplementWiki <hola@fitnesssupplementwiki.com>`, y
+   ese dominio tiene que ser el que verificaste en el punto 1.
+4. Para probarlo en local, descomenta las dos líneas del final de `web/.dev.vars`.
+   Wrangler lee ese fichero al arrancar: si lo tocas, para el servidor y vuelve a lanzarlo.
+
+> **Qué tienes que ver:** en <http://127.0.0.1:8788/entrar>, *He olvidado mi contraseña* →
+> escribes tu correo → llega un correo con un enlace → lo abres, pones una contraseña nueva
+> y entras directamente.
+
+Tres cosas que hace a propósito y conviene no "arreglar":
+
+- **Contesta lo mismo exista o no la cuenta.** Si dijese "ese correo no está registrado",
+  cualquiera podría averiguar quién tiene cuenta probando direcciones una a una.
+- **El enlace caduca en una hora y solo sirve una vez.** No hay tabla de enlaces: va
+  firmado con la contraseña de ese momento, así que en cuanto se cambia deja de valer.
+- **Las cuentas de Google no reciben nada**, porque no tienen contraseña que cambiar. La
+  pantalla lo dice: se entra con el botón de Google.
+
 ### Lo que este paso NO hace
 
 Está escrito así a propósito, para no mantener lo que nadie ha pedido todavía:
 
-- **No hay "he olvidado mi clave"**: haría falta enviar correos, y eso es otro servicio.
-  Quien pierda la clave, se hace otra cuenta (o entra con Google, que no gasta clave).
-- **No hay moderación ni denuncias**: si aparece una reseña que sobra, se borra a mano:
-  `npx wrangler d1 execute suplementos --remote --command "DELETE FROM resenas WHERE id = 7"`.
-- **No hay límite de peticiones**: para frenar a un robot que registre mil cuentas,
-  Cloudflare tiene *Rate limiting* en el panel (gratis, una regla sobre `/api/*`).
+- **No hay denuncias del lector**: nadie puede marcar una reseña como abusiva. Moderarlas
+  sí se puede, desde el panel del paso 10 (`/admin` → Reseñas), que fue lo que sustituyó al
+  `DELETE` a mano por consola.
+- **Sí hay límite de peticiones** desde el 2026-08-31: se cuenta por IP en la tabla
+  `intentos`, y solo sobre lo que escribe. Entrar admite 20 intentos cada 15 minutos;
+  registrarse, pedir contraseña nueva y publicar reseñas, unos pocos por hora. Leer no se
+  limita nunca. Si te pasas ves *"Demasiados intentos desde tu conexion"*. Los topes son
+  altos a propósito porque una oficina entera comparte una IP. Si algún día hiciera falta
+  algo más duro, Cloudflare tiene *Rate limiting* en el panel (gratis, una regla sobre
+  `/api/*`), que corta antes de llegar a la base de datos.
 - **La media de lectores no entra en el marcado de Google**: las fichas son estáticas y
   se generan cada noche, así que el `aggregateRating` diría una nota de hace horas. La
   puntuación que Google lee sigue siendo la editorial, la de la metodología.
 
-Los tres primeros se añaden el día que hagan falta de verdad, no antes.
+Los dos primeros se añaden el día que hagan falta de verdad, no antes.
+
+---
+
+## Paso 10 · El panel de administración (`/admin`)
+
+Una pantalla desde la que ver, corregir y quitar cualquier cosa de la web sin abrir el
+código: productos, precios, categorías, dosis de referencia, pesos del ranking, reseñas y
+cuentas.
+
+### 10.0 · Lo primero, porque si no parece roto
+
+El panel administra **dos mundos distintos** y no se comportan igual:
+
+| | Dónde vive | Cuándo se ve el cambio |
+|---|---|---|
+| **Reseñas y cuentas** | Base de datos de Cloudflare | **Al instante.** Recargas la ficha y ya está. |
+| **Productos, categorías, dosis, pesos** | Tu SQLite + las 2.984 páginas generadas | **Al publicar.** Se apunta la corrección y se aplica cuando corres el pipeline. |
+
+No es un despiste: esta web son páginas estáticas: no hay ningún servidor consultando una
+base de datos cuando alguien abre `/creatina`, y eso es justo lo que la hace instantánea y
+gratis de servir. La contrapartida es que corregir el precio de un bote no puede repintar
+una página que ya está escrita en disco. El panel lo dice en cada pestaña.
+
+### 10.1 · Estado real de la instalación (2026-08-31)
+
+Al activar el panel salió a la luz que **el paso 9 nunca llegó a hacerse en producción**: la
+web estaba publicada, pero no existía ninguna base de datos D1, R2 no estaba activado y
+faltaba el secreto `SECRETO`. Es decir, las cuentas y las reseñas funcionaban en tu
+ordenador y en el sitio de verdad devolvían *"La base de datos aun no esta configurada"*.
+
+Lo que ya está hecho:
+
+- Base de datos D1 `suplementos` creada (región WEUR) y su id puesto en `web/wrangler.toml`.
+- `schema.sql` aplicado en remoto: tablas `usuarios`, `resenas` y `ediciones`.
+- R2 activado, bucket `suplementos-fotos` creado y su binding (`FOTOS`) puesto en
+  `wrangler.toml`. Ojo: el binding se llama **FOTOS**, no el `suplementos_fotos` que sugiere
+  wrangler al crear el bucket; el nombre es el contrato con `env.FOTOS` de la API.
+
+Lo que falta y tienes que escribir tú, porque son secretos. Desde `web`:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" | npx wrangler pages secret put SECRETO
+```
+
+```powershell
+npx wrangler pages secret put ADMINS
+```
+
+En `ADMINS`, tu correo. Y después desplegar, porque hasta que no despliegues `/admin` no
+existe en el sitio publicado:
+
+```powershell
+npx wrangler pages deploy --branch main
+```
+
+> **Ojo con `SECRETO`:** firma las cookies de sesión. Si algún día lo cambias, todas las
+> sesiones abiertas dejan de valer y hay que volver a entrar. No pasa nada más, pero no lo
+> toques sin motivo.
+
+> **Si algún día hay que rehacer R2:** se activa en el panel de Cloudflare (pide aceptar sus
+> condiciones y eso solo se puede desde el navegador), luego `npx wrangler r2 bucket create
+> suplementos-fotos`. El plan gratuito son 10 GB, 1M de escrituras y 10M de lecturas al mes,
+> sin coste de salida. Las fotos se reducen en el navegador a 1400 px y JPEG al 82 % antes
+> de subirse (`encoger()` en `Resenas.jsx`), así que salen a 200-300 KB.
+
+### 10.2 · Darte acceso
+
+Quien puede entrar sale de un secreto, no de una casilla en la base de datos. Desde `web`:
+
+```powershell
+npx wrangler pages secret put ADMINS
+```
+
+Cuando pregunte el valor, escribe **tu correo** (el mismo con el que entras en la web). Si
+algún día sois dos, se separan con comas: `una@ejemplo.com,otra@ejemplo.com`.
+
+> **Sin este secreto no entra nadie**, ni siquiera tú. Es a propósito: el valor por defecto
+> de "quién manda aquí" tiene que ser "nadie".
+
+La tabla donde se guardan las correcciones (`ediciones`) **ya está creada**: se aplicó con
+el esquema en el 10.1. Si alguna vez dudas, volver a lanzarlo no rompe nada, porque todo el
+fichero es `CREATE TABLE IF NOT EXISTS`:
+
+```powershell
+npx wrangler d1 execute suplementos --remote --file=./schema.sql
+```
+
+Después: entra en la web con tu cuenta y abre `https://fitnesssupplementwiki.com/admin`.
+
+### 10.3 · Qué hay en cada pestaña
+
+- **Resumen** — cuántos productos, cuántas correcciones sin publicar y los cuatro comandos
+  para publicarlas.
+- **Productos** — los 2.665, buscables por marca, nombre o tienda y filtrables por
+  categoría. Se abre uno y se corrigen marca, nombre, categoría, precio, formato, unidades,
+  servicios por envase, forma química e imagen. También se puede **quitar de la web**, que
+  no borra nada: deja de generarse su ficha y su historial de precios se queda guardado por
+  si el producto vuelve.
+- **Reseñas** — todas, con buscador. Se cambia la puntuación o el texto, se borra la foto o
+  se borra la reseña entera. **En vivo.**
+- **Usuarios** — nombre y correo. Borrar una cuenta borra sus reseñas y sus fotos.
+  **En vivo.** La contraseña no se puede leer ni cambiar desde aquí: para eso está
+  `/recuperar`, y así tiene que seguir.
+- **Categorías** — el nombre que se ve, cómo llama la gente a esa categoría, la fórmula
+  "el mejor X" y las preguntas que responde su página.
+- **Dosis y fuentes** — las cifras que mueven el coste por dosis de todo el catálogo, con
+  sus citas. La regla del proyecto sigue en pie: ninguna cifra sin fuente.
+- **Pesos del score** — los números de `scoring/config.py`. Mandan en el ranking **y** en
+  lo que dice `/metodologia`, que se genera desde ellos.
+- **Cambios** — todo lo corregido y aún sin publicar, con quién y cuándo. Cada línea se
+  puede deshacer.
+
+### 10.4 · Publicar lo corregido
+
+```powershell
+cd C:\Users\f.munoz.THERMOLYMPIC\Desktop\Fran\Proyects\FitnessSupplementWiki ; python ediciones.py ; python exportar.py ; cd web ; npm run build ; npx wrangler pages deploy --branch main ; cd ..
+```
+
+`ediciones.py` baja las correcciones del panel y las mete en tu base de datos local; el
+resto es la publicación de siempre.
+
+Si además quieres refrescar precios, `python actualizar.py` **ya hace ese paso solo**, en el
+sitio correcto: después del scraper y **antes** de puntuar. Por eso corregir un precio mueve
+también la nota del producto, en vez de dejar la etiqueta corregida y el ranking viejo.
+
+### 10.5 · Por qué las correcciones no se borran nunca solas
+
+El scraper guarda cada producto con un *upsert* por tienda y URL: la pasada siguiente
+sobrescribe nombre y precio con lo que diga la tienda. Si las correcciones se aplicaran una
+vez y ya, cada una duraría hasta la mañana siguiente y nadie entendería por qué.
+
+Por eso se guardan aparte, en la tabla `ediciones`, y se **vuelven a aplicar en cada
+pasada**, hasta que las deshagas desde el panel. Si un producto desaparece del catálogo, su
+corrección se queda esperando por si vuelve y el pipeline lo avisa por pantalla.
+
+### 10.6 · Lo que el panel NO deja hacer, y por qué
+
+- **Escribir una nota a mano.** El score sale de la fórmula publicada en `/metodologia`.
+  Poder escribir un 8,4 encima convertiría esa página en una promesa falsa. Se corrige el
+  dato de entrada (el precio, el formato, la certificación) y la nota se recalcula sola.
+- **Tocar los filtros de una categoría.** Qué producto entra en `creatina` lo deciden dos
+  expresiones regulares de `categorias.py`. Una mal escrita deja la tabla en cero productos
+  sin un solo error en el log; eso se toca en el fichero, con su comentario al lado.
+- **Verificar una certificación.** Un nivel 4 exige un código QS o una URL de prueba
+  comprobados contra la fuente. Eso es `python verificar.py`, no un campo de texto.
+- **Borrar un producto de verdad.** Se oculta. El historial de precios es el único dato del
+  proyecto que nadie puede reconstruir después, y un borrado se lo llevaría por delante.
+- **Editar las guías de evidencia** (`evidencia.js`). Son 1.700 líneas de prosa con DOIs
+  que una persona revisa contra sus fuentes; se editan en el fichero, que es donde están las
+  reglas escritas.
 
 ---
 
 ## Resumen de una línea
 
 ```
-python actualizar.py → python tests.py → cd web → npm run build → cd .. → python seo_check.py → cd web → npx wrangler pages deploy
+python actualizar.py → python tests.py → cd web → npm run build → cd .. → python seo_check.py → cd web → npx wrangler pages deploy --branch main
 ```
+
+Para probar en local
+npm run dev
+
 
 Media hora de ordenador, dos minutos tuyos. Todo lo demás (títulos, respuestas, preguntas
 frecuentes, rankings, sitemap, fechas) se genera solo desde los datos: lo único que se

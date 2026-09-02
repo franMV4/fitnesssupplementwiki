@@ -144,6 +144,47 @@ const schema = [
       url: abs(`/${c.slug}`),
     })),
   },
+  {
+    // La web declarada como lo que es: una base de datos de precios del mercado espanol,
+    // no treinta articulos sueltos. Los ficheros de `distribution` ya existian y ya se
+    // servian; lo que faltaba era decir que son las descargas de UN dataset con fecha,
+    // licencia y autor. Es lo que separa una fuente citable de una pagina mas.
+    '@type': 'Dataset',
+    '@id': abs('/#dataset'),
+    name: 'Precios y certificaciones de suplementos deportivos en Espana',
+    description:
+      `${datos.productos.length} productos de ${tiendas} tiendas espanolas en ` +
+      `${datos.categorias.length} categorias, con el precio por unidad de venta ` +
+      `(kilo o capsula) y el nivel de verificacion de sus certificaciones, del 1 al 4.`,
+    url: abs('/'),
+    inLanguage: 'es-ES',
+    // La licencia, en la URL canonica de Creative Commons: es la que un agregador de
+    // datos abiertos reconoce sin leer nada. Las condiciones en cristiano, en /legal.
+    license: 'https://creativecommons.org/licenses/by/4.0/',
+    usageInfo: abs('/legal#licencia-datos'),
+    creator: { '@id': abs('/#editor') },
+    publisher: { '@id': abs('/#editor') },
+    isAccessibleForFree: true,
+    dateModified: datos.generado,
+    // Abierto por la derecha: se vuelve a recoger en cada pasada del robot.
+    temporalCoverage: `${datos.generado}/..`,
+    spatialCoverage: { '@type': 'Place', name: 'Espana' },
+    variableMeasured: [
+      'Precio del envase en euros',
+      'Precio por kilo',
+      'Precio por capsula',
+      'Nivel de verificacion de la certificacion (1 a 4)',
+      'Score de 0 a 100 (50 % precio, 50 % calidad verificable)',
+    ],
+    distribution: [
+      { '@type': 'DataDownload', name: 'Catalogo completo',
+        encodingFormat: 'application/json', contentUrl: abs('/datos/catalogo.json') },
+      ...datos.categorias.map((c) => ({
+        '@type': 'DataDownload', name: c.nombre,
+        encodingFormat: 'application/json', contentUrl: abs(`/datos/${c.slug}.json`),
+      })),
+    ],
+  },
 ];
 ---
 <Base ancho="completo"
@@ -152,11 +193,10 @@ const schema = [
       schema={schema}>
 
   <section class="portada">
-    <p class="edicion aparece">
-      <span>Edicion <b><time datetime={datos.generado}>{fechaLarga(datos.generado)}</time></b></span>
-      <span>Mercado espanol</span>
-      <span>El orden no lee el fichero de afiliados</span>
-    </p>
+    {/* Aqui iba la linea de edicion (fecha, mercado espanol, "el orden no lee el
+        fichero de afiliados"). Fuera: la fecha la da la respuesta corta de aqui debajo
+        y el colofon del pie; lo del orden y los afiliados lo explican la metodologia y
+        el aviso de cada categoria. Eran tres renglones de rotulo antes del titular. */}
 
     {/* El H1 dice que es esto y con que se compara: son las palabras con las que se
         busca. La frase de marca no se tira, baja a antetitulo, donde hace de gancho sin

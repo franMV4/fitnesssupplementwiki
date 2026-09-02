@@ -24,13 +24,13 @@ comprobaciones del proyecto (sin red, sin framework).
 | `data/dosis_referencia.json` | **El activo del proyecto**: dosis efectivas con su fuente citada. Se edita a mano. |
 | `data/afiliados.json` | Enlaces de afiliado por tienda. El scoring no lo lee nunca. |
 | `scraper/core.py` | Descarga educada (robots.txt, delay, cache) y normalizacion. |
-| `scraper/tiendas/*.py` | Un modulo por tienda. Anadir una 6a tienda = un fichero nuevo. |
+| `scraper/tiendas/*.py` | Un modulo por tienda, salvo las 11 del 31/08/2026, agrupadas por como publican (`shopify.py`, `listado.py`, `catalogo_sitemap.py`). |
 | `verificar.py` | Capa de certificaciones: cruce automatico + curacion manual. |
 | `scoring/config.py` | **Todos** los pesos de la metodologia, en un sitio. |
 | `scoring/motor.py` | Motor de scoring: logica pura, con desglose explicable. |
 | `exportar.py` | Vuelca la BD a `web/src/datos/dataset.json`. |
 | `web/` | Sitio Astro estatico + islas React (filtros de la tabla y comparativa del lector). |
-| `tests.py` | Comprobaciones de todo lo anterior (63). `cd web && node --test` prueba la API y el filtrado de la tabla (15). |
+| `tests.py` | Comprobaciones de todo lo anterior (72). `cd web && node --test` prueba la API y el filtrado de la tabla (15). |
 
 ## Que hay dentro de cada pieza
 
@@ -40,12 +40,15 @@ Extrae contra **JSON-LD schema.org**, que las tiendas publican para Google y cam
 menos que su HTML. Respeta `robots.txt` con el User-Agent real del bot, espacia las
 peticiones 2 s por host y cachea 6 h en `data/cache/`.
 
-**Treinta categorias** (ampliado el 25/08/2026): los treinta suplementos que encabezan las
-listas de mas vendidos del sector. Las nueve originales (creatina, preentreno, proteina whey,
-proteina aislada, BCAA, glutamina, colageno, omega 3 y multivitaminicos) mas veintiuna:
-proteina vegana, caseina, ganadores de peso, EAA, beta-alanina, citrulina, carbohidratos,
-magnesio, zinc, hierro, vitamina D, vitamina C, vitamina B12, ZMA, ashwagandha, melatonina,
-cafeina, probioticos, curcuma, glucosamina y L-carnitina.
+**Cincuenta categorias** (ampliado el 31/08/2026): los cincuenta suplementos que encabezan
+las listas de mas vendidos del sector. Las nueve originales (creatina, preentreno, proteina
+whey, proteina aislada, BCAA, glutamina, colageno, omega 3 y multivitaminicos), las
+veintiuna del 25/08/2026 (proteina vegana, caseina, ganadores de peso, EAA, beta-alanina,
+citrulina, carbohidratos, magnesio, zinc, hierro, vitamina D, vitamina C, vitamina B12, ZMA,
+ashwagandha, melatonina, cafeina, probioticos, curcuma, glucosamina y L-carnitina) y las
+veinte del 31/08/2026: taurina, arginina, HMB, tribulus, maca, coenzima Q10, espirulina, te
+verde, L-teanina, triptofano y 5-HTP, colina y alfa-GPC, acido hialuronico, vitamina E,
+vitamina K2, calcio, CLA, selenio, potasio y electrolitos, complejo B y quemagrasas.
 
 Que entra en cada una (filtro de nombre, exclusiones, activo y modo de scoring) esta en
 `categorias.py`, que leen a la vez el scraper, el motor y la web: anadir una categoria es una
@@ -57,7 +60,7 @@ precio por capsula y por certificacion, y su pagina lo dice. Las ocho que si la 
 (proteina vegana, caseina, EAA, beta-alanina, citrulina, cafeina, carnitina y melatonina) la
 tienen citada en `data/dosis_referencia.json`.
 
-Estado de las nueve tiendas (28/08/2026):
+Estado de las veinte tiendas (31/08/2026):
 
 | Tienda | Estado | Detalle |
 |--------|--------|---------|
@@ -69,6 +72,18 @@ Estado de las nueve tiendas (28/08/2026):
 | Zumub | funciona a rachas | **La septima.** Su listado publica `CollectionPage` sin precio y sus fichas un `ProductGroup` JSON-LD con un `hasVariant` por formato (nombre, sku, `size`, precio). Hasta el 28/08/2026 lo publicaba en microdatos y el modulo se quedo trayendo cero fichas sin un solo error. El formato de cada variante sale de su `size`, nunca de la URL: la ficha es una sola para todos los formatos y el sobre de 30 g heredaba el kilo del bote (1,23 EUR/kg, primero del ranking). Limita por rate: 6 s entre peticiones y tope de fichas por categoria. |
 | Prozis | funciona a rachas | Las nueve, descubiertas por su sitemap de productos (su listado es JS puro). Limita por rate: en las categorias largas devuelve 429 y esa pasada se documenta como bloqueada. |
 | iO.GENIX | funciona | **La novena.** Tienda oficial de la marca (PrestaShop). No publica `Product` en ningun formato de schema.org, pero su rejilla de categoria trae nombre, precio sin formatear, imagen y URL en atributos: **una peticion por categoria y ninguna ficha**. El formato de lo que no lo lleva en el nombre sale del fragmento de la URL (`#/3898-formatos-300_g`). Tienda de una sola marca, asi que la marca es constante y su categoria "otras marcas" no se mapea. |
+| Holland & Barrett ES | funciona | 30 categorias. Shopify: `/collections/<handle>/products.json` trae marca, imagen y una variante por formato con su precio. La mas surtida en vitaminas y minerales. |
+| Quamtrax | funciona | 33 categorias, la que mas cubre por si sola. Shopify. |
+| Crown Sport Nutrition | funciona | 12 categorias. Shopify, marca propia con certificado antidoping. |
+| Sotya | funciona | 26 categorias. Shopify; sus plantas y vitaminas van en listados comunes y los separa el filtro de la categoria. |
+| 226ERS | funciona | 8 categorias. Shopify, nutricion de resistencia (mucha sal mineral, poco bote de gimnasio). |
+| TiendaCulturista | funciona | 32 categorias. PrestaShop con microdatos en el listado: nombre, precio y URL de una sola peticion. |
+| USA Fitness | funciona | 18 categorias. PrestaShop: `ItemList` sin precio en el listado, precio en los microdatos de la ficha. |
+| Vitobest | funciona | 48 categorias. PrestaShop de una sola marca. Su listado publica el precio **sin IVA**, asi que el precio se lee en la ficha; el formato viaja en el fragmento de la URL (`#/38-tamano-500_g`). |
+| DosFarma | funciona | Cualquiera de las 50. Listado pintado por JS: se recorre el sitemap, se filtran las URLs con el filtro de la categoria y se abren hasta 15 fichas por categoria. Publica un `AggregateOffer` con descuento por cantidad: se coge el precio de comprar UNO. |
+| Bulevip | funciona | Cualquiera de las 50, por sitemap (anidado en dos niveles). Su ficha no publica marca: sale del tramo de la URL. |
+| Promofarma | funciona | Cualquiera de las 50, por sitemap. Sus URLs acaban en un identificador (`/p-30376`), asi que el filtro lee los dos ultimos tramos del slug. |
+| Weider ES | **descartada** | Su Shopify contesta con todo el catalogo a 0,00 EUR: es escaparate de marca, no vende al publico. Un producto sin precio no se puede comparar. |
 | MASmusculo | **bloqueada** | 307 en bucle infinito esperando una cookie que pone su JS. Solo creatina mapeada. No se fuerza. |
 
 El modulo bloqueado esta escrito y listo: si abren, funciona sin tocar nada mas. No se usan
@@ -106,11 +121,44 @@ esquema, no en la buena voluntad de quien inserta.
 
 ### Scoring (fase 3)
 
-El score es **mitad precio, mitad calidad**. El precio se compara en la unidad en que se vende
-la categoria (€/kg en polvo, €/capsula en perlas), siempre contra el mas barato de esa categoria,
-y las dos unidades no se mezclan nunca en la misma tabla. La calidad sale del nivel de
-verificacion, de la forma quimica del activo y, cuando la tienda publica las dosis, de si la
-formula llega a la dosis efectiva.
+El score es **35 % precio, 35 % calidad, 20 % requisitos de la categoria y 10 % la nota de los
+compradores en la tienda**. El precio se compara en la unidad en que se vende la categoria (€/kg
+en polvo, €/capsula en perlas), siempre contra el mas barato de esa categoria, y las dos unidades
+no se mezclan nunca en la misma tabla. La calidad sale del nivel de verificacion, de la forma
+quimica del activo, de la composicion real de la ficha y, cuando la tienda publica las dosis, de
+si la formula llega a la dosis efectiva.
+
+Los **requisitos de la categoria** (fase 15, `scoring/requisitos.py`) contestan lo que no
+contestan ni el precio ni la certificacion: *¿esto es lo que dice ser?* El precio por kilo no
+distingue un kilo de creatina de un kilo de creatina con un tercio de maltodextrina -el segundo
+sale MAS BARATO y rinde menos- y la certificacion tampoco, porque certifica que no hay dopantes,
+no que no haya relleno. Las 50 categorias tienen los suyos, escritos por familias: un polvo
+monoingrediente tiene que ser el activo y no una mezcla; una whey tiene que traer un minimo de
+proteina por 100 g, no llevar aminoacidos sueltos anadidos (*amino spiking*) ni proteinas mas
+baratas mezcladas; un mineral tiene que venir en forma quelada y no en oxido; un botanico tiene
+que ser extracto estandarizado con su ratio; un probiotico tiene que identificar sus cepas y
+declarar sus UFC; un preentreno no puede esconder las dosis en una mezcla propietaria.
+
+Cada requisito declara de donde se juzga, y **el que no se puede juzgar no puntua**: "no lleva
+relleno" solo se afirma leyendo la lista de ingredientes de la etiqueta (`fuente="lista"`), porque
+que no salga en el nombre no prueba nada y darlo por bueno premiaria a la tienda mas opaca. La
+nota es *de los comprobables, cuantos cumple*; a quien no se le puede juzgar ninguno se le pone la
+media de su categoria. Se afinan sin rescrapear: la etiqueta se guarda en `producto.lista_ingredientes`
+y basta con `python -m scoring.motor`.
+
+La **composicion real** (fase 14) se lee de la propia ficha cuando la publica: la columna "por
+100 g" de la tabla nutricional dice cuanto del bote es activo (74 g de proteina por cada 100 g de
+polvo, no la media de la categoria) y con esa cifra se calcula el coste por dosis efectiva; la
+lista de ingredientes de la etiqueta dice que aditivos lleva (edulcorantes artificiales,
+colorantes, rellenos, antiaglomerantes), y cada uno resta un 4 % de la calidad hasta un tope del
+12 %. Lo que la tienda no publica no resta: sin tabla se usa la pureza tipica de la categoria y
+sin lista no hay penalizacion ninguna.
+
+La **nota de los compradores** sale del `aggregateRating` de schema.org de la propia tienda,
+normalizada a 5 (Prozis y Promofarma puntuan sobre 10) y amortiguada con la media de su categoria
+como si cada producto empezara con 10 opiniones prestadas: asi una unica resena de cinco estrellas
+no adelanta a un producto con cientos. Una tienda que pone la MISMA nota en todo su catalogo esta
+enseñando la suya y no la del producto (DosFarma), y se descarta entera.
 
 El **coste por dosis efectiva** se sigue calculando y se enseña en la ficha de cada producto
 (es lo que distingue dos botes que cuestan lo mismo por kilo), pero no ordena las tablas: solo
@@ -143,7 +191,8 @@ El caro gana, y la ficha lo explica con esas mismas frases.
 
 ### Web (fase 4)
 
-Astro estatico + una isla React (filtros y orden). En build no toca la BD: lee
+Astro estatico. Las tablas de comparativa se pintan enteras en el build y los filtros y el
+orden los mueve un script sobre el DOM, sin framework. En build no toca la BD: lee
 `dataset.json`. Paginas: home, una por categoria (`/creatina`, `/proteina_whey`,
 `/omega3`...), ficha de producto y `/metodologia`.
 

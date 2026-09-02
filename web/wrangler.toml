@@ -10,8 +10,11 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "suplementos"
-database_id = "PON-AQUI-EL-ID-QUE-TE-DA-CLOUDFLARE"
+database_id = "e0338f15-7d09-42a0-9752-d5960df754fa"
 
+# El binding se llama FOTOS y no "suplementos_fotos" como sugiere wrangler al crear el
+# bucket: en la API es `env.FOTOS`, y el nombre del binding es el contrato entre las dos
+# cosas. Si se cambia aqui, hay que cambiarlo en functions/api/[[ruta]].js.
 [[r2_buckets]]
 binding = "FOTOS"
 bucket_name = "suplementos-fotos"

@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 
 import categorias
+import ediciones
 from data.db import connect
 from scoring import config as cfg
 from scoring.motor import precio_referencia, sellos_de
@@ -93,7 +94,12 @@ def seo(categoria):
     # modo simple, o el unico ingrediente que puntua en una formula (omega 3). Una
     # formula con varios (preentreno) o con ninguno (multivitaminicos) no tiene una
     # dosis de categoria, y no se inventa.
-    dosis_key = cfg.get("activo") or (ings[0] if ings and len(ings) == 1 else None)
+    # `dosis_key` explicito para la categoria que puntua dos activos pero cuya dosis se
+    # cita por uno solo: la glucosamina y la condroitina se venden juntas y se ensayaron
+    # juntas, pero la pregunta que trae la gente es "cuanta glucosamina". Es un campo y no
+    # una regla nueva: si algun dia hay que elegir en otra categoria, se escribe alli.
+    dosis_key = (cfg.get("dosis_key") or cfg.get("activo")
+                 or (ings[0] if ings and len(ings) == 1 else None))
     return {"termino": cfg.get("termino", categorias.nombre(categoria).lower()),
             "mejor": cfg.get("mejor", "el mejor " + categoria),
             "consultas": cfg.get("consultas", {}),
@@ -234,6 +240,18 @@ def historicos(con, dias=180):
 
 
 def exportar(con):
+    # Las correcciones de /admin. Las de producto y dosis ya estan en la BD (las mete
+    # ediciones.py antes del scoring, para que la nota se recalcule con ellas); aqui
+    # quedan las dos que no son datos de la BD: que productos no se publican y los
+    # textos de las categorias, que viven en categorias.py.
+    correcciones = ediciones.cargar()
+    # Los pesos tambien, porque `python exportar.py` se puede correr suelto y en ese
+    # proceso nadie ha pisado config.py: sin esto, /metodologia publicaria los pesos de
+    # fabrica junto a un ranking calculado con los corregidos.
+    ediciones.aplicar_config(correcciones, cfg)
+    no_publicar = ediciones.ocultos(correcciones)
+    textos_categoria = ediciones.textos_categoria(correcciones)
+
     dosis = {r["ingrediente"]: dict(r, fuentes=json.loads(r["fuentes"]))
              for r in con.execute("SELECT * FROM dosis_referencia")}
     historia = historicos(con)
@@ -241,8 +259,13 @@ def exportar(con):
     productos = []
     for p in con.execute(
             "SELECT p.*, s.score_final, s.score_calidad, s.coste_por_dosis_efectiva,"
-            " s.flag_infradosaje, s.desglose FROM producto p "
+            " s.flag_infradosaje, s.desglose, s.score_requisitos, s.requisitos FROM producto p "
             "LEFT JOIN score s ON s.producto_id = p.id ORDER BY s.score_final DESC"):
+        # Marcado desde /admin para no publicarse. Se salta aqui y no con un DELETE:
+        # borrar la fila se llevaria por delante su serie de precios, que es el unico
+        # dato del proyecto que nadie puede reconstruir despues.
+        if "%s|%s" % (p["tienda"], p["url"]) in no_publicar:
+            continue
         certs = [dict(r) for r in con.execute(
             "SELECT tipo, nivel_verificacion, codigo_qs, url_evidencia, verificado_fecha,"
             " verificado_por FROM certificacion WHERE producto_id=? "
@@ -277,6 +300,21 @@ def exportar(con):
             "precio_referencia": round(precio, 3) if precio else None,
             "unidad_precio": unidad,
             "servicios_por_envase": p["servicios_por_envase"], "forma": p["forma"],
+            # Lo que opinan los compradores EN la tienda, normalizado a 5. None cuando la
+            # tienda no publica opiniones de ese producto.
+            "valoracion": p["valoracion"], "n_valoraciones": p["n_valoraciones"],
+            # Composicion real de ESTA ficha: cuanto del bote es activo y que aditivos
+            # declara la etiqueta. aditivos None = la ficha no publica la lista, que no es
+            # lo mismo que publicarla sin ninguno ([]).
+            "pureza_real": p["pureza_real"],
+            "aditivos": json.loads(p["aditivos"]) if p["aditivos"] else
+                        ([] if p["aditivos"] == "[]" else None),
+            "lista_ingredientes": p["lista_ingredientes"],
+            # De los requisitos de su categoria que se han podido juzgar, cuantos cumple,
+            # y cuales con su si/no. None = su ficha no publica lo suficiente para juzgar
+            # ninguno, que no es lo mismo que suspenderlos todos.
+            "score_requisitos": p["score_requisitos"],
+            "requisitos": json.loads(p["requisitos"]) if p["requisitos"] else [],
             "fecha_scrape": p["fecha_scrape"],
             "score_final": p["score_final"], "score_calidad": p["score_calidad"],
             "coste_por_dosis_efectiva": p["coste_por_dosis_efectiva"],
@@ -299,6 +337,13 @@ def exportar(con):
     # un peso, la pagina /metodologia cambia sola. Documentacion que no puede mentir.
     configuracion = {
         "peso_calidad": cfg.PESO_CALIDAD, "peso_coste": cfg.PESO_COSTE,
+        "peso_valoracion": cfg.PESO_VALORACION,
+        "peso_requisitos": cfg.PESO_REQUISITOS,
+        "opiniones_de_referencia": cfg.OPINIONES_DE_REFERENCIA,
+        "factor_pureza_max": cfg.FACTOR_PUREZA_MAX,
+        "factor_pureza_min": cfg.FACTOR_PUREZA_MIN,
+        "penalizacion_por_aditivo": cfg.PENALIZACION_POR_ADITIVO,
+        "suelo_aditivos": cfg.SUELO_ADITIVOS,
         "factor_verificacion": cfg.FACTOR_VERIFICACION,
         "factor_forma_preferida": cfg.FACTOR_FORMA_PREFERIDA,
         "factor_forma_alternativa": cfg.FACTOR_FORMA_ALTERNATIVA,
@@ -317,6 +362,7 @@ def exportar(con):
         # lo decide por su cuenta.
         "hay_afiliados": any(p.get("url_afiliado") for p in productos),
         "categorias": [{"slug": web_slug(c), "nombre": categorias.nombre(c), **seo(c),
+                        **textos_categoria.get(c, {}),
                         "productos": sum(1 for p in productos if p["categoria"] == c),
                         # Hay categorias donde ninguna tienda publica las dosis
                         # (multivitaminicos): se comparan igual por precio y certificacion,

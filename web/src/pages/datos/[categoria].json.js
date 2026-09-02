@@ -45,6 +45,15 @@ export function GET({ props }) {
       servicios_por_envase: p.servicios_por_envase,
       score: p.score_final,
       nivel_verificacion: p.nivel_verificacion,
+      // Lo que la ficha de la tienda declara de su composicion y lo que le ponen sus
+      // compradores. null cuando esa tienda no lo publica.
+      valoracion_tienda: p.valoracion,
+      n_valoraciones: p.n_valoraciones,
+      pureza_real: p.pureza_real,
+      aditivos: p.aditivos,
+      // Los requisitos de la categoria y cuales cumple, con su motivo: es la parte de la
+      // nota que mas se puede discutir, asi que se publica entera.
+      requisitos: p.requisitos,
       // Por que puntua lo que puntua, en las mismas palabras que la ficha.
       desglose: p.desglose,
       ficha: abs(`/producto/${p.slug}`),

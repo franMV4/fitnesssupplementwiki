@@ -10,8 +10,10 @@ import subprocess
 import sys
 
 import categorias
+import ediciones
 from data.db import cargar_dosis, connect, guardar_historico, init, limpiar_marcas
 from exportar import exportar
+from scoring import config as cfg
 from scoring.motor import recalcular
 
 CATEGORIAS = list(categorias.CATEGORIAS)
@@ -43,6 +45,16 @@ def main():
     print("\n=== mantenimiento ===")
     print("marcas normalizadas: %d" % limpiar_marcas(con))
     print("precios guardados en el historico: %d" % guardar_historico(con))
+
+    # Las correcciones hechas en /admin, ANTES de puntuar. El scraper acaba de machacar
+    # con su upsert todo lo que se corrigio en la pasada anterior, asi que se vuelven a
+    # aplicar aqui y el motor puntua ya con el dato bueno: corregir un precio tiene que
+    # mover la nota, no solo la etiqueta.
+    print("\n=== correcciones de /admin ===")
+    correcciones = ediciones.descargar()
+    print("productos: %d campos corregidos" % ediciones.aplicar_productos(con, correcciones))
+    print("dosis: %d campos corregidos" % ediciones.aplicar_dosis(con, correcciones))
+    print("pesos del score: %d corregidos" % ediciones.aplicar_config(correcciones, cfg))
 
     print("\n=== scoring ===")
     print("%d productos puntuados" % recalcular(con))

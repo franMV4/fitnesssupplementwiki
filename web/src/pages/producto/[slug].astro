@@ -15,7 +15,38 @@ export function getStaticPaths() {
   return datos.productos.map((p) => ({ params: { slug: p.slug }, props: { p } }));
 }
 
+// La cita de una fuente viene entera del dataset: autores, titulo, revista, ano y, casi
+// siempre, una nota en castellano detras ("3-6 mg/kg de peso corporal; ... depende del
+// peso"). Son 300 caracteres, y pintados como texto del enlace ocupaban cuatro lineas
+// subrayadas en movil. En el enlace va lo que identifica el estudio -primer autor y
+// ano-, y la cita entera se queda en el `title`. Son 18 citas distintas en todo el
+// dataset y las 18 siguen el mismo formato "Autores. Titulo. Revista. Ano;...".
+const citaCorta = (cita) => {
+  // El punto de "et al." es el mismo que separa autores de titulo y se lo lleva el split.
+  const autores = cita.split('. ')[0].replace(/ et al$/, ' et al.');
+  const sigla = autores.split(/[\s,]/)[0];
+  // "EFSA Panel on Dietetic Products, Nutrition and Allergies" es una institucion, no
+  // una lista de autores: con la sigla basta y cabe.
+  // Una de las 18 no es un articulo sino un reglamento europeo y no lleva el punto que
+  // separa autores de titulo: sin tope, su "autor" son 106 caracteres.
+  const quien = /^[A-Z]{2,}$/.test(sigla) ? sigla
+    : autores.length <= 34 ? autores
+    : autores.split(',')[0].slice(0, 40);
+  const anio = cita.match(/\b(19|20)\d{2}\b/)?.[0];
+  return anio ? `${quien}, ${anio}` : quien;
+};
+// El dataset da los gramos con punto decimal; en castellano son coma.
+const gramos = (mg) => (mg / 1000).toFixed(1).replace('.', ',');
+
 const { p } = Astro.props;
+// Como se escriben los aditivos que detecta el scraper. La clave es la que guarda la BD.
+const ADITIVO = {
+  edulcorante_artificial: 'edulcorantes artificiales',
+  colorante: 'colorantes',
+  aroma_artificial: 'aromas artificiales',
+  relleno: 'rellenos (maltodextrina, almidon o similar)',
+  antiaglomerante: 'antiaglomerantes',
+};
 const nivel = NIVEL[p.nivel_verificacion];
 const nivelInfo = datos.niveles[p.nivel_verificacion];
 const categoria = datos.categorias.find((c) => c.slug === p.categoria);
@@ -147,9 +178,12 @@ const schema = [
     <div class="lateral aparece">
       {p.imagen && (
         <figure class="foto-producto">
-          {/* La sirve la CDN de la tienda; aqui no se aloja ninguna imagen. */}
+          {/* La sirve la CDN de la tienda; aqui no se aloja ninguna imagen. El onerror
+              se traga la foto que la tienda ha borrado de su servidor: sin el sale el
+              icono de imagen rota y debajo un pie que dice de quien es. */}
           <img src={p.imagen} alt={`${p.marca} ${p.nombre}`} loading="lazy" decoding="async"
-               referrerpolicy="no-referrer" />
+               referrerpolicy="no-referrer"
+               onerror="this.closest('figure').hidden = true" />
           <figcaption>Imagen de {TIENDAS[p.tienda] ?? p.tienda}</figcaption>
         </figure>
       )}
@@ -186,6 +220,27 @@ const schema = [
           <div>
             <dt>Por dosis efectiva</dt>
             <dd>{eur(p.coste_por_dosis_efectiva, 3)}</dd>
+          </div>
+        )}
+        {p.valoracion && (
+          <div>
+            {/* La nota es de los compradores EN la tienda que lo vende, no nuestra.
+                El numero de opiniones va al lado porque un 5,0 de una resena y un 4,7
+                de dos mil no son el mismo dato. */}
+            <dt>Compradores ({p.n_valoraciones})</dt>
+            <dd>{p.valoracion.toFixed(1)}<small>/5</small></dd>
+          </div>
+        )}
+        {p.pureza_real && (
+          <div>
+            <dt>Activo por 100 g</dt>
+            <dd>{Math.round(p.pureza_real * 100)}<small>%</small></dd>
+          </div>
+        )}
+        {p.requisitos.length > 0 && (
+          <div>
+            <dt>Requisitos</dt>
+            <dd>{p.requisitos.filter((r) => r.cumple).length}<small>/{p.requisitos.length}</small></dd>
           </div>
         )}
         <div>
@@ -249,6 +304,58 @@ const schema = [
         {p.desglose.map((d) => <li>{d}</li>)}
       </ul>
 
+      {p.requisitos.length > 0 && <h2>Requisitos de {cat.nombre.toLowerCase()}</h2>}
+      {p.requisitos.length > 0 && (
+        <>
+          <p class="sutil">
+            Lo que tiene que cumplir un producto para ser lo que esta categoria dice que es.
+            Solo se listan los que se han podido comprobar en su ficha.
+            {' '}<a href="/metodologia#requisitos">Como se decide cada uno</a>.
+          </p>
+          <ul class="requisitos">
+            {p.requisitos.map((r) => (
+              <li class={r.cumple ? 'si' : 'no'}>
+                <span class="marca-req" aria-hidden="true">{r.cumple ? '✓' : '✗'}</span>
+                <span class="que">{r.que}</span>
+                <span class="porque">{r.porque}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {(p.pureza_real || p.aditivos) && <h2>Que lleva de verdad</h2>}
+      {(p.pureza_real || p.aditivos) && (
+        <ul class="composicion">
+          {p.pureza_real && (
+            <li>
+              <strong>{Math.round(p.pureza_real * 100)} g de activo por cada 100 g</strong> de
+              producto, segun la tabla nutricional de la propia ficha.
+            </li>
+          )}
+          {/* aditivos es null cuando la tienda no publica la lista y [] cuando la publica
+              y no lleva ninguno de los que restan. No son lo mismo y no se cuentan igual. */}
+          {p.aditivos && p.aditivos.length === 0 && (
+            <li>Etiqueta limpia: su lista de ingredientes no declara edulcorantes
+              artificiales, colorantes, rellenos ni antiaglomerantes.</li>
+          )}
+          {p.aditivos && p.aditivos.length > 0 && (
+            <li>
+              Su lista de ingredientes declara{' '}
+              {p.aditivos.map((a) => ADITIVO[a] || a).join(', ')}.
+            </li>
+          )}
+        </ul>
+      )}
+      {/* La etiqueta tal cual la publica la tienda: es el dato con el que se juzgan los
+          requisitos, y quien lea tiene derecho a comprobarlo por su cuenta. */}
+      {p.lista_ingredientes && (
+        <p class="etiqueta">
+          <b>Ingredientes segun la ficha de {TIENDAS[p.tienda] ?? p.tienda}:</b>{' '}
+          {p.lista_ingredientes}
+        </p>
+      )}
+
       {p.ingredientes.length > 0 && <h2>Ingredientes frente a la dosis de referencia</h2>}
       {p.ingredientes.map((i) => {
         const ref = i.referencia;
@@ -269,15 +376,19 @@ const schema = [
                     <span style={`width:${pct}%`}></span>
                   </div>
                 )}
-                <div class="sutil">
-                  Dosis efectiva de referencia: <span class="num-t">{(ref.dosis_efectiva_min_mg / 1000).toFixed(1)}
-                  {ref.dosis_efectiva_max_mg ? `–${(ref.dosis_efectiva_max_mg / 1000).toFixed(1)}` : ''} g</span>
-                  {' '}(evidencia {ref.nivel_evidencia}).
-                  {ref.fuentes.map((f) => <> Fuente: <a href={f.url} rel="nofollow">{f.cita}</a></>)}
-                </div>
+                {/* Tres datos en una linea: cuanto es la dosis de referencia, con que
+                    evidencia y quien lo dice. Antes eran dos frases y una cita entera. */}
+                <p class="pie-ingrediente">
+                  <span>Referencia <span class="num-t">{gramos(ref.dosis_efectiva_min_mg)}{ref.dosis_efectiva_max_mg
+                    ? `–${gramos(ref.dosis_efectiva_max_mg)}` : ''} g</span></span>
+                  <span>evidencia {ref.nivel_evidencia}</span>
+                  {ref.fuentes.map((f) => (
+                    <a href={f.url} rel="nofollow" title={f.cita}>{citaCorta(f.cita)}</a>
+                  ))}
+                </p>
               </>
             )}
-            {!ref && <div class="sutil">Sin dosis de referencia publicada para este ingrediente: no se puntua.</div>}
+            {!ref && <p class="pie-ingrediente"><span>Sin dosis de referencia publicada: no puntua</span></p>}
           </div>
         );
       })}
@@ -322,43 +433,29 @@ const schema = [
 
       <Historico p={p} />
 
-      <h2>Donde comprarlo</h2>
+      {/* Aqui iba "Donde comprarlo": una tabla con este bote y el mismo bote en otras
+          tiendas. En 2.595 de las 2.664 fichas (el 97,4 %) esa tabla era UNA fila, la
+          de esta misma tienda, o sea el boton de arriba repetido en formato tabla.
+          Fuera. Lo que si aportaba se queda: el aviso de que el mismo envase esta mas
+          barato en otro sitio, que solo sale en las 28 fichas donde es verdad. */}
       {mejorOferta && mejorOferta.id !== p.id && (
         <p class="nota">
           <strong>El mismo envase esta mas barato en {TIENDAS[mejorOferta.tienda] ?? mejorOferta.tienda}.</strong>
           {' '}{eur(mejorOferta.precio_eur)} frente a {eur(p.precio_eur)} aqui: te ahorras
           {' '}{eur(p.precio_eur - mejorOferta.precio_eur)}. Es el mismo producto y el mismo
           formato en otra tienda, no una version parecida.
+          {' '}<a class="enlace-accion" href={mejorOferta.url_afiliado ?? mejorOferta.url}
+                  rel={mejorOferta.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+                  target="_blank">ver en {TIENDAS[mejorOferta.tienda] ?? mejorOferta.tienda} →</a>
         </p>
       )}
-      <div class="tabla-marco">
-        <div class="tabla-scroll">
-          <table class="apilable">
-            <caption>Precio del mismo producto por tienda</caption>
-            <thead><tr><th>Tienda</th><th class="num">Envase</th><th class="num">Precio unidad</th><th></th></tr></thead>
-            <tbody>
-              {[p, ...enOtrasTiendas].map((o) => (
-                <tr>
-                  <td class="principal marca">{TIENDAS[o.tienda] ?? o.tienda}</td>
-                  <td class="num" data-et="Envase">{eur(o.precio_eur)}</td>
-                  <td class="num" data-et="Por unidad">{precioReferencia(o).valor}/{precioReferencia(o).unidad}</td>
-                  <td>
-                    <a class="enlace-accion" href={o.url_afiliado ?? o.url}
-                       rel={o.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
-                       target="_blank">ver en la tienda →</a>
-                    {o.url_afiliado && <span class="sutil"> (afiliado)</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
       <Aviso />
 
       <h2 id="opiniones">Opiniones de los lectores</h2>
       <p class="sutil">
-        La nota de arriba la pone esta web (precio y certificacion); esta la ponen los lectores.
+        La nota de arriba la calcula esta web con la composicion, la certificacion, el precio
+        y las opiniones de la tienda que lo vende. Estas son las de los lectores de aqui, y
+        no cuentan en el score.
       </p>
       {/* Isla React: solo se carga cuando el lector llega a esta altura de la ficha.
           Es la unica parte de la web que habla con una base de datos (/api/*). */}

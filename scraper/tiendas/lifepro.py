@@ -63,7 +63,8 @@ class Lifepro(Scraper):
 
         fuera = []
         for url in dict.fromkeys(urls):
-            for p in ld_json(fetch(url)):
+            pagina = fetch(url)
+            for p in ld_json(pagina):
                 if p.get("@type") != "Product":
                     continue
                 nombre = p.get("name") or ""
@@ -77,5 +78,5 @@ class Lifepro(Scraper):
                     marca=(p.get("brand") or {}).get("name"), nombre=nombre, url=url,
                     formato_gramos=g, unidades=u, precio_eur=float(precio),
                     categoria=categoria, servicios=raciones(nombre) or u,
-                    texto_extra=url, imagen=p.get("image")))
+                    texto_extra=url, imagen=p.get("image"), ld=p, pagina=pagina))
         return fuera

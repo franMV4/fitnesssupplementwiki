@@ -1,0 +1,261 @@
+---
+import Base from '../../layouts/Base.astro';
+import Aviso from '../../componentes/Aviso.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { REVISADO } from '../../datos/evidencia.js';
+import { NIVELES, OBJETIVOS_RESUELTOS } from '../../datos/eficacia.js';
+import { eur, precioReferencia } from '../../datos/util.js';
+import { fechaLarga, nom, tiendaDe } from '../../datos/seo.js';
+import { abs } from '../../sitio.js';
+
+// "Que suplementos tomar para ganar masa muscular" y sus cinco hermanas. Son consultas de
+// volumen alto que hoy contesta un foro o una tienda, y las dos contestan lo mismo: la
+// lista entera. Aqui la pagina tiene dos mitades y la segunda es la que importa, la de lo
+// que no hace falta comprar.
+//
+// El reparto de categorias por objetivo es editorial y esta escrito en datos/eficacia.js.
+// Todo lo demas (evidencia, dosis, precio, producto) sale de donde ya salia.
+export function getStaticPaths() {
+  return OBJETIVOS_RESUELTOS.map((o) => ({ params: { objetivo: o.slug }, props: { o } }));
+}
+
+const { o } = Astro.props;
+const canonica = abs(`/para/${o.slug}`);
+const mes = (n) => (n == null ? '—' : eur(n));
+const descripcion =
+  `${o.incluye.length} suplementos para ${o.nombre.toLowerCase()} ordenados por evidencia, ` +
+  `con su efecto medido, su dosis y lo que cuesta al mes` +
+  (o.alMes != null ? ` (lo basico, desde ${mes(o.alMes)} al mes)` : '') +
+  `. Y los ${o.descarta.length} que se venden para esto y no hacen falta.`;
+
+const faqs = [
+  {
+    p: `¿Que suplementos tomar para ${o.nombre.toLowerCase()}?`,
+    r: o.nucleo.length
+      ? `Lo minimo defendible con fuentes son ${o.nucleo.map((x) => x.cat.nombre.toLowerCase()).join(' y ')}` +
+        (o.alMes != null ? `, que a la dosis de los estudios salen por ${mes(o.alMes)} al mes ` +
+                           `comprando el mas barato que llega a esa dosis.` : '.') +
+        ` A partir de ahi, esta pagina lista otros ${o.incluye.length - o.nucleo.length} con ` +
+        `evidencia detras, cada uno para un caso concreto.`
+      : `Los de la tabla de arriba, por orden de evidencia. Ninguno sustituye a comer y ` +
+        `entrenar: tapan huecos, no hacen el trabajo.`,
+  },
+  ...(o.descarta.length ? [{
+    p: `¿Y ${o.descarta.map((x) => x.cat.nombre.toLowerCase()).join(', ')}?`,
+    r: `${o.descarta.map((x) => x.cat.nombre).join(', ')} ${o.descarta.length > 1 ? 'tienen' : 'tiene'} ` +
+       `evidencia baja para esto: ${NIVELES.baja.que.toLowerCase()} Se venden mucho para ` +
+       `${o.nombre.toLowerCase()} y cada uno tiene su guia con las fuentes, para que la ` +
+       `decision no dependa de lo que diga una etiqueta.`,
+  }] : []),
+  {
+    p: '¿De donde salen estos precios?',
+    r: `De los ${datos.productos.length} productos que esta web recoge en ` +
+       `${new Set(datos.productos.map((p) => p.tienda)).size} tiendas espanolas, con precios del ` +
+       `${fechaLarga(datos.generado)}. El coste al mes es el de una dosis efectiva al dia ` +
+       `durante 30 dias, con el producto mas barato que llega a esa dosis. La evidencia se ` +
+       `reviso el ${fechaLarga(REVISADO)}.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: o.h1,
+    description: descripcion,
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Que funciona', item: abs('/suplementos-que-funcionan') },
+      { '@type': 'ListItem', position: 3, name: o.nombre, item: canonica },
+    ],
+  },
+];
+---
+<Base ancho="completo" titulo={o.titulo} descripcion={descripcion} schema={schema}>
+
+  <p class="migas">
+    <a href="/">Inicio</a> / <a href="/suplementos-que-funcionan">Que funciona</a> / {o.nombre}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      Por objetivo · evidencia revisada el <time datetime={REVISADO}>{fechaLarga(REVISADO)}</time>
+    </p>
+    <h1 class="aparece d1">{o.h1}</h1>
+    <p class="respuesta aparece d2">
+      <b>La respuesta corta.</b> {o.nucleo.length > 0 && (
+        <>Lo que se sostiene con fuentes es corto: {o.nucleo.map((x) => x.cat.nombre.toLowerCase()).join(' y ')}
+        {o.alMes != null && <>, unos {mes(o.alMes)} al mes a la dosis de los estudios</>}. </>
+      )}
+      Esta pagina lista {o.incluye.length} suplementos con evidencia para
+      {' '}{o.nombre.toLowerCase()}{o.descarta.length > 0 && <>, y {o.descarta.length} que se venden
+      para esto y no hacen falta</>}.
+    </p>
+    <p class="entradilla aparece d2">{o.entrada}</p>
+  </section>
+
+  <Aviso />
+
+  {o.nucleo.length > 0 && (
+    <>
+      <h2 class="titulo-bloque">Lo basico, y lo que cuesta</h2>
+      <div class="destacados aparece d2">
+        {o.nucleo.map((x) => (
+          <div class="bloque destacado-bloque">
+            <span class="rotulo-destacado">{NIVELES[x.nivel].etiqueta}</span>
+            <h3><a href={`/guia/${x.slug}`}>{x.cat.nombre}</a></h3>
+            <p class="linea-destacado">
+              <span class="cifra">{mes(x.alMes)}</span>
+              <span class="sutil">al mes</span>
+            </p>
+            <p>{x.dosis}</p>
+            {x.barato && (
+              <p class="sutil">
+                Mas barato a esa dosis: <a href={`/producto/${x.barato.slug}`}>{nom(x.barato)}</a>
+                {' '}de {x.tiendaBarato}, {precioReferencia(x.barato).valor}/{precioReferencia(x.barato).unidad}.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      {o.alMes != null && (
+        <p class="nota">
+          <strong>{mes(o.alMes)} al mes en total</strong>, sumando
+          {' '}{o.conPrecio.map((x) => x.cat.nombre.toLowerCase()).join(' y ')} a una dosis
+          efectiva al dia con el producto mas barato que llega a esa dosis. No es una
+          recomendacion medica ni un plan: es lo que cuesta hoy, en las tiendas que compara
+          esta web, lo que tiene fuentes detras.
+        </p>
+      )}
+    </>
+  )}
+
+  <section class="seccion" id="con-evidencia">
+    <div class="cabecera-seccion">
+      <h2>Los {o.incluye.length} que tienen algo detras</h2>
+      <p class="apunte">Por nivel de evidencia y coste al mes</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>Suplementos con evidencia para {o.nombre.toLowerCase()}</caption>
+          <thead>
+            <tr>
+              <th>Suplemento</th>
+              <th>Evidencia</th>
+              <th>Lo que se ha medido</th>
+              <th class="num">Al mes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {o.incluye.map((x) => (
+              <tr>
+                <td class="principal marca">
+                  <a href={`/guia/${x.slug}`}>{x.cat.nombre}</a>
+                  {x.dosis && <span class="explica">{x.dosis}</span>}
+                </td>
+                <td data-et="Evidencia">
+                  {NIVELES[x.nivel].etiqueta}
+                  <span class="explica">
+                    <a href={`/${x.slug}`}>{x.productos} productos comparados</a>
+                    {x.mejor && <> · mejor nota: {nom(x.mejor)} de {tiendaDe(x.mejor)}</>}
+                  </span>
+                </td>
+                <td data-et="Lo que se ha medido">
+                  {x.efecto ? <>{x.efecto.que}: <strong>{x.efecto.cifra}</strong></> : '—'}
+                  {x.fuente && <span class="explica">{x.fuente.cita}</span>}
+                </td>
+                <td class="num" data-et="Al mes">
+                  {x.alMes != null
+                    ? <span class="destacado">{mes(x.alMes)}</span>
+                    : <span class="sutil">sin dosis publicada</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {o.descarta.length > 0 && (
+    <section class="seccion" id="no-hacen-falta">
+      <div class="cabecera-seccion">
+        <h2>Los {o.descarta.length} que te van a vender para esto</h2>
+        <p class="apunte">Evidencia baja, precio de suplemento</p>
+      </div>
+      <p class="sutil">{NIVELES.baja.que}</p>
+      <div class="tabla-marco">
+        <div class="tabla-scroll">
+          <table class="apilable">
+            <caption>Suplementos de evidencia baja que se venden para {o.nombre.toLowerCase()}</caption>
+            <thead>
+              <tr>
+                <th>Suplemento</th>
+                <th>Lo que se ha medido</th>
+                <th class="num">Al mes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {o.descarta.map((x) => (
+                <tr>
+                  <td class="principal marca">
+                    <a href={`/guia/${x.slug}`}>{x.cat.nombre}</a>
+                    <span class="explica">{x.resumen?.split('. ')[0]}.</span>
+                  </td>
+                  <td data-et="Lo que se ha medido">
+                    {x.efecto ? <>{x.efecto.que}: <strong>{x.efecto.cifra}</strong></> : '—'}
+                    {x.fuente && <span class="explica">{x.fuente.cita}</span>}
+                  </td>
+                  <td class="num" data-et="Al mes">
+                    {x.alMes != null
+                      ? mes(x.alMes)
+                      : <span class="sutil">sin dosis publicada</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="nota">
+        <strong>Evidencia baja no es fraude.</strong> Es que el efecto no aparece cuando la
+        dieta ya cubre el hueco, o que los estudios que lo sostienen son pequenos, cortos o
+        pagados por quien vende. Cada guia dice en que caso concreto si tiene sentido, que
+        casi siempre existe y casi nunca es el de la persona que lo compra.
+      </p>
+    </section>
+  )}
+
+  <Faq faqs={faqs} titulo={`Preguntas sobre suplementos para ${o.nombre.toLowerCase()}`} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Otros objetivos</h2>
+      <p class="apunte">La misma lista, otra pregunta</p>
+    </div>
+    <div class="lista-categorias">
+      {OBJETIVOS_RESUELTOS.filter((x) => x.slug !== o.slug).map((x) => (
+        <a class="fila-categoria" href={`/para/${x.slug}`}>
+          <span class="nombre">{x.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{x.incluye.length} suplementos</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href="/suplementos-que-funcionan">
+        <span class="nombre">Todos, por evidencia</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">30 guias</span>
+      </a>
+    </div>
+  </section>
+</Base>

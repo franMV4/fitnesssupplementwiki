@@ -73,5 +73,7 @@ class Nutritienda(Scraper):
                     marca=(p.get("brand") or {}).get("name"), nombre=nombre, url=purl,
                     formato_gramos=g, unidades=u, precio_eur=float(precio),
                     categoria=categoria, servicios=u, texto_extra=purl,
-                    imagen=p.get("image")))
+                    # Sin `pagina`: aqui no se descarga la ficha, y la tabla nutricional
+                    # del listado seria la de otro producto.
+                    imagen=p.get("image"), ld=p))
         return fuera

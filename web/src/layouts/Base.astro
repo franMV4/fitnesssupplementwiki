@@ -4,6 +4,7 @@ import Jsonld from '../componentes/Jsonld.astro';
 import { SITIO, abs } from '../sitio.js';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { porFamilia } from '../datos/familias.js';
+import { OBJETIVOS } from '../datos/eficacia.js';
 import { fechaLarga } from '../datos/seo.js';
 import { ARCHIVO, DISPLAY } from '../estilos/fuentes.js';
 import '../estilos/fuentes.css';
@@ -67,22 +68,19 @@ const total = datos.productos.length;
 const diasDelDato = datos.generado
   ? Math.floor((Date.now() - Date.parse(datos.generado)) / 86400000) : null;
 const datoViejo = diasDelDato != null && diasDelDato > 10;
-// Con treinta categorias no cabe una fila de enlaces: van dentro de un <details>.
+// Con treinta categorias no cabe una fila de enlaces: van dentro de un <details>,
+// y ahi tampoco se leen en plano: por estante, igual que las guias.
 const enCategoria = datos.categorias.some((c) => aqui === `/${c.slug}`);
+const categorias = porFamilia(datos.categorias);
 // Las guias son treinta y tambien: van agrupadas por estante para que el menu se lea.
 const guias = porFamilia(datos.categorias, (c) => EVIDENCIA[c.slug]);
 const enGuia = aqui === '/guias' || aqui.startsWith('/guia/');
+// El tercer menu: los articulos que se leen antes de elegir categoria (que funciona, para
+// que objetivo, en que tienda). Sin el estaban publicados y no se llegaba a ellos.
+const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/para/')
+  || aqui === '/tiendas' || aqui.startsWith('/tiendas/');
 // Lo que desfila en la tira de edicion. Son recuentos del dataset, no eslogans: si
 // manana hay 3.000 productos, la tira lo dice sola.
-const tira = [
-  { etiqueta: 'Mercado espanol' },
-  { etiqueta: 'Edicion del', valor: fechaLarga(datos.generado) },
-  { etiqueta: 'Productos', valor: total },
-  { etiqueta: 'Categorias', valor: datos.categorias.length },
-  { etiqueta: 'Tiendas', valor: new Set(datos.productos.map((p) => p.tienda)).size },
-  { etiqueta: 'De nivel 4 verificado', valor: datos.productos.filter((p) => p.nivel_verificacion === 4).length },
-  { etiqueta: 'El orden no lee el fichero de afiliados' },
-];
 ---
 <!doctype html>
 <html lang="es">
@@ -138,21 +136,13 @@ const tira = [
 <body>
   <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-  {/* Tira de edicion: los recuentos del dataset desfilando, como el teletipo de un
-      diario. La lista va DOS veces porque el desfile la desplaza justo la mitad de su
-      ancho: al llegar al final, la segunda copia esta donde empezo la primera y el
-      bucle no salta. Con `prefers-reduced-motion` el CSS esconde la segunda. */}
-  <div class="tira" aria-hidden="true">
-    <div>
-      {[0, 1].map(() => (
-        <div style="display:flex">
-          {tira.map((t) => (
-            <span><i></i>{t.etiqueta}{t.valor != null && <> <b>{t.valor}</b></>}</span>
-          ))}
-        </div>
-      ))}
-    </div>
-  </div>
+  {/* Aqui iba el teletipo: los siete recuentos del dataset desfilando encima de la
+      cabecera, en las 2.978 paginas. Se quito porque no decia NADA que no estuviera ya
+      en la misma pantalla: en la portada, la linea de edicion y la respuesta corta dan
+      los siete; en una categoria los da el bloque de cifras; y en todas, el colofon del
+      pie repite fecha, productos y categorias. Era una segunda copia, en movimiento,
+      por encima del titular. Iba `aria-hidden`, asi que no se pierde ni un dato ni un
+      enlace: solo 26 px de la primera pantalla y una animacion infinita. */}
 
   <header class="sitio">
     <div class="envoltorio">
@@ -165,14 +155,24 @@ const tira = [
         FitnessSupplement<span class="fina">Wiki</span>
       </a>
       <nav class="principal" id="menu-principal" aria-label="Secciones">
+        {/* Solo se ve en movil, dentro del panel: sin un titulo arriba, el panel
+            empieza directamente en "Categorias" y no se sabe que es lo que se ha
+            abierto. Al entrar en un submenu lo sustituye la fila de vuelta. */}
+        <p class="cabeza-panel" aria-hidden="true">Menu</p>
         <details class="menu-cat" name="menu">
           <summary aria-current={enCategoria ? 'page' : undefined}>Categorias</summary>
-          <div class="lamina">
-            {datos.categorias.map((c) => (
-              <a href={`/${c.slug}`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
-                {c.nombre} <span>{c.productos}</span>
-              </a>
+          <div class="lamina laminas-grupos">
+            {categorias.map((g) => (
+              <div class="grupo-menu">
+                <p class="rotulo-menu">{g.nombre}</p>
+                {g.cats.map((c) => (
+                  <a href={`/${c.slug}`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
+                    {c.nombre} <span>{c.productos}</span>
+                  </a>
+                ))}
+              </div>
             ))}
+            <a class="pie-menu" href="/guias#categorias">Ver todas las categorias &rarr;</a>
           </div>
         </details>
         <details class="menu-cat" name="menu">
@@ -191,13 +191,51 @@ const tira = [
             <a class="pie-menu" href="/guias">Ver todas las guias y categorias &rarr;</a>
           </div>
         </details>
+        <details class="menu-cat" name="menu">
+          <summary aria-current={enFunciona ? 'page' : undefined}>Que funciona</summary>
+          <div class="lamina laminas-grupos">
+            <div class="grupo-menu">
+              <p class="rotulo-menu">Por evidencia</p>
+              <a href="/suplementos-que-funcionan"
+                 aria-current={aqui === '/suplementos-que-funcionan' ? 'page' : undefined}>
+                Que suplementos funcionan
+              </a>
+            </div>
+            <div class="grupo-menu">
+              <p class="rotulo-menu">Por objetivo</p>
+              {OBJETIVOS.map((o) => (
+                <a href={`/para/${o.slug}`} aria-current={aqui === `/para/${o.slug}` ? 'page' : undefined}>
+                  {o.nombre}
+                </a>
+              ))}
+            </div>
+            <div class="grupo-menu">
+              <p class="rotulo-menu">Por tienda</p>
+              <a href="/tiendas" aria-current={aqui === '/tiendas' ? 'page' : undefined}>
+                Que tienda es mas barata
+              </a>
+            </div>
+          </div>
+        </details>
         <a href="/metodologia" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
         <a href="/quienes-somos" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
         <a class="comparar" href="/guias#categorias">Comparar</a>
+
+        {/* El pie del panel: lo que no es navegar por el catalogo. En escritorio solo
+            se ve el boton de tema, en su sitio de siempre a la derecha de la barra.
+            El enlace de administracion sale oculto y lo destapa el script de abajo si
+            /api/yo dice que este visitante es admin: la pagina es estatica y va
+            cacheada, asi que no puede saberlo al generarse. */}
+        <div class="pie-panel">
+          <a class="enlace-admin" href="/admin" hidden>
+            <span class="glifo-panel" aria-hidden="true">&#9881;</span>Panel de administracion
+          </a>
+          <button class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
+            <span class="luna" aria-hidden="true">&#9789;</span><span class="sol" aria-hidden="true">&#9788;</span>
+            <span class="texto-tema">Cambiar de tema</span>
+          </button>
+        </div>
       </nav>
-      <button class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
-        <span class="luna" aria-hidden="true">&#9789;</span><span class="sol" aria-hidden="true">&#9788;</span>
-      </button>
     </div>
     {/* El acceso va FUERA del envoltorio: el envoltorio esta limitado a 82rem y
         centrado, asi que en una pantalla ancha su borde derecho no es el de la
@@ -294,6 +332,10 @@ const tira = [
     const cerrarMenu = () => {
       delete cabecera.dataset.menu;
       hamburguesa.setAttribute('aria-expanded', 'false');
+      // El panel vuelve a su primera pantalla. Sin esto, quien entro en Categorias y
+      // cerro el menu se lo encuentra abierto por dentro la proxima vez que lo abre,
+      // y parece que ha perdido las secciones.
+      for (const d of cabecera.querySelectorAll('.menu-cat[open]')) d.open = false;
     };
     hamburguesa.addEventListener('click', () => {
       if (cabecera.dataset.menu === undefined) {
@@ -320,11 +362,12 @@ const tira = [
     (async () => {
       const icono = document.querySelector('.acceso-cabecera');
       const aqui = location.pathname + location.search;
-      if (!/^\/(entrar|registro)/.test(location.pathname)) {
+      if (!/^\/(entrar|registro|recuperar)/.test(location.pathname)) {
         icono.href = '/entrar?volver=' + encodeURIComponent(aqui);
       }
       try {
-        const { usuario } = await (await fetch('/api/yo')).json();
+        const { usuario, admin } = await (await fetch('/api/yo')).json();
+        if (admin) document.querySelector('.enlace-admin').hidden = false;
         if (!usuario) return;
         icono.classList.add('dentro');
         icono.title = usuario.nombre;

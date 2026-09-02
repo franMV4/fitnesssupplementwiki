@@ -1,0 +1,259 @@
+---
+import { NIVEL, ORDENES, TIENDAS, UNIDAD, eur, precioReferencia, puntos,
+         tieneSello } from '../datos/util.js';
+
+// La tabla de categoria: se pinta entera en el build y los filtros los mueve un script
+// de ~120 lineas sobre las filas que ya estan en el DOM (tabla.js).
+//
+// Antes era la unica isla React del sitio, y salia carisima: las mismas 120 filas
+// viajaban DOS veces, una en el HTML ya pintado (que es lo que leen el lector, Google y
+// los modelos) y otra en el atributo `props` del <astro-island> para poder hidratarlas
+// (218 KB del HTML de /proteina-whey), mas 184 KB de runtime de React para ordenar una
+// tabla. El navegador parseaba el catalogo dos veces antes de que se pudiera tocar nada.
+//
+// Lo que hace el script no es distinto de lo que hacia el componente: llama al MISMO
+// `filtrar()` de datos/util.js, con los mismos ordenes y los mismos tests
+// (`node tabla.test.mjs`). Solo cambia de donde saca los productos: de los `data-` de
+// cada <tr> en vez de un JSON duplicado.
+//
+// Sin JavaScript la tabla sigue siendo la de siempre: ordenada por score, con sus
+// puestos, su fila mas barata marcada y las 25 primeras a la vista.
+const { productos } = Astro.props;
+
+const TOPE = 25;
+
+const NIVELES_CHIP = [
+  { v: 1, texto: 'Todos' },
+  { v: 2, texto: '2+ declarado' },
+  { v: 3, texto: '3+ analisis' },
+  { v: 4, texto: '4 verificado' },
+];
+
+// Sellos que existen en el dataset y que valen nivel 4 porque los respalda un tercero.
+// El chip solo aparece si esta tabla tiene alguno: un filtro que siempre deja la tabla
+// vacia es peor que no tener filtro.
+const SELLOS_CHIP = [
+  { tipo: 'creapure', texto: 'Solo Creapure' },
+  { tipo: 'ifos', texto: 'Solo IFOS' },
+];
+
+const tiendas = [...new Set(productos.map((p) => p.tienda))].sort();
+
+// Sellos de calidad de verdad (Creapure, IFOS) son nivel 4 y solo existen en unas pocas
+// categorias (creatina, omega 3). En proteinas o preentrenos, como mucho hay "analisis de
+// marca" (nivel 3), que no es un sello: la columna de verificacion es ruido y la ocultamos
+// entera (con su filtro) cuando ningun producto de la tabla llega al nivel de sello.
+const hayVerificacion = productos.some((p) => p.nivel_verificacion >= 4);
+
+// Una categoria en capsulas (omega 3, multivitaminicos) no tiene precio por kilo, y
+// poner "€/kg" encima de un precio por capsula es ensenar un numero mintiendo sobre
+// que numero es.
+const unidadPrecio = `€/${UNIDAD[productos.find((p) => p.unidad_precio)?.unidad_precio] ?? 'kg'}`;
+
+// Los sellos presentes en ESTA tabla. En proteinas no hay ninguno y los chips no salen.
+const sellosVisibles = SELLOS_CHIP.filter((s) => productos.some((p) => tieneSello(p, s.tipo)));
+
+// El estado inicial es el de siempre: sin filtros y por score. Lo mismo que servia React
+// en el HTML, asi que el bot lee exactamente lo mismo que antes.
+const visibles = productos.slice().sort(ORDENES.score.cmp);
+const refs = visibles.map((p) => p.precio_referencia).filter((n) => n != null);
+const minPrecio = refs.length ? Math.min(...refs) : null;
+
+// Lo que el script necesita de cada fila para volver a filtrar y ordenar. Son ocho
+// campos cortos por producto, no el producto entero: unos 60 bytes frente a los 900 que
+// costaba serializar el mismo producto en las props de la isla.
+const fila = (p) => ({
+  'data-slug': p.slug,
+  'data-cat': p.categoria,
+  'data-busca': `${p.marca} ${p.nombre}`.toLowerCase(),
+  'data-tienda': p.tienda,
+  'data-nivel': p.nivel_verificacion,
+  'data-sellos': (p.certificaciones ?? []).map((c) => c.tipo).join(' '),
+  'data-ref': p.precio_referencia ?? '',
+  'data-precio': p.precio_eur ?? '',
+  'data-score': p.score_final ?? '',
+});
+---
+<div class="tabla-comparador" data-tope={TOPE} data-unidad={unidadPrecio}
+     data-total={productos.length}>
+
+  <div class="barra-filtros">
+    <label class="campo ancho">
+      <span>Buscar</span>
+      <input type="search" name="busqueda" placeholder="marca o producto" />
+    </label>
+    <label class="campo">
+      <span>Tienda</span>
+      <select name="tienda">
+        <option value="">Todas</option>
+        {tiendas.map((t) => <option value={t}>{TIENDAS[t] ?? t}</option>)}
+      </select>
+    </label>
+    <label class="campo">
+      <span>Maximo {unidadPrecio}</span>
+      <input type="number" name="precioMax" min="0" step="1" placeholder="sin limite" />
+    </label>
+    <label class="campo">
+      <span>Ordenar por</span>
+      <select name="orden">
+        {Object.entries(ORDENES).map(([k, v]) => <option value={k}>{v.etiqueta}</option>)}
+      </select>
+    </label>
+    {/* El chip de limpiar solo tiene sentido con algun filtro puesto: al cargar no hay
+        ninguno, asi que sale oculto y lo ensena el script. */}
+    <div class="campo linea" data-limpiar hidden>
+      <span>&nbsp;</span>
+      <div class="grupo-chips">
+        <button type="button" class="chip">limpiar filtros</button>
+      </div>
+    </div>
+    {hayVerificacion && (
+      <div class="campo linea">
+        <span>Verificacion minima</span>
+        <div class="grupo-chips">
+          {NIVELES_CHIP.map((n) => (
+            <button type="button" class="chip" data-nivel={n.v}
+                    aria-pressed={n.v === 1 ? 'true' : 'false'}>{n.texto}</button>
+          ))}
+          {sellosVisibles.map((s) => (
+            <button type="button" class="chip" data-sello={s.tipo}
+                    aria-pressed="false">{s.texto}</button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div class="tabla-marco">
+    <div class="tabla-scroll">
+      <table class:list={['apilable', 'fichas', { recortada: visibles.length > TOPE }]}>
+        <caption>Productos ordenados por {ORDENES.score.etiqueta.toLowerCase()}</caption>
+        <thead>
+          <tr>
+            <th class="rango">#</th>
+            <th>Producto</th>
+            <th>Tienda</th>
+            {/* Cabecera que ordena al pincharla. El desplegable "Ordenar por" sigue
+                estando (es el unico que se ve en movil, donde la tabla se apila y no hay
+                cabecera): los dos escriben el mismo estado y no pueden contradecirse. */}
+            <th class="num" aria-sort="none"><button type="button" class="orden" data-orden="precio">Envase</button></th>
+            <th class="num" aria-sort="none"><button type="button" class="orden" data-orden="kg">{unidadPrecio}</button></th>
+            {hayVerificacion && <th>Verificacion</th>}
+            <th class="num" aria-sort="ascending"><button type="button" class="orden activo" data-orden="score">Score</button></th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibles.map((p, i) => (
+            <tr {...fila(p)}>
+              <td class:list={['puesto', { top: i === 0 }]}>{String(i + 1).padStart(2, '0')}</td>
+              <td class:list={['principal', { alarma: p.flag_infradosaje }]}>
+                {/* Sabores, sellos y avisos van dentro de la columna del nombre: fuera
+                    del flex empezaban linea nueva y caian debajo de la foto. */}
+                <div class="con-miniatura">
+                  {/* La foto la sirve la CDN de la tienda; aqui no se aloja ninguna.
+                      loading/decoding perezosos: son 45 imagenes en una sola tabla.
+                      onerror inline: el catalogo de una tienda se pudre solo (Zumub
+                      publica en su JSON-LD ficheros que ya ha borrado). Un hueco es
+                      mejor que el icono de rota, y esto lo cubre sin comprobar 3.000
+                      URLs en cada pasada del scraper. */}
+                  {p.imagen && (
+                    <img class="miniatura" src={p.imagen} alt="" aria-hidden="true"
+                         referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'"
+                         loading="lazy" decoding="async" width="55" height="55" />
+                  )}
+                  <div class="celda-producto">
+                    <a href={`/producto/${p.slug}`}>
+                      {/* En Amazon la marca no viene en ningun campo y el scraper la deja
+                          en "Desconocida": es lo honesto en la BD, pero pintarla delante
+                          de cada nombre llena la columna de una palabra que no es un
+                          dato. Sin marca, manda el nombre. */}
+                      <span class="enlace-producto">
+                        {p.marca !== 'Desconocida' && <span class="marca">{p.marca}</span>}
+                        {p.marca !== 'Desconocida' ? ' ' : ''}{p.nombre}
+                      </span>
+                    </a>
+                    {p.sabores > 1 && <span class="sutil"> · {p.sabores} sabores</span>}
+                    {/* La nota de los compradores en la tienda y lo que la tabla
+                        nutricional dice que es activo. Van en la celda del nombre y no en
+                        columnas propias: dos columnas mas estrechan la tabla en movil por
+                        dos datos que no todas las tiendas publican. */}
+                    {p.valoracion && (
+                      <span class="opinion" title={`${p.n_valoraciones} opiniones en la tienda`}>
+                        {p.valoracion.toFixed(1)}<i aria-hidden="true">★</i>
+                        <span class="sutil"> ({p.n_valoraciones})</span>
+                      </span>
+                    )}
+                    {p.pureza_real && (
+                      <span class="sutil" title="Activo por cada 100 g, segun la tabla de la ficha">
+                        {' · '}{Math.round(p.pureza_real * 100)} % activo
+                      </span>
+                    )}
+                    {p.requisitos_total > 0 && (
+                      <span class:list={['requisitos-mini',
+                                         { incumple: p.requisitos_cumple < p.requisitos_total }]}
+                            title="Requisitos de la categoria que cumple, de los comprobables">
+                        {' · '}{p.requisitos_cumple}/{p.requisitos_total} requisitos
+                      </span>
+                    )}
+                    {p.sellos?.map((s) => <span class="sello" title={s.criterio}>{s.texto}</span>)}
+                    {p.flag_infradosaje && <div class="infradosis">infradosificado</div>}
+                    {/* Guardar para comparar. Va dentro de la celda del nombre y no en
+                        una columna nueva: una columna mas estrecha la tabla en movil por
+                        una funcion que no usa todo el mundo. */}
+                    <button type="button" class="marcar" aria-pressed="false">+ comparar</button>
+                  </div>
+                </div>
+              </td>
+              <td data-et="Tienda">
+                <a href={p.url_afiliado ?? p.url}
+                   rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+                   target="_blank">{TIENDAS[p.tienda] ?? p.tienda}</a>
+              </td>
+              <td class="num" data-et="Envase">{eur(p.precio_eur)}</td>
+              <td class:list={['num', 'referencia',
+                               { destacado: p.precio_referencia != null
+                                            && p.precio_referencia === minPrecio }]}
+                  data-et={unidadPrecio}>
+                {precioReferencia(p).valor}
+                {precioReferencia(p).unidad && <span class="sutil"> /{precioReferencia(p).unidad}</span>}
+              </td>
+              {hayVerificacion && (
+                <td data-et="Verificacion">
+                  <span class:list={['nivel', NIVEL[p.nivel_verificacion].clase]}>
+                    <span class="puntos">{puntos(p.nivel_verificacion).map((on) => <i class:list={[{ on }]} />)}</span>
+                    {' '}{NIVEL[p.nivel_verificacion].etiqueta}
+                  </span>
+                </td>
+              )}
+              <td class="num puntuacion" data-et="Score">
+                <span class="cifra">{p.score_final?.toFixed(0) ?? '—'}</span>
+                <span class="barra mini"><span style={`width: ${p.score_final ?? 0}%`} /></span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="boton ver-mas" hidden={visibles.length <= TOPE}>
+      Ver los <span data-restantes>{visibles.length - TOPE}</span> productos restantes
+      <span class="flecha">↓</span>
+    </button>
+    <a class="volver-arriba" href="#contenido" hidden>↑ Volver arriba</a>
+    <p class="vacio" hidden>Ningun producto cumple esos filtros.</p>
+  </div>
+
+  {/* El recuento va DEBAJO, como el pie de una tabla impresa: arriba repetia la cifra
+      que ya da el bloque de cifras de la cabecera, y decia dos veces lo mismo con dos
+      tipografias distintas. Aqui cierra lo que se acaba de leer. */}
+  <p class="pie-tabla" aria-live="polite"><b>{productos.length}</b> productos en esta tabla</p>
+
+  <div class="barra-comparar" hidden>
+    <span><b data-cuenta>0</b> <span data-etiqueta>productos guardados</span></span>
+    <a class="boton primario" href="/comparar">Ver la comparativa →</a>
+  </div>
+</div>
+
+<script>
+  import { montarTabla } from './tabla.js';
+  document.querySelectorAll('.tabla-comparador').forEach(montarTabla);
+</script>

@@ -64,8 +64,10 @@ const schema = [{
       <li>
         <strong>Si creas una cuenta</strong> para escribir resenas: se guarda tu nombre, tu
         correo y tu contrasena (esta ultima cifrada con PBKDF2, nunca en claro), mas las
-        resenas y las fotos que publiques. Sirven para eso y para nada mas: no se usan para
-        mandarte correos ni se ceden.
+        resenas y las fotos que publiques. Sirven para eso y para nada mas: no se ceden ni se
+        usan para mandarte publicidad. El unico correo que puedes recibir es el enlace para
+        cambiar tu contrasena, y solo si lo pides tu; lo envia Resend, que actua como
+        encargado del tratamiento y no lo usa para otra cosa.
       </li>
       <li>
         <strong>Si escribes al correo de contacto</strong>: tu mensaje y tu direccion se usan
@@ -163,11 +165,27 @@ const schema = [{
 
     <h2 id="propiedad">Propiedad intelectual y reutilizacion</h2>
     <p>
-      Los textos, la metodologia y las puntuaciones de esta web son obra propia. Los datos de
-      cada comparativa se publican tambien en formato abierto (por ejemplo,
-      <a href="/datos/creatina.json">/datos/creatina.json</a>) y se pueden reutilizar citando
-      la fuente y la fecha de recogida. Las imagenes de producto pertenecen a las tiendas y se
-      sirven desde sus servidores.
+      Los textos y la metodologia de esta web son obra propia y no se licencian: no se pueden
+      copiar y republicar como si fueran de otro. Las imagenes de producto pertenecen a las
+      tiendas y se sirven desde sus servidores.
+    </p>
+    <p id="licencia-datos">
+      <strong>Los datos, en cambio, son libres.</strong> Los ficheros abiertos de cada
+      comparativa (<a href="/datos/creatina.json">/datos/creatina.json</a> y sus 29 hermanos,
+      mas el <a href="/datos/catalogo.json">catalogo completo</a>) se publican bajo licencia
+      <a href="https://creativecommons.org/licenses/by/4.0/deed.es" rel="license nofollow">
+      Creative Commons Reconocimiento 4.0 (CC BY 4.0)</a>: se pueden descargar, analizar,
+      republicar y usar en un trabajo comercial, con una sola condicion, citar de donde
+      salen y de que dia son los precios. Por ejemplo:
+    </p>
+    <p class="nota">
+      Datos de FitnessSupplementWiki (fitnesssupplementwiki.com), recogidos el
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>, CC BY 4.0.
+    </p>
+    <p>
+      La licencia cubre los ficheros de datos: precios, formatos, sellos declarados, niveles
+      de verificacion y puntuaciones. No cubre ni los articulos ni las guias de evidencia, que
+      son el parrafo de arriba.
     </p>
 
     <h2 id="legislacion">Legislacion aplicable</h2>

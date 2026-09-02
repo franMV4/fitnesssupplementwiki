@@ -27,6 +27,9 @@ export function GET() {
   const cuerpo = [
     'User-agent: *',
     'Allow: /',
+    // El panel no tiene nada que indexar (sin sesion de admin no ensena un dato) y sale
+    // aqui para que no gaste presupuesto de rastreo ni aparezca en una busqueda.
+    'Disallow: /admin',
     '',
     ...BOTS_IA.flatMap((bot) => [`User-agent: ${bot}`, 'Allow: /', '']),
     `Sitemap: ${abs('/sitemap.xml')}`,

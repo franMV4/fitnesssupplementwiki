@@ -34,9 +34,11 @@ export default function ControlPeso() {
 
       <div className="panel-peso">
         <p className="sutil">
-          El orden de la tabla de abajo sale de una nota de 0 a 100: mitad precio frente al
-          mas barato de su categoria, mitad calidad verificable. Es la misma formula que
-          ordena todas las tablas del sitio. Muevela y mira que aguanta.
+          El orden de la tabla de abajo sale de una nota de 0 a 100. Aqui repartes a tu
+          gusto las dos partes que discute todo el mundo: el precio frente al mas barato de
+          su categoria y la calidad verificable. La nota de los compradores en la tienda no
+          entra en este mando, que es la parte pequena del score y no la que se discute.
+          Muevelo y mira que aguanta.
         </p>
 
         <label className="mando">

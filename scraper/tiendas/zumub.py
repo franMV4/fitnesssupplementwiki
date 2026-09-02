@@ -17,10 +17,17 @@ ancha no cuesta una peticion de mas.
 """
 
 import logging
+import re
 
 from ..core import Scraper, TiendaBloqueada, es_valido, fetch, ld_json, medida
 
 log = logging.getLogger("scraper")
+
+# El JSON-LD de Zumub publica la imagen sin la carpeta de la marca
+# (/images/large/Casein_1kg_LRG.jpg), pero el fichero vive en
+# /images/large/zumub/Casein_1kg_LRG.jpg: cuatro de cada cinco daban 404 en la web.
+# La carpeta buena esta en el propio HTML de la ficha, en el <img> de la galeria.
+CARPETA_IMG = re.compile(r"/images/large/([\w.-]+)/")
 
 BASE = "https://www.zumub.com/ES/"
 CATEGORIA_URL = {
@@ -59,6 +66,13 @@ PAGINAS = 4          # 36 productos por pagina
 MAX_FICHAS = 40      # tope de fichas por categoria: mas es tiempo, no mas comparativa
 
 
+def _imagen(url, carpeta):
+    """Le devuelve a la URL del JSON-LD la carpeta de marca que le falta."""
+    if not url or not carpeta or "/images/large/" not in url:
+        return url
+    return "https://www.zumub.com/images/large/%s/%s" % (carpeta, url.rsplit("/", 1)[-1])
+
+
 class Zumub(Scraper):
     tienda = "zumub"
     categorias = tuple(CATEGORIA_URL)
@@ -95,6 +109,8 @@ class Zumub(Scraper):
                 self.parcial = True
                 log.warning("zumub: corta en %s (%s); %d productos traidos", url, e, len(fuera))
                 break
+            carpeta = CARPETA_IMG.search(pagina)
+            carpeta = carpeta.group(1) if carpeta else None
             for grupo in ld_json(pagina):
                 if grupo.get("@type") != "ProductGroup":
                     continue
@@ -120,6 +136,7 @@ class Zumub(Scraper):
                         url="%s?sku=%s" % (url, p.get("sku")) if p.get("sku") else url,
                         formato_gramos=g, unidades=u, precio_eur=float(precio),
                         categoria=categoria, servicios=u, texto_extra=url,
-                        imagen=p.get("image")))
+                        imagen=_imagen(p.get("image"), carpeta),
+                        ld=[p, grupo], pagina=pagina))
         log.info("zumub: %s -> %d productos", categoria, len(fuera))
         return fuera

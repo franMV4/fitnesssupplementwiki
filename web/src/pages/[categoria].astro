@@ -1,15 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-import TablaProductos from '../componentes/TablaProductos.jsx';
+import TablaProductos from '../componentes/TablaProductos.astro';
 import Aviso from '../componentes/Aviso.astro';
 import Cifras from '../componentes/Cifras.astro';
 import Faq from '../componentes/Faq.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { abs } from '../sitio.js';
-import { eur, paraTabla, UNIDAD } from '../datos/util.js';
+import { eur, paraTabla, reparto, UNIDAD } from '../datos/util.js';
 import {
-  descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
+  agregadoLd, descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
   respuestaCategoria, tituloCategoria,
 } from '../datos/seo.js';
 import { comparativasDe, mejoresDe } from '../datos/landings.js';
@@ -51,7 +51,10 @@ const canonica = abs(`/${cat.slug}`);
 // "cual compro" y la otra "para que sirve".
 const guia = EVIDENCIA[cat.slug];
 
-// Los diez primeros con su oferta. Mas no aporta: nadie lee una ItemList de 118.
+// Los diez primeros con su oferta. Mas no aporta: nadie lee una ItemList de 118. La
+// horquilla de los otros ciento ocho no se pierde: va en el AggregateOffer.
+const agregado = agregadoLd(
+  `${nombre} en las tiendas comparadas`, productos, canonica);
 const schema = [
   {
     '@type': 'CollectionPage',
@@ -61,8 +64,14 @@ const schema = [
     description: descripcionCategoria(cat, productos, datos.generado),
     inLanguage: 'es-ES',
     dateModified: datos.generado,
-    isPartOf: { '@id': abs('/#sitio') },
+    // Del sitio y, ademas, del dataset que se declara en la portada: estas treinta
+    // tablas no son treinta articulos sueltos, son las particiones de una misma base
+    // de datos. Es lo que hace que un modelo cite "la fuente" y no "una pagina".
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
     publisher: { '@id': abs('/#editor') },
+    // La horquilla de la categoria ENTERA, no solo la de los diez que van en la
+    // ItemList. Es el dato del fragmento: "de 12 a 68 EUR en 8 tiendas".
+    ...(agregado ? { mainEntity: agregado } : {}),
   },
   {
     '@type': 'BreadcrumbList',
@@ -94,7 +103,7 @@ const schema = [
     )}
     <p class="entradilla aparece d2">
       {productos.length} productos de {tiendas} {tiendas === 1 ? 'tienda' : 'tiendas'},
-      ordenados por score: mitad precio por {unidad}, mitad calidad verificable. {verificados === 0
+      ordenados por score: {reparto(unidad)}. {verificados === 0
         ? 'Ninguno tiene ahora mismo una certificacion verificada contra la fuente oficial (nivel 4).'
         : `${verificados} tienen certificacion verificada contra fuente oficial (nivel 4).`}
     </p>
@@ -121,7 +130,7 @@ const schema = [
   <div class="aparece d3 tabla-categoria">
     <Cifras n={productos.length} min={barato} max={caro} unidad={unidad} dec={dec}
             nivel4={verificados} />
-    <TablaProductos productos={productos.map(paraTabla)} client:visible />
+    <TablaProductos productos={productos.map(paraTabla)} />
   </div>
 
   <p class="nota">

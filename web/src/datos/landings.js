@@ -15,9 +15,10 @@
 // landing que filtra por un dato inexistente es una pagina que miente. Se anade el campo
 // al scraper y la landing sale sola.
 
-import datos from './dataset.json';
-import { TIENDAS, eur } from './util.js';
+import datos from './dataset.json' with { type: 'json' };
+import { TIENDAS, eur, reparto } from './util.js';
 import { anio, cap, fechaLarga, formatoDe, nom, porScore, resumen, tiendaDe, titula } from './seo.js';
+import { porQuePrecio } from './porque.js';
 
 // Cuantos productos hacen falta para que la pagina tenga algo que contar.
 const MIN_SELLO = 3;
@@ -115,6 +116,12 @@ function porTienda(cat, ps) {
       slug: `${cat.slug}-de-${t}`,
       cat,
       productos: sel,
+      // Quien es la tienda, para que la pagina pueda compararla con el resto del mercado
+      // en la seccion de "por que". Las otras landings (sello, precio) no la llevan y por
+      // eso no pintan esa seccion: comparar "los Creapure" con "el resto" no explica
+      // ningun precio, solo repite el filtro.
+      tienda: t,
+      nombreTienda: nombre,
       matiz: `Solo lo que vende ${nombre}.`,
       h1: `${cap(cat.mejor)} de ${nombre}: ${sel.length} productos por precio por ${r.unidad}`,
       titulo: titula(`Mejor ${cat.termino} de ${nombre} ${anio(datos.generado)}`,
@@ -148,7 +155,7 @@ function porPrecio(cat, ps) {
               `que cuestan ${r.precio(r.mediana)} o menos, que es la mediana de los ` +
               `${ps.length} comparados. Van de ${rSel.precio(rSel.barato?.precio_referencia)} ` +
               `a ${rSel.precio(rSel.caro?.precio_referencia)}. Barato no es lo mismo que bueno: ` +
-              `el orden sigue siendo el score, mitad precio y mitad calidad verificable.`,
+              `el orden sigue siendo el score: ${reparto()}.`,
   }];
 }
 
@@ -278,8 +285,8 @@ export function faqsMejores(l) {
   }
   faqs.push({
     p: '¿Como se ha hecho esta seleccion?',
-    r: `${l.criterio} El orden dentro de la tabla es el score de siempre: mitad precio por ` +
-       `${r.unidad} frente al mas barato de la categoria y mitad calidad verificable. Los ` +
+    r: `${l.criterio} El orden dentro de la tabla es el score de siempre: ` +
+       `${reparto(r.unidad)}. Los ` +
        `enlaces de afiliado no entran en el calculo. Precios recogidos el ` +
        `${fechaLarga(datos.generado)}.`,
   });
@@ -314,13 +321,23 @@ export function faqsComparativa(l) {
          `verificacion sobre 4.`,
     });
   }
+  // La pregunta que trae de verdad quien compara dos tiendas y que la pagina no
+  // contestaba: por que una cuesta menos. La respuesta sale de los mismos factores que
+  // pinta la seccion "por que", asi que la FAQ no puede decir una cosa y la tabla otra.
+  const { intro, factores } = porQuePrecio(cat, { nombre: na, productos: l.pa },
+                                                { nombre: nb, productos: l.pb });
+  if (intro) {
+    faqs.push({
+      p: `¿Por que ${na} y ${nb} no cuestan lo mismo?`,
+      r: [intro, ...factores.slice(0, 2).map((f) => f.texto)].join(' '),
+    });
+  }
   if (l.ganaScore) {
     faqs.push({
       p: `¿Cual puntua mejor de las dos tiendas?`,
       r: `${nom(l.ganaScore)} de ${tiendaDe(l.ganaScore)}, con ` +
-         `${l.ganaScore.score_final?.toFixed(0)} sobre 100. El score es mitad precio por ` +
-         `${ra.unidad} frente al mas barato de la categoria entera y mitad calidad ` +
-         `verificable, y se calcula sin mirar los enlaces de afiliado. Precios del ` +
+         `${l.ganaScore.score_final?.toFixed(0)} sobre 100. El score es ` +
+         `${reparto(ra.unidad)}, y se calcula sin mirar los enlaces de afiliado. Precios del ` +
          `${fechaLarga(datos.generado)}.`,
     });
   }

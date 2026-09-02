@@ -225,6 +225,185 @@
           "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32012R0432"
         }
       ]
+    },
+    {
+      "ingrediente": "magnesio",
+      "dosis_efectiva_min_mg": 375,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Magnesio, 375 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "zinc",
+      "dosis_efectiva_min_mg": 10,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Zinc, 10 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "hierro",
+      "dosis_efectiva_min_mg": 14,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Hierro, 14 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "vitamina_c",
+      "dosis_efectiva_min_mg": 80,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "alta",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Vitamina C, 80 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "calcio",
+      "dosis_efectiva_min_mg": 800,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Calcio, 800 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "potasio",
+      "dosis_efectiva_min_mg": 2000,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Potasio, 2000 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "vitamina_e",
+      "dosis_efectiva_min_mg": 12,
+      "dosis_efectiva_max_mg": null,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Reglamento (UE) 1169/2011 sobre la informacion alimentaria facilitada al consumidor, Anexo XIII: valores de referencia de nutrientes. Vitamina E, 12 mg. Es un valor de ETIQUETADO, no una dosis con efecto demostrado: mide cuanto cubre una capsula de lo que se considera la ingesta de referencia diaria.",
+          "url": "https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+        },
+        {
+          "cita": "Kerksick CM et al. ISSN exercise & sports nutrition review update: research & recommendations. J Int Soc Sports Nutr. 2018;15:38. Los micronutrientes mejoran el rendimiento solo cuando corrigen un deficit previo.",
+          "url": "https://doi.org/10.1186/s12970-018-0242-y"
+        }
+      ]
+    },
+    {
+      "ingrediente": "ashwagandha",
+      "dosis_efectiva_min_mg": 300,
+      "dosis_efectiva_max_mg": 600,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Chandrasekhar K, Kapoor J, Anishetty S. A prospective, randomized double-blind, placebo-controlled study of safety and efficacy of a high-concentration full-spectrum extract of ashwagandha root in reducing stress and anxiety in adults. Indian J Psychol Med. 2012;34(3):255-262. 300 mg de extracto dos veces al dia durante 60 dias.",
+          "url": "https://doi.org/10.4103/0253-7176.106022"
+        },
+        {
+          "cita": "Pratte MA et al. An alternative treatment for anxiety: a systematic review of human trial results reported for the Ayurvedic herb ashwagandha (Withania somnifera). J Altern Complement Med. 2014;20(12):901-908.",
+          "url": "https://doi.org/10.1089/acm.2014.0177"
+        }
+      ]
+    },
+    {
+      "ingrediente": "curcuminoides",
+      "dosis_efectiva_min_mg": 500,
+      "dosis_efectiva_max_mg": 1000,
+      "forma_preferida": null,
+      "nivel_evidencia": "media",
+      "fuentes": [
+        {
+          "cita": "Daily JW, Yang M, Park S. Efficacy of turmeric extracts and curcumin for alleviating the symptoms of joint arthritis: a systematic review and meta-analysis of randomized clinical trials. J Med Food. 2016;19(8):717-729. Alrededor de 1000 mg/dia de curcuminoides en los ensayos incluidos. La dosis es de CURCUMINOIDES, no de raiz molida: un bote de curcuma en polvo lleva un 3-5 % de curcuminoides.",
+          "url": "https://doi.org/10.1089/jmf.2016.3705"
+        },
+        {
+          "cita": "Shoba G et al. Influence of piperine on the pharmacokinetics of curcumin in animals and human volunteers. Planta Med. 1998;64(4):353-356. La piperina aumenta de forma muy marcada la biodisponibilidad de la curcumina.",
+          "url": "https://doi.org/10.1055/s-2006-957450"
+        }
+      ]
+    },
+    {
+      "ingrediente": "glucosamina",
+      "dosis_efectiva_min_mg": 1500,
+      "dosis_efectiva_max_mg": 1500,
+      "forma_preferida": null,
+      "nivel_evidencia": "baja",
+      "fuentes": [
+        {
+          "cita": "Clegg DO et al. Glucosamine, chondroitin sulfate, and the two in combination for painful knee osteoarthritis. N Engl J Med. 2006;354(8):795-808. 1500 mg de glucosamina al dia; sin diferencia frente a placebo en el analisis principal. La dosis esta aqui porque es la que se ensayo, no porque funcione.",
+          "url": "https://doi.org/10.1056/NEJMoa052771"
+        }
+      ]
+    },
+    {
+      "ingrediente": "condroitina",
+      "dosis_efectiva_min_mg": 1200,
+      "dosis_efectiva_max_mg": 1200,
+      "forma_preferida": null,
+      "nivel_evidencia": "baja",
+      "fuentes": [
+        {
+          "cita": "Clegg DO et al. Glucosamine, chondroitin sulfate, and the two in combination for painful knee osteoarthritis. N Engl J Med. 2006;354(8):795-808. 1200 mg de condroitina al dia; sin diferencia frente a placebo en el analisis principal.",
+          "url": "https://doi.org/10.1056/NEJMoa052771"
+        }
+      ]
     }
   ]
 }

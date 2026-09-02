@@ -31,12 +31,19 @@ def init(con):
     # un sistema de migraciones: es la alternativa a borrar la BD, que se llevaria por
     # delante lo curado a mano (los codigos QS de verificar.py, que nadie puede rescrapear).
     columnas = {r["name"] for r in con.execute("PRAGMA table_info(producto)")}
-    for col, tipo in (("imagen", "TEXT"),):
+    for col, tipo in (("imagen", "TEXT"), ("valoracion", "REAL"),
+                      ("n_valoraciones", "INTEGER"), ("pureza_real", "REAL"),
+                      ("aditivos", "TEXT"), ("lista_ingredientes", "TEXT"),
+                      ("descripcion", "TEXT")):
         if col not in columnas:
             con.execute("ALTER TABLE producto ADD COLUMN %s %s" % (col, tipo))
     if "pureza_tipica" not in {r["name"] for r in
                                con.execute("PRAGMA table_info(dosis_referencia)")}:
         con.execute("ALTER TABLE dosis_referencia ADD COLUMN pureza_tipica REAL")
+    cols_score = {r["name"] for r in con.execute("PRAGMA table_info(score)")}
+    for col, tipo in (("score_requisitos", "REAL"), ("requisitos", "TEXT")):
+        if col not in cols_score:
+            con.execute("ALTER TABLE score ADD COLUMN %s %s" % (col, tipo))
     con.commit()
     sql_actual = con.execute(
         "SELECT sql FROM sqlite_master WHERE name='producto'").fetchone()[0]
@@ -81,7 +88,8 @@ def _migrar_producto(con):
 
 CAMPOS_PRODUCTO = (
     "marca nombre categoria tienda url formato_gramos unidades servicios_por_envase "
-    "precio_eur forma imagen fecha_scrape"
+    "precio_eur forma imagen valoracion n_valoraciones pureza_real aditivos "
+    "lista_ingredientes descripcion fecha_scrape"
 ).split()
 
 
@@ -91,6 +99,8 @@ def guardar_producto(con, producto, ingredientes=(), certificaciones=()):
     Idempotente: reejecutar el scraper actualiza precio y fecha_scrape, no duplica.
     """
     p = {k: producto.get(k) for k in CAMPOS_PRODUCTO}
+    if not isinstance(p["aditivos"], (str, type(None))):
+        p["aditivos"] = json.dumps(sorted(p["aditivos"]), ensure_ascii=False)
     p.setdefault("fecha_scrape", None)
     p["fecha_scrape"] = p["fecha_scrape"] or date.today().isoformat()
     cols = ", ".join(CAMPOS_PRODUCTO)

@@ -7,7 +7,7 @@
 // Lo que edita una persona (el termino con el que se busca la categoria y las
 // consultas que quiere ganar) vive en categorias.py. Ver SEO-PRODUCTOS.md.
 
-import { eur, TIENDAS, UNIDAD } from './util.js';
+import { eur, reparto, TIENDAS, UNIDAD } from './util.js';
 import { abs } from '../sitio.js';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
@@ -45,6 +45,11 @@ const corta = (s, max) => {
 // justo donde va el dato ("precio por kilo", "y certificacion"). Asi que en vez de un
 // sufijo fijo se prueba del mas informativo al mas corto y se queda el que entra entero.
 export const TOPE_TITULO = 65;
+// Hasta donde se puede estirar un titulo cuando lo que sobra es lo que lo hace UNICO.
+// Google no penaliza pasar de 65, solo corta el resultado al pintarlo; publicar dos
+// paginas con el mismo titulo si tiene coste, porque compiten por la misma consulta.
+// Es el mismo tope que comprueba seo_check.py: si se sube aqui, se sube alli.
+export const TOPE_TITULO_DURO = 80;
 export const titula = (base, ...sufijos) => {
   for (const sufijo of sufijos) {
     if ((base + sufijo).length <= TOPE_TITULO) return base + sufijo;
@@ -117,8 +122,7 @@ const RESPUESTAS = {
     return `${nom(r.lider)} de ${tiendaDe(r.lider)}, con ${r.lider.score_final?.toFixed(0)} ` +
       `puntos sobre 100 a ${r.precio(r.lider.precio_referencia)}` +
       (razones ? `. Puntua asi porque ${razones}` : '') +
-      `. La nota es mitad precio frente al mas barato de la categoria y mitad calidad ` +
-      `verificable, y ningun acuerdo comercial mueve el orden.`;
+      `. La nota es ${reparto()}, y ningun acuerdo comercial mueve el orden.`;
   },
 
   barato: (cat, r) => {
@@ -256,6 +260,28 @@ export const listaLd = (nombre, productos) => ({
   })),
 });
 
+/** La horquilla de precios de una tabla entera, no solo la de los diez que se marcan
+    uno a uno. Es el dato por el que existe esta web ("de X a Y euros en N tiendas") y
+    sin esto Google solo veia diez ofertas sueltas de una tabla de ciento veinte.
+
+    OJO con la unidad: aqui va `precio_eur`, lo que se paga en la tienda por el envase.
+    `precio_referencia` es euros por kilo o por capsula, que sirve para comparar y no es
+    el precio de ninguna oferta: marcarlo como tal es declarar un precio que no existe. */
+export const agregadoLd = (nombre, productos, url) => {
+  const precios = productos.map((p) => p.precio_eur).filter((n) => n != null);
+  if (!precios.length) return null;
+  return {
+    '@type': 'AggregateOffer',
+    name: nombre,
+    url,
+    offerCount: precios.length,
+    lowPrice: Math.min(...precios),
+    highPrice: Math.max(...precios),
+    priceCurrency: 'EUR',
+    availability: 'https://schema.org/InStock',
+  };
+};
+
 /* --- Titulos y descripciones ---------------------------------------------------
    El ano sale de la fecha de recogida, no esta escrito a mano: no se queda viejo. */
 export const tituloCategoria = (cat, generado) =>
@@ -297,7 +323,8 @@ export function tituloProducto(p, productos = []) {
   const iguales = productos.filter((o) => visible(o) === visible(p));
   const repetido = iguales.length > 1;
   const otraTienda = repetido && new Set(iguales.map(tiendaDe)).size > 1;
-  const base = nom(p) + (otraTienda ? ` en ${tiendaDe(p)}` : '');
+  const enTienda = otraTienda ? ` en ${tiendaDe(p)}` : '';
+  const base = nom(p) + enTienda;
   const unidad = p.unidad_precio === 'kg' ? 'kilo' : 'capsula';
   const sufijos = [`: precio por ${unidad}, dosis y certificacion`,
                    `: precio por ${unidad} y certificacion`,
@@ -307,22 +334,25 @@ export function tituloProducto(p, productos = []) {
   for (const sufijo of sufijos) {
     if ((base + sufijo).length <= TOPE_TITULO) return base + sufijo;
   }
-  // Nombres largos (Myprotein, Amazon): el nombre manda y se corta por palabra. El
-  // formato va al final ("...1Kg") y es lo que distingue dos variantes, asi que no se
-  // sacrifica por meter el sufijo.
+  // Nombres largos (Myprotein, Amazon): el nombre manda y se corta por palabra.
   //
-  // Y si DOS productos de la misma tienda comparten nombre, el formato deja de ser un
-  // adorno: es lo unico que los distingue. En los titulos kilometricos de Amazon
-  // ("...Citrulina Malato 150 g Ideal para deportistas...") cae despues del corte
-  // y el corte se lo lleva, asi que se pega detras del recorte en vez de perderse.
-  // Y si tampoco el formato los distingue (dos sabores del mismo bote de Amazon, con el
-  // sabor escrito en el caracter 90), lo unico que queda y que ademas le sirve a quien
-  // lee es el precio. Se genera en cada pasada, asi que no envejece.
-  const mismoFormato = iguales.filter((o) => formatoDe(o) === formatoDe(p)).length > 1;
-  const cola = !repetido || otraTienda ? ''
-    : mismoFormato ? ` · ${formatoDe(p)}, ${eur(p.precio_eur)}`
-    : ` · ${formatoDe(p)}`;
-  return corta(base, TOPE_TITULO - cola.length) + cola;
+  // La COLA es lo unico que distingue esta ficha de las que comparten su nombre visible,
+  // asi que se arma con todo lo que hace falta y no se corta nunca: se pega detras del
+  // recorte. Se anade la tienda cuando el mismo bote esta en dos tiendas, y el formato
+  // cuando la MISMA tienda lista dos con el mismo nombre visible (Life Pro vende cuatro
+  // "WHEY DRAGON BALL SUPER LIMITED EDITION ..." que solo se diferencian en el personaje
+  // y el tamano, y los dos van detras del caracter 47). Y si tampoco el formato los
+  // separa (dos sabores del mismo bote de Amazon, con el sabor en el caracter 90), lo
+  // ultimo que queda y que ademas le sirve a quien lee es el precio.
+  const delMismoSitio = iguales.filter((o) => tiendaDe(o) === tiendaDe(p));
+  const mismoFormato = delMismoSitio.filter((o) => formatoDe(o) === formatoDe(p)).length > 1;
+  const cola = !repetido ? '' : enTienda
+    + (delMismoSitio.length > 1 ? ` · ${formatoDe(p)}` : '')
+    + (mismoFormato ? `, ${eur(p.precio_eur)}` : '');
+  // El nombre se recorta contra el TOPE DURO, no contra los 65: un titulo de 70 se lee
+  // igual en Google (solo se corta al pintarlo) y dos titulos iguales, no. Antes de
+  // perder la cola que desempata, se gastan los caracteres que Google permite.
+  return corta(nom(p), TOPE_TITULO_DURO - cola.length) + cola;
 }
 
 export const descripcionProducto = (p, productos, cat) => {

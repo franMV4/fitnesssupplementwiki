@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { pedir, destino } from './api.js';
 
 // Entrar y registrarse. Un solo componente para los tres sitios donde hace falta:
 // /entrar, /registro y el hueco de la ficha de producto cuando el lector aun no tiene
@@ -28,8 +29,12 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [verClave, setVerClave] = useState(false);
+  // El `?volver=` se lee aqui y no en el .astro: la pagina es estatica, ese codigo corre
+  // al generar el HTML y alli todavia no existe ninguna peticion con query.
+  const [vuelta, setVuelta] = useState(volver || '/');
 
   useEffect(() => {
+    setVuelta(destino(volver || '/'));
     fetch('/api/yo').then((r) => r.json()).then(setEstado)
       .catch(() => setEstado({ usuario: null, google: false }));
   }, []);
@@ -45,16 +50,18 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
       return setError('Las dos contraseñas no coinciden.');
     }
     setError(''); setEnviando(true);
-    const r = await fetch(`/api/${modo}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(datos),
-    });
-    const d = await r.json();
-    setEnviando(false);
-    if (!r.ok) return setError(d.error);
-    if (onListo) return onListo(d.usuario);
-    location.href = volver || '/';
+    // try/finally y no un `setEnviando(false)` suelto detras del fetch: si la peticion
+    // fallaba, esa linea no se ejecutaba y el boton se quedaba en "Un momento..." sin
+    // decir nada. Ahora el formulario siempre vuelve, con el fallo escrito.
+    try {
+      const d = await pedir(`/api/${modo}`, datos);
+      if (onListo) return onListo(d.usuario);
+      location.href = vuelta;
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const salir = async () => {
@@ -79,7 +86,7 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
         <p className="antetitulo">Sesion abierta</p>
         <p className="nombre-dentro">{estado.usuario.nombre}</p>
         <p className="acciones-acceso">
-          <a className="boton primario" href={volver || '/'}>Volver <span className="flecha">→</span></a>
+          <a className="boton primario" href={vuelta}>Volver <span className="flecha">→</span></a>
           <button type="button" className="enlace-accion" onClick={salir}>Salir de la cuenta</button>
         </p>
       </div>
@@ -106,7 +113,7 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
             sale igual, apagado y diciendo por que: cuando desaparecia entero no habia
             forma de distinguir "no existe" de "esta sin configurar". */}
         {estado.google ? (
-          <a className="boton-google" href={`/api/google?volver=${encodeURIComponent(volver || '/')}`}>
+          <a className="boton-google" href={`/api/google?volver=${encodeURIComponent(vuelta)}`}>
             {GOOGLE}{registrando ? 'Crear cuenta con Google' : 'Continuar con Google'}
           </a>
         ) : (
@@ -160,6 +167,13 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
               {enviando ? 'Un momento…' : registrando ? 'Crear cuenta' : 'Entrar'}
               {!enviando && <span className="flecha">→</span>}
             </button>
+            {/* Solo al entrar: en el registro todavia no hay ninguna contrasena que
+                olvidar. */}
+            {!registrando && (
+              <a className="enlace-accion" href={`/recuperar?volver=${encodeURIComponent(vuelta)}`}>
+                He olvidado mi contraseña
+              </a>
+            )}
           </p>
         </form>
       </div>

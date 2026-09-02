@@ -1,0 +1,185 @@
+---
+import Base from '../layouts/Base.astro';
+import Aviso from '../componentes/Aviso.astro';
+import Faq from '../componentes/Faq.astro';
+import datos from '../datos/dataset.json';
+import { RANKING, VERSUS_TIENDAS } from '../datos/tiendas.js';
+import { fechaLarga } from '../datos/seo.js';
+import { abs } from '../sitio.js';
+
+// "Que tienda de suplementos es mas barata": la consulta que va antes de elegir producto y
+// la que ninguna pagina del sitio contestaba, porque no se puede sumar un kilo de proteina
+// con una capsula de omega 3. Lo que si se puede es medir la POSICION de cada tienda
+// dentro de cada categoria y quedarse con la mediana de esas posiciones. Ver datos/tiendas.js.
+const canonica = abs('/tiendas');
+const conIndice = RANKING.filter((t) => t.indice != null);
+const sinIndice = RANKING.filter((t) => t.indice == null);
+const barata = conIndice[0];
+const cara = conIndice[conIndice.length - 1];
+const pct = (n) => (n > 0 ? `+${n} %` : `${n} %`);
+
+const faqs = [
+  {
+    p: '¿Que tienda de suplementos es mas barata?',
+    r: barata
+      ? `${barata.nombre}: en una categoria tipica su mediana esta un ${Math.abs(barata.indice)} % ` +
+        `por debajo de la del mercado, midiendo ${barata.comparables.length} categorias en las ` +
+        `que tiene al menos tres productos. Al otro lado esta ${cara.nombre}, un ` +
+        `${Math.abs(cara.indice)} % por encima. Barato no es lo mismo que bueno: la tabla ` +
+        `ensena tambien cuantos productos publican analisis en cada tienda.`
+      : 'Depende de la categoria; la tabla lo dice categoria por categoria.',
+  },
+  {
+    p: '¿Como se calcula el indice de precio?',
+    r: `En cada categoria se compara la mediana de la tienda con la mediana de todo el ` +
+       `mercado comparado aqui, en la unidad de esa categoria (euros por kilo o por capsula). ` +
+       `Eso da un porcentaje sin unidad, y el indice es la mediana de esos porcentajes. Solo ` +
+       `cuentan las categorias donde la tienda tiene tres productos o mas, para que una ` +
+       `oferta suelta no mueva el indice de una tienda entera.`,
+  },
+  {
+    p: '¿Por que no se suman los precios de cada tienda?',
+    r: `Porque un catalogo no es una cesta: son kilos de polvo y capsulas, y sumarlos da un ` +
+       `numero que no significa nada. Ademas, una tienda que solo vende creatina pareceria ` +
+       `barata al lado de una que vende de todo. El indice compara cada categoria con la suya, ` +
+       `que es la unica manera de que la comparacion sea justa entre catalogos distintos.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: 'Que tienda de suplementos es mas barata',
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Tiendas', item: canonica },
+    ],
+  },
+];
+---
+<Base ancho="completo" schema={schema}
+      titulo={`Que tienda de suplementos es mas barata: ${conIndice.length} comparadas`}
+      descripcion={`Las ${conIndice.length} tiendas de suplementos comparadas entre si con el ` +
+                   `mismo criterio: cuanto se separa la mediana de cada una de la del mercado en ` +
+                   `cada categoria. Con productos, verificacion y nota de compradores. Datos del ` +
+                   `${datos.generado}.`}>
+
+  <p class="migas"><a href="/">Inicio</a> / Tiendas</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      Cara a cara de tiendas · datos del{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">Que tienda de suplementos sale mas barata</h1>
+    {barata && (
+      <p class="respuesta aparece d2">
+        <b>La respuesta corta.</b> {barata.nombre} es la mas barata de las
+        {' '}{conIndice.length} comparadas: en una categoria tipica esta un
+        {' '}{Math.abs(barata.indice)} % por debajo de la mediana del mercado, con
+        {' '}{barata.productos} productos en {barata.comparables.length} categorias medibles.
+        La mas cara es {cara.nombre}, un {Math.abs(cara.indice)} % por encima. Ninguna gana
+        en todo: la tabla dice en cuantas categorias esta cada una por debajo y por encima.
+      </p>
+    )}
+    <p class="entradilla aparece d2">
+      Los catalogos no se pueden sumar: una tienda vende kilos de proteina y otra capsulas de
+      omega 3. Lo que si se puede comparar es la posicion de cada una dentro de cada
+      categoria, en porcentaje sobre la mediana del mercado. El indice de esta tabla es la
+      mediana de esas posiciones, y por eso se puede leer de arriba abajo.
+    </p>
+  </section>
+
+  <Aviso />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Las {conIndice.length} tiendas, de la mas barata a la mas cara</h2>
+      <p class="apunte">Indice: distancia a la mediana del mercado</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>Tiendas de suplementos comparadas por indice de precio, con los precios del {fechaLarga(datos.generado)}</caption>
+          <thead>
+            <tr>
+              <th>Tienda</th>
+              <th class="num">Indice</th>
+              <th class="num">Categorias</th>
+              <th class="num">Productos</th>
+              <th class="num">Con analisis</th>
+            </tr>
+          </thead>
+          <tbody>
+            {conIndice.map((t) => (
+              <tr>
+                <td class="principal marca">
+                  {t.nombre}
+                  <span class="explica">
+                    {t.marcas === 1
+                      ? 'Vende solo su propia marca.'
+                      : `Reparte su catalogo entre ${t.marcas} marcas.`}
+                    {t.aditivos != null && ` ${t.aditivos} % de sus fichas declaran aditivos.`}
+                  </span>
+                </td>
+                <td class="num" data-et="Indice">
+                  <span class={t.indice < 0 ? 'destacado' : ''}>{pct(t.indice)}</span>
+                  <span class="explica">
+                    {t.indice < 0 ? 'por debajo del mercado' : t.indice > 0 ? 'por encima del mercado' : 'clavada al mercado'}
+                  </span>
+                </td>
+                <td class="num" data-et="Categorias">
+                  {t.comparables.length}
+                  <span class="explica">{t.baratas} baratas · {t.caras} caras</span>
+                </td>
+                <td class="num" data-et="Productos">{t.productos}</td>
+                <td class="num" data-et="Con analisis">
+                  {t.verificados}
+                  <span class="explica">{t.nivel4} en nivel 4</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>El indice no es un descuento.</strong> Dice donde esta la mediana de esa tienda
+      dentro de cada categoria, no lo que vas a pagar por un producto concreto: una tienda cara
+      en conjunto puede tener el bote mas barato de una categoria, y pasa a menudo. Para
+      comprar mandan las tablas de categoria; esta pagina es para elegir por donde empezar a
+      mirar.
+      {sinIndice.length > 0 && (
+        <> Quedan fuera {sinIndice.map((t) => t.nombre).join(', ')}: tienen productos en muy
+        pocas categorias y su mediana no se puede comparar con nada.</>
+      )}
+    </p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Cara a cara: {VERSUS_TIENDAS.length} comparaciones</h2>
+      <p class="apunte">Dos tiendas, categoria a categoria</p>
+    </div>
+    <div class="lista-categorias">
+      {VERSUS_TIENDAS.map((v) => (
+        <a class="fila-categoria" href={`/tiendas/${v.slug}`}>
+          <span class="nombre">{v.a.nombre} o {v.b.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{v.comunes.length} categorias</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <Faq faqs={faqs} titulo="Preguntas sobre las tiendas" />
+</Base>

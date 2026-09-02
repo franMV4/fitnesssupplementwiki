@@ -22,6 +22,26 @@ CREATE TABLE IF NOT EXISTS producto (
   precio_por_unidad     REAL GENERATED ALWAYS AS (precio_eur / unidades) STORED,
   forma                 TEXT,                   -- monohidrato | hcl | kre_alkalyn | ...
   imagen                TEXT,                   -- URL en la CDN de la tienda; no se descarga
+  -- Lo que opinan los compradores EN LA TIENDA que lo vende (aggregateRating de
+  -- schema.org), normalizado siempre a 5 aunque la tienda puntue sobre 10.
+  valoracion            REAL CHECK (valoracion IS NULL OR valoracion BETWEEN 0 AND 5),
+  n_valoraciones        INTEGER CHECK (n_valoraciones IS NULL OR n_valoraciones >= 0),
+  -- Fraccion del envase que ES el activo segun la TABLA de esta ficha (0-1). Cuando
+  -- existe, manda sobre la pureza tipica de la categoria: es el dato real de ESTE bote.
+  pureza_real           REAL CHECK (pureza_real IS NULL OR (pureza_real > 0 AND pureza_real <= 1)),
+  -- JSON con los tipos de aditivo declarados en la etiqueta. NULL = la ficha no publica
+  -- la lista de ingredientes, que no es lo mismo que publicarla sin aditivos ("[]").
+  aditivos              TEXT CHECK (aditivos IS NULL OR json_valid(aditivos)),
+  -- La declaracion de ingredientes tal cual la publica la etiqueta. Se guarda el TEXTO y
+  -- no solo lo que se dedujo de el, porque los requisitos de cada categoria
+  -- (scoring/requisitos.py) se afinan a mano y hay que poder repuntuar sin rescrapear
+  -- las 3.000 fichas. Ademas es lo que la ficha ensena al lector.
+  lista_ingredientes    TEXT,
+  -- La descripcion que la tienda publica de ESTE producto (el `description` de su
+  -- schema.org). Es donde vive lo que el nombre no cabe: la forma quimica, el peso
+  -- molecular, las UFC, el ratio del extracto. Sin ella, los requisitos que piden un
+  -- dato declarado no se pueden juzgar y no cuentan.
+  descripcion           TEXT,
   fecha_scrape          TEXT NOT NULL,          -- ISO-8601
   UNIQUE (tienda, url),                         -- clave del upsert idempotente (fase 1)
   -- Algo que medir hace falta: gramos, capsulas o al menos servicios por envase
@@ -78,6 +98,12 @@ CREATE TABLE IF NOT EXISTS score (
   coste_por_dosis_efectiva REAL,
   flag_infradosaje         INTEGER NOT NULL DEFAULT 0 CHECK (flag_infradosaje IN (0,1)),
   score_final              REAL NOT NULL,
+  -- De los requisitos de su categoria que se le han podido juzgar, cuantos cumple (0-100).
+  -- NULL = su ficha no publica lo suficiente para juzgar ninguno; no es un cero.
+  score_requisitos         REAL CHECK (score_requisitos IS NULL OR
+                                       score_requisitos BETWEEN 0 AND 100),
+  -- JSON con cada requisito juzgado y su si/no, para que la ficha los enseñe uno a uno.
+  requisitos               TEXT CHECK (requisitos IS NULL OR json_valid(requisitos)),
   desglose                 TEXT CHECK (desglose IS NULL OR json_valid(desglose)),
   fecha_calculo            TEXT NOT NULL
 );

@@ -1,12 +1,13 @@
 ---
 import Base from '../../layouts/Base.astro';
-import TablaProductos from '../../componentes/TablaProductos.jsx';
+import TablaProductos from '../../componentes/TablaProductos.astro';
+import CaraACara from '../../componentes/CaraACara.astro';
 import Aviso from '../../componentes/Aviso.astro';
 import Faq from '../../componentes/Faq.astro';
 import datos from '../../datos/dataset.json';
 import { abs } from '../../sitio.js';
 import { NIVEL, paraTabla, precioReferencia, puntos } from '../../datos/util.js';
-import { fechaLarga, listaLd, nom } from '../../datos/seo.js';
+import { agregadoLd, fechaLarga, listaLd, nom } from '../../datos/seo.js';
 import {
   COMPARATIVAS, comparativasDe, descripcionComparativa, faqsComparativa, mejoresDe,
   respuestaComparativa,
@@ -34,6 +35,7 @@ const lados = [
   { n: nb, r: rb, url: `/mejores/${cat.slug}-de-${l.b}` },
 ];
 
+const agregado = agregadoLd(l.titulo, l.productos, canonica);
 const schema = [
   {
     '@type': 'CollectionPage',
@@ -43,8 +45,10 @@ const schema = [
     description: descripcionComparativa(l),
     inLanguage: 'es-ES',
     dateModified: datos.generado,
-    isPartOf: { '@id': abs('/#sitio') },
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
     publisher: { '@id': abs('/#editor') },
+    // La horquilla de la tabla entera, no solo la de los diez de la ItemList.
+    ...(agregado ? { mainEntity: agregado } : {}),
   },
   {
     '@type': 'BreadcrumbList',
@@ -176,12 +180,14 @@ const schema = [
     </p>
   </section>
 
+  <CaraACara cat={cat} ladoA={{ nombre: na, productos: l.pa }} ladoB={{ nombre: nb, productos: l.pb }} />
+
   <section class="seccion">
     <div class="cabecera-seccion">
       <h2>Los {l.productos.length} productos de las dos tiendas</h2>
       <p class="apunte">Filtra por tienda para ver solo una</p>
     </div>
-    <TablaProductos productos={l.productos.map(paraTabla)} client:visible />
+    <TablaProductos productos={l.productos.map(paraTabla)} />
   </section>
 
   <Faq faqs={faqs} titulo={`Preguntas sobre ${na} y ${nb} en ${cat.termino}`} />

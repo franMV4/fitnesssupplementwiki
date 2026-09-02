@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import Recuperar from '../componentes/Recuperar.jsx';
+
+// Pagina de recuperar contrasena, los dos pasos en la misma URL: sin `?t=` pide el
+// correo, con `?t=` deja escribir la clave nueva. Dos URLs para dos pantallas del mismo
+// tramite serian dos paginas que mantener y un enlace mas que se puede escribir mal.
+//
+// Como /entrar: noindex y fuera del sitemap. Es una utilidad, no contenido.
+---
+<Base titulo="Recuperar contrasena | FitnessSupplementWiki"
+      descripcion="Recupera el acceso a tu cuenta si has olvidado la contrasena."
+      noindex>
+  <div class="pagina-acceso">
+    <div class="acceso-solo">
+      <h1 class="aparece">Recuperar</h1>
+      <div class="acceso-ficha aparece d1">
+        <Recuperar client:load />
+      </div>
+
+      <p class="sutil pie-acceso">
+      Si te registraste con Google, entra con el <a href="/entrar">boton de Google</a>: esa
+      cuenta no tiene contrasena. Como se tratan tus datos esta en el <a href="/legal">aviso legal</a>.
+      </p>
+    </div>
+  </div>
+</Base>

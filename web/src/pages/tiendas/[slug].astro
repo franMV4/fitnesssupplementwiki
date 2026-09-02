@@ -1,0 +1,260 @@
+---
+import Base from '../../layouts/Base.astro';
+import Aviso from '../../componentes/Aviso.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { VERSUS_TIENDAS } from '../../datos/tiendas.js';
+import { COMPARATIVAS } from '../../datos/landings.js';
+import { UNIDAD, eur } from '../../datos/util.js';
+import { fechaLarga } from '../../datos/seo.js';
+import { abs } from '../../sitio.js';
+
+// "HSN o Prozis" a secas, sin categoria: la comparacion de antes de elegir donde comprar.
+// Las comparativas por categoria que ya existen contestan "cual de las dos para creatina";
+// esta contesta la de arriba, y por eso su tabla es una fila por categoria compartida en
+// vez de una fila por producto.
+export function getStaticPaths() {
+  return VERSUS_TIENDAS.map((v) => ({ params: { slug: v.slug }, props: { v } }));
+}
+
+const { v } = Astro.props;
+const { a, b } = v;
+const canonica = abs(`/tiendas/${v.slug}`);
+const pct = (n) => (n > 0 ? `+${n} %` : `${n} %`);
+const precio = (n, cat) => {
+  const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+  return n == null ? '—' : `${eur(n, unidad === 'kg' ? 2 : 3)}/${unidad}`;
+};
+// La comparativa por categoria de estas dos tiendas, si existe: es la pagina que de verdad
+// resuelve la compra, y desde aqui se entra a ella con el nombre de la categoria.
+const detalle = (slug) => COMPARATIVAS.find((c) => c.cat.slug === slug
+  && [c.a, c.b].includes(a.tienda) && [c.a, c.b].includes(b.tienda));
+
+const masBarata = a.indice <= b.indice ? a : b;
+const otra = masBarata === a ? b : a;
+const empate = v.comunes.length - v.ganaA - v.ganaB;
+
+const faqs = [
+  {
+    p: `¿${a.nombre} o ${b.nombre}?`,
+    r: `En las ${v.comunes.length} categorias que venden las dos, ${a.nombre} tiene la mediana ` +
+       `mas baja en ${v.ganaA} y ${b.nombre} en ${v.ganaB}` +
+       (empate > 0 ? ` (${empate} empatan)` : '') + `. En el conjunto del catalogo, ` +
+       `${masBarata.nombre} esta un ${Math.abs(masBarata.indice)} % ` +
+       `${masBarata.indice < 0 ? 'por debajo' : 'por encima'} de la mediana del mercado y ` +
+       `${otra.nombre} un ${Math.abs(otra.indice)} % ` +
+       `${otra.indice < 0 ? 'por debajo' : 'por encima'}. El precio no lo decide todo: ` +
+       `${a.nombre} publica analisis en ${a.verificados} productos y ${b.nombre} en ${b.verificados}.`,
+  },
+  {
+    p: `¿En que categorias gana cada una?`,
+    r: `${a.nombre} sale mas barata en ` +
+       `${v.comunes.filter((x) => x.a.mediana < x.b.mediana).map((x) => x.cat.nombre.toLowerCase()).join(', ') || 'ninguna'}. ` +
+       `${b.nombre} sale mas barata en ` +
+       `${v.comunes.filter((x) => x.b.mediana < x.a.mediana).map((x) => x.cat.nombre.toLowerCase()).join(', ') || 'ninguna'}. ` +
+       `Son medianas de cada catalogo en la unidad de cada categoria, con los precios del ` +
+       `${fechaLarga(datos.generado)}.`,
+  },
+  {
+    p: '¿Que catalogo es mas grande?',
+    r: `${a.nombre} tiene ${a.productos} productos comparados aqui en ${a.categorias.length} ` +
+       `categorias y ${b.nombre}, ${b.productos} en ${b.categorias.length}. ` +
+       `${a.marcas === 1 ? `${a.nombre} vende solo su marca` : `${a.nombre} reparte su catalogo entre ${a.marcas} marcas`} y ` +
+       `${b.marcas === 1 ? `${b.nombre} solo la suya` : `${b.nombre} entre ${b.marcas}`}: ` +
+       `quien vende marca propia se salta el margen del fabricante, quien revende lo paga y a ` +
+       `cambio tiene marcas que la otra no.`,
+  },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: v.titulo,
+    inLanguage: 'es-ES',
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 2, name: 'Tiendas', item: abs('/tiendas') },
+      { '@type': 'ListItem', position: 3, name: `${a.nombre} vs ${b.nombre}`, item: canonica },
+    ],
+  },
+];
+
+const filas = [
+  { que: 'Indice de precio', a: pct(a.indice), b: pct(b.indice),
+    explica: 'Distancia mediana a la mediana del mercado en las categorias donde tiene tres ' +
+             'productos o mas. Negativo es barato.' },
+  { que: 'Categorias comparadas', a: a.comparables.length, b: b.comparables.length,
+    explica: 'De todo el sitio, en cuantas tiene catalogo suficiente para medirla.' },
+  { que: 'Productos comparados', a: a.productos, b: b.productos,
+    explica: 'Los que esta web recoge de esa tienda, no su catalogo entero.' },
+  { que: 'Marcas en el catalogo', a: a.marcas, b: b.marcas,
+    explica: 'Una sola marca es marca propia (sin margen de fabricante); muchas es reventa.' },
+  { que: 'Con analisis publicado', a: `${a.verificados} de ${a.productos}`, b: `${b.verificados} de ${b.productos}`,
+    explica: 'Nivel 3 o 4: analizar un lote cuesta dinero y se repercute en el precio.' },
+  { que: 'Fichas con aditivos declarados', a: a.aditivos == null ? '—' : `${a.aditivos} %`,
+    b: b.aditivos == null ? '—' : `${b.aditivos} %`,
+    explica: 'Un aditivo ocupa gramos que no son activo y es mas barato que el activo.' },
+  ...(a.nota != null && b.nota != null ? [{
+    que: 'Nota mediana en la tienda',
+    a: `${a.nota.toFixed(1).replace('.', ',')}/5`, b: `${b.nota.toFixed(1).replace('.', ',')}/5`,
+    explica: `Sobre ${a.opiniones.toLocaleString('es-ES')} y ${b.opiniones.toLocaleString('es-ES')} ` +
+             'opiniones publicadas por las propias tiendas, que son juez y parte.',
+  }] : []),
+];
+---
+<Base ancho="completo" titulo={v.titulo} schema={schema}
+      descripcion={`${a.nombre} o ${b.nombre}: las dos tiendas comparadas en las ` +
+                   `${v.comunes.length} categorias que venden las dos, con la mediana de cada una, ` +
+                   `su indice de precio y cuantos productos publican analisis. Datos del ${datos.generado}.`}>
+
+  <p class="migas">
+    <a href="/">Inicio</a> / <a href="/tiendas">Tiendas</a> / {a.nombre} vs {b.nombre}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      Tienda contra tienda · datos del{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{v.h1}</h1>
+    <p class="respuesta aparece d2">
+      <b>La respuesta corta.</b> De las {v.comunes.length} categorias que venden las dos,
+      {' '}{a.nombre} tiene la mediana mas baja en {v.ganaA} y {b.nombre} en {v.ganaB}
+      {empate > 0 && <> ({empate} empatan)</>}. En el conjunto del catalogo,
+      {' '}{masBarata.nombre} esta un {Math.abs(masBarata.indice)} %
+      {' '}{masBarata.indice < 0 ? 'por debajo' : 'por encima'} de la mediana del mercado y
+      {' '}{otra.nombre} un {Math.abs(otra.indice)} %
+      {' '}{otra.indice < 0 ? 'por debajo' : 'por encima'}.
+    </p>
+    <p class="entradilla aparece d2">
+      Ninguna tienda es barata en todo. Esta pagina no da un ganador: da la mediana de cada
+      una en cada categoria que comparten, para que se vea donde gana cada cual y por cuanto.
+      Los precios son de la ultima recogida y cambian; el catalogo y la certificacion, mucho menos.
+    </p>
+  </section>
+
+  <Aviso />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Categoria a categoria</h2>
+      <p class="apunte">Mediana de cada tienda, en su unidad</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{a.nombre} y {b.nombre} en las {v.comunes.length} categorias que venden las dos</caption>
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th class="num">{a.nombre}</th>
+              <th class="num">{b.nombre}</th>
+              <th class="num">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {v.comunes.map((x) => {
+              const gana = x.a.mediana === x.b.mediana ? null : (x.a.mediana < x.b.mediana ? a : b);
+              const alta = Math.max(x.a.mediana, x.b.mediana);
+              const baja = Math.min(x.a.mediana, x.b.mediana);
+              const dif = baja ? Math.round(((alta / baja) - 1) * 100) : null;
+              const d = detalle(x.cat.slug);
+              return (
+                <tr>
+                  <td class="principal marca">
+                    <a href={`/${x.cat.slug}`}>{x.cat.nombre}</a>
+                    <span class="explica">
+                      {x.a.n} productos de {a.nombre} y {x.b.n} de {b.nombre}.
+                      {d && <> <a href={`/comparativa/${d.slug}`}>Ver el cara a cara completo</a>.</>}
+                    </span>
+                  </td>
+                  <td class="num" data-et={a.nombre}>
+                    <span class={gana === a ? 'destacado' : ''}>{precio(x.a.mediana, x.cat)}</span>
+                    <span class="explica">{pct(x.a.dif)} vs mercado</span>
+                  </td>
+                  <td class="num" data-et={b.nombre}>
+                    <span class={gana === b ? 'destacado' : ''}>{precio(x.b.mediana, x.cat)}</span>
+                    <span class="explica">{pct(x.b.dif)} vs mercado</span>
+                  </td>
+                  <td class="num" data-et="Diferencia">
+                    {dif == null ? '—' : `${dif} %`}
+                    {gana && <span class="explica">mas barata: {gana.nombre}</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>La mediana no es el precio que vas a pagar.</strong> Es el punto medio del
+      catalogo de esa tienda en esa categoria: sirve para saber por donde empezar a mirar, no
+      para comprar. Para eso estan las tablas de cada categoria, donde manda la fila concreta.
+    </p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Las dos tiendas, dato a dato</h2>
+      <p class="apunte">Lo que no es el precio de hoy</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{a.nombre} y {b.nombre}: catalogo, certificacion y aditivos</caption>
+          <thead>
+            <tr>
+              <th>Dato</th>
+              <th class="num">{a.nombre}</th>
+              <th class="num">{b.nombre}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr>
+                <td class="principal marca">
+                  {f.que}
+                  <span class="explica">{f.explica}</span>
+                </td>
+                <td class="num" data-et={a.nombre}>{f.a}</td>
+                <td class="num" data-et={b.nombre}>{f.b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <Faq faqs={faqs} titulo={`Preguntas sobre ${a.nombre} y ${b.nombre}`} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>Seguir comparando</h2>
+      <p class="apunte">Las mismas tiendas, por categoria</p>
+    </div>
+    <div class="lista-categorias">
+      {v.comunes.map((x) => detalle(x.cat.slug)).filter(Boolean).map((d) => (
+        <a class="fila-categoria" href={`/comparativa/${d.slug}`}>
+          <span class="nombre">{d.na} o {d.nb} en {d.cat.termino}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{d.productos.length} prod.</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href="/tiendas">
+        <span class="nombre">Todas las tiendas, por indice de precio</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">ranking</span>
+      </a>
+    </div>
+  </section>
+</Base>
