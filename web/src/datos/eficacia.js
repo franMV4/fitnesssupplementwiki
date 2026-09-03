@@ -76,7 +76,7 @@ function deCategoria(cat) {
   };
 }
 
-/** Las 30 categorias con guia escrita, por nivel de evidencia y luego por coste al mes. */
+/** Las 50 categorias con guia escrita, por nivel de evidencia y luego por coste al mes. */
 export const EFICACIA = datos.categorias
   .filter((c) => EVIDENCIA[c.slug])
   .map(deCategoria)
