@@ -29,3 +29,22 @@ data/cache/
 # Secretos locales de Cloudflare y estado de wrangler
 .dev.vars
 .wrangler/
+
+# El lock de npm NO se versiona, y es una decision, no un olvido.
+#
+# Se genera en Windows, y ahi npm nunca instala el respaldo WebAssembly de satteri (el
+# motor de Markdown de Astro): es una dependencia OPCIONAL que solo se elige en Linux.
+# Sus dos dependencias (@emnapi/core y @emnapi/runtime) quedan anotadas anidadas pero no
+# como entradas de primer nivel, y `npm ci` en Linux las exige y aborta:
+#     Missing: @emnapi/runtime from lock file
+# Eso tumbaba el build de Cloudflare Pages y el paso de comprobaciones del robot diario.
+# Probado y descartado: regenerar el lock, `npm install --os=linux --cpu=x64`, `overrides`
+# en package.json y fijar la version de Node. El problema es la plataforma donde se genera
+# el lock, no su contenido.
+#
+# Sin lock, Cloudflare y Actions ejecutan `npm install` y resuelven cada uno lo suyo. Lo
+# que se pierde: las versiones exactas entre builds, dentro de los rangos ^ de
+# package.json. Para un sitio estatico que se reconstruye a diario es asumible; el dia que
+# deje de serlo, la solucion es generar el lock EN Linux (en el propio Actions) y
+# confirmarlo desde ahi.
+web/package-lock.json

@@ -82,7 +82,8 @@ jobs:
       - name: Construir el sitio y validar el SEO
         run: |
           cd web
-          npm ci
+          # npm install y no npm ci: el lock ya no se versiona (ver .gitignore).
+          npm install --no-audit --no-fund
           # Las pruebas de la API (cuentas y resenas) y las del filtrado de la tabla.
           # Son node:test de la stdlib: no instalan nada y tardan menos de un segundo.
           node --test
