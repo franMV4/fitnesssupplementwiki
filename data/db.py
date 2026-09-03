@@ -10,6 +10,7 @@ Uso:  python data/db.py          -> crea la BD, siembra 3 creatinas y se autocom
 import json
 import re
 import sqlite3
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -278,12 +279,20 @@ def _autocomprobacion(con):
     assert con.execute("SELECT count(*) FROM ingrediente_producto WHERE producto_id=?",
                        (p["id"],)).fetchone()[0] == 0
     con.rollback()
-    print(f"OK: {n} productos, esquema y upsert correctos ->", DB_PATH)
+    print(f"OK: {n} productos, esquema y upsert correctos (BD de prueba)")
 
 
 if __name__ == "__main__":
-    con = connect()
-    init(con)
-    seed(con)
-    seed(con)  # dos veces a proposito: debe seguir habiendo 3 productos
-    _autocomprobacion(con)
+    # La autocomprobacion corre sobre una BD DESECHABLE, nunca sobre la de verdad.
+    # Antes conectaba a data/suplementos.sqlite y le metia el SEED, que son tres
+    # productos INVENTADOS: acabaron publicados, con su pagina, en el puesto 19 de
+    # /creatina y en /mejores/creatina-creapure, porque el scraper no borra lo que no
+    # vuelve a ver. Las dosis de verdad las carga actualizar.py en cada pasada, asi
+    # que este fichero ya no tiene ningun motivo para tocar la BD real.
+    with tempfile.TemporaryDirectory() as tmp:
+        con = connect(Path(tmp) / "prueba.sqlite")
+        init(con)
+        seed(con)
+        seed(con)  # dos veces a proposito: debe seguir habiendo 3 productos
+        _autocomprobacion(con)
+        con.close()  # Windows no borra el fichero mientras sqlite lo tenga abierto

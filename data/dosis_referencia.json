@@ -8,7 +8,8 @@
     "activo puro (un kilo de concentrado de suero no es un kilo de proteina). Es un valor",
     "tipico de la categoria, no la analitica de cada bote: si una marca publica la suya,",
     "gana la de la ficha.",
-    "Se carga con: python data/db.py"
+    "Se carga sola en cada pasada de actualizar.py. NO ejecutes data/db.py para esto:",
+    "ese fichero solo comprueba el esquema, y lo hace sobre una BD desechable."
   ],
   "dosis": [
     {

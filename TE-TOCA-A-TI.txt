@@ -1,139 +1,158 @@
 ================================================================================
 LO QUE TIENES QUE HACER TU
-FitnessSupplementWiki - 28/08/2026
+FitnessSupplementWiki - 03/09/2026
 ================================================================================
 
-Todo lo que se podia hacer desde el codigo esta hecho, probado y confirmado en
-git (3 commits). Lo que queda aqui necesita una de tres cosas que yo no tengo:
-tus cuentas, tu tarjeta o tu criterio personal.
+La web esta publicada y el robot diario funciona: los precios se recogen solos y
+el historico crece sin que toques nada. Eso ya no esta en esta lista.
 
-Esta en orden y conviene respetarlo: el 2 no sirve de nada sin el 1, y el 4 no
-te lo aprueban sin el 2.
+Lo que queda necesita una de tres cosas que el codigo no tiene: tus cuentas, tu
+tarjeta o tu criterio personal.
 
---------------------------------------------------------------------------------
-1. VERIFICAR LAS DOSIS  -  2-3 horas  -  ANTES QUE NADA
---------------------------------------------------------------------------------
-Abre data/dosis_referencia.json y comprueba, una a una, las cifras y sus DOI.
-Son posicionamientos de la ISSN, pero quien publica esto eres tu.
+Esta en orden y conviene respetarlo. El 1 es el unico que puede hacer dano a una
+persona de verdad. El 3 sin el 2 es tomar decisiones a ciegas.
 
-Es el unico punto de toda la lista donde un error hace dano a una persona de
-verdad, y el unico que no puede hacer nadie mas por ti. Si solo tienes una tarde
-este mes, gastala aqui.
-
---------------------------------------------------------------------------------
-2. PUBLICAR LA WEB  -  un fin de semana
---------------------------------------------------------------------------------
-El manual paso a paso ya esta escrito en PUBLICAR.md. Sigue sus pasos 2 a 5 y 8:
-
-  a) Crear la cuenta de Cloudflare (paso 2).
-
-  b) Repositorio PRIVADO en GitHub y subir lo que ya esta confirmado:
-         git remote add origin https://github.com/TUUSUARIO/fitnesssupplementwiki.git
-         git push -u origin master
-     Comprueba que el push son unos pocos MB: si son cientos, se esta colando
-     data/cache (974 MB). Ya esta en el .gitignore, asi que no deberia pasar.
-
-  c) Conectar Cloudflare Pages al repositorio: directorio raiz "web",
-     build "npm run build", salida "dist" (PUBLICAR.md pasos 3 y 8.2).
-
-  d) Comprar y enchufar el dominio fitnesssupplementwiki.com (paso 4).
-
-  e) Encender el robot diario en la pestana Actions (paso 8.3).
-     Desde ese dia la web se actualiza sola y el historico de precios crece solo.
-     Es lo que mantiene vivo el proyecto aunque pases un mes sin tocarlo.
+ESTADO DE HOY, medido y no recordado:
+  4.340 productos  ·  50 categorias  ·  19 tiendas  ·  5.336 paginas
+  50 categorias con guia de evidencia escrita (las 50, ya no falta ninguna)
+  0 enlaces de afiliado activos
+  0 analitica instalada
+  48 productos en nivel de verificacion 4, sobre 4.340
 
 --------------------------------------------------------------------------------
-3. DECIRLE A GOOGLE QUE EXISTE  -  30 minutos
+1. VERIFICAR LAS FUENTES NUEVAS  -  2-3 horas  -  ANTES QUE NADA
 --------------------------------------------------------------------------------
-  a) Search Console: verifica el dominio y envia /sitemap.xml (PUBLICAR.md 5).
-  b) Bing Webmaster Tools: diez minutos, y de ahi comen ChatGPT y Copilot.
-  c) Pide indexacion manual de la portada, /metodologia, /quienes-somos y las
-     cinco categorias que mas te importen.
-  d) Da de alta Cloudflare Web Analytics y pega el token en web/src/sitio.js
-     (campo SITIO.analitica). Es sin cookies, asi que no obliga a banner.
-     Sin esto no sabras nunca que consultas te traen gente, y todas las
-     decisiones siguientes se toman a ciegas.
+Las 20 guias nuevas (taurina, arginina, hmb, tribulus, maca, coenzima-q10,
+espirulina, te-verde, teanina, triptofano, colina, acido-hialuronico, vitamina-e,
+vitamina-k2, calcio, cla, selenio, potasio, complejo-b, quemagrasas) traen 55
+fuentes. De cada una se comprobo por API que el DOI resuelve al articulo citado y
+que la cifra sale de su resumen. Falta lo que no puede hacer una maquina: abrir
+el texto y confirmarlo con tus ojos. Quien lo firma eres tu.
+
+Para sacar la lista de los 55 enlaces:
+
+    node --input-type=module -e "import {EVIDENCIA} from './web/src/datos/evidencia.js'; for (const k of ['taurina','arginina','hmb','tribulus','maca','coenzima-q10','espirulina','te-verde','teanina','triptofano','colina','acido-hialuronico','vitamina-e','vitamina-k2','calcio','cla','selenio','potasio','complejo-b','quemagrasas']) { console.log('\n## '+k); EVIDENCIA[k].fuentes.forEach((f,i)=>console.log('  ['+(i+1)+'] '+f.url)); }"
+
+Cuando termines, sube la fecha de REVISADO en web/src/datos/evidencia.js (linea
+22). Hoy dice 2026-08-25, que es de las 30 primeras guias: mientras no la subas,
+las 20 nuevas afirman que se revisaron antes de existir. Es lo unico de toda la
+web que ahora mismo es falso.
+
+Si no llegaste a hacer lo mismo con data/dosis_referencia.json, va aqui tambien.
+Es la tabla de la que sale el coste por dosis efectiva de todo el ranking.
 
 --------------------------------------------------------------------------------
-4. DARTE DE ALTA EN LA AFILIACION  -  3-4 horas + esperas de aprobacion
+2. DARTE DE ALTA EN LA AFILIACION  -  3-4 horas + esperas de aprobacion
 --------------------------------------------------------------------------------
-Hoy la web tiene 0 enlaces de afiliado: no puede ingresar un euro aunque manana
-entren 10.000 visitas. Casi todos los programas exigen la web ya publicada, con
-aviso legal y contacto atendido, y por eso este paso va DESPUES del 2.
+Las 9 tiendas de data/afiliados.json tienen "programa": null. Traducido: la web no
+puede ingresar un euro aunque manana entren 10.000 visitas. Es el paso con mas
+retorno de la lista y el que lleva mas tiempo parado.
 
-  a) Awin o Tradedoubler primero (HSN, Prozis, Myprotein, Nutritienda). Comision
-     del 5-12 %, muy por encima de Amazon, y sin la clausula de (b).
+  a) Awin o Tradedoubler primero: cubren HSN, Prozis, Myprotein y Nutritienda.
+     Comision del 5-12 % y sin la clausula de (b).
 
-  b) Amazon Afiliados despues: es el 65 % del catalogo, pero CANCELA la cuenta si
-     no haces 3 ventas en 180 dias. No entres hasta tener algo de trafico.
+  b) Amazon Afiliados despues. Son 1.695 de los 4.340 productos, el 39 % del
+     catalogo, pero CANCELA la cuenta si no haces 3 ventas en 180 dias. No entres
+     hasta tener trafico que lo sostenga.
 
-  c) Rellena data/afiliados.json con los parametros de cada programa y ejecuta:
+  c) Rellena data/afiliados.json y ejecuta:
          python exportar.py
          python tests.py
-     La prueba test_los_afiliados_no_mueven_el_ranking tiene que seguir pasando.
-     Si pasa, el orden no ha cambiado ni un puesto, que es la promesa de la web.
-     El aviso de afiliacion de /legal y /metodologia se enciende solo.
+     test_los_afiliados_no_mueven_el_ranking tiene que seguir pasando. Si pasa, el
+     orden no ha cambiado ni un puesto, que es la promesa de la web. El aviso de
+     afiliacion de /legal y /metodologia se enciende solo.
+
+  d) Once tiendas del dataset (promofarma, dosfarma, bulevip, hollandbarrett,
+     usafitness, vitobest, lifepro, tiendaculturista, iogenix, quamtrax, sotya)
+     no estan en afiliados.json. Se enlazan con enlace normal y compiten en
+     igualdad, asi que no urge, pero promofarma y dosfarma juntas son 1.087
+     productos: mirar si tienen programa sale a cuenta.
+
+--------------------------------------------------------------------------------
+3. INSTALAR LA ANALITICA  -  10 minutos  -  ESTAS A CIEGAS
+--------------------------------------------------------------------------------
+SITIO.analitica en web/src/sitio.js (linea 38) esta vacio. Sin eso no sabes que
+consultas te traen gente, y todas las decisiones de las proximas semanas se toman
+a ojo: que categorias reforzar, que guias ampliar, donde buscar enlaces.
+
+Cloudflare Web Analytics, sin cookies, no obliga a banner. Das de alta el dominio,
+copias el token y lo pegas en ese campo.
+
+--------------------------------------------------------------------------------
+4. QUE GOOGLE VEA LAS 20 GUIAS NUEVAS  -  20 minutos
+--------------------------------------------------------------------------------
+Son 20 URLs que ningun buscador ha visto nunca, y son el contenido que mas te
+diferencia de la competencia.
+
+  a) Search Console: reenvia /sitemap.xml y pide indexacion manual de las guias
+     de las categorias que mas te importen.
+  b) Bing Webmaster Tools si no lo hiciste: de ahi comen ChatGPT y Copilot.
 
 --------------------------------------------------------------------------------
 5. CURAR CERTIFICACIONES A MANO  -  a ratos, cuando puedas
 --------------------------------------------------------------------------------
-    python verificar.py pendientes          # la cola
+    python verificar.py pendientes          # hoy: 66 en cola
     python verificar.py qs 27 123456        # despues de comprobarlo en creapure.com
 
-Cada codigo QS comprobado sube un producto a nivel 4 y es contenido que no tiene
-nadie mas. Hoy hay 30 productos en nivel 4 sobre 2.665: cada uno que anadas
-mejora la mitad "calidad" del score, que es la que hoy casi no discrimina.
+Hay 48 productos en nivel 4 sobre 4.340. Cada codigo que compruebas sube uno y es
+contenido que no tiene nadie mas, pero con esa proporcion la mitad "calidad" del
+score sigue sin discriminar casi nada. La cola de hoy son sobre todo omega-3 IFOS
+de HSN, colagenos y proteinas vegetales.
 
 --------------------------------------------------------------------------------
-6. CONSEGUIR LOS PRIMEROS ENLACES  -  semanas 3 a 6 desde el despliegue
+6. CONSEGUIR LOS PRIMEROS ENLACES  -  lo mas dificil de la lista
 --------------------------------------------------------------------------------
-Lo mas dificil de la lista y lo unico que no se puede automatizar. El plan
-completo esta en el punto 8 de PLAN-MEJORA.txt. El resumen:
+Lo unico que no se puede automatizar. El plan completo esta en el punto 8 de
+PLAN-MEJORA.txt.
 
-El gancho NO es "he hecho un comparador de suplementos" (hay cientos). El gancho
-es "he publicado el metodo con el que puntuo, y hay una prueba automatica que
-verifica que mis comisiones no mueven el ranking". Eso es una historia, y las
-historias se enlazan.
+El gancho ya no es "he hecho un comparador de suplementos", que hay cientos. Ahora
+tienes dos historias mejores, y las historias se enlazan:
 
-Sitios: r/espanol_fitness, r/gym_es, foros del nicho, Hacker News (angulo
-tecnico), LinkedIn (angulo de datos) y 3-5 blogs pequenos de nutricion a los que
-ofrecer el dataset abierto (/datos/*.json) para que lo citen. Aporta el DATO, no
-el enlace. Objetivo realista: 5-10 enlaces de calidad en cuatro semanas.
+  - "He publicado 50 guias y en 12 de ellas digo que el producto no funciona, con
+    el DOI al lado." Tribulus, HMB, CLA y quemagrasas son las que mejor se cuentan.
+  - "He publicado el metodo con el que puntuo, y hay una prueba automatica que
+    verifica que mis comisiones no mueven el ranking."
+
+Sitios: r/espanol_fitness, r/gym_es, foros del nicho, Hacker News (angulo tecnico),
+LinkedIn (angulo de datos) y 3-5 blogs pequenos de nutricion a los que ofrecer el
+dataset abierto (/datos/*.json) para que lo citen. Aporta el DATO, no el enlace.
+Objetivo realista: 5-10 enlaces de calidad en cuatro semanas.
 
 --------------------------------------------------------------------------------
 7. DECISIONES TUYAS, PARA MAS ADELANTE
 --------------------------------------------------------------------------------
-  - Miniaturas propias en R2 (PLAN 4.3): cuando exista el bucket. Mientras tanto
-    ya no se filtra la direccion de tus lectores a las ocho tiendas.
   - Alerta de precio por correo (PLAN 5.1, la funcion de mas valor del plan):
-    necesita la web desplegada y un emisor de correo. El dato del que depende (el
-    historico) ya se esta guardando desde hoy, que era lo urgente.
+    necesita un emisor de correo. El historico del que depende lleva meses
+    guardandose, asi que el dato ya esta.
+  - Miniaturas propias en R2 (PLAN 4.3): cuando exista el bucket.
   - Anuncios: no, hasta pasar de 10.000 visitas/mes. Razonado en el plan.
 
 ================================================================================
 DOS COSAS QUE CONVIENE QUE SEPAS
 ================================================================================
 
-1. Los productos "sin marca" han SUBIDO de 527 a 763, y es una mejora. Habia 161
-   marcas inventadas ("Citrato de", "Extracto de", "Aceite de Krill", "L") en 251
-   productos, que salian de cortar mal el titulo de Amazon. Ahora la web dice que
-   no sabe la marca en vez de publicar una falsa en el JSON-LD que lee Google.
-   La marca de esos productos no se puede recuperar sin pedir una pagina por
-   producto a Amazon (527 peticiones al dia), y eso va contra la regla de
-   scraping educado del proyecto. La decision es tuya; mi recomendacion es no.
+1. Hay 746 productos con marca "Desconocida". No es un fallo que se arregle: son
+   productos cuyo titulo no permite deducir la marca sin pedir una pagina por
+   producto a Amazon, y eso va contra la regla de scraping educado del proyecto.
+   La web dice que no sabe la marca en vez de publicar una falsa en el JSON-LD que
+   lee Google, que es la decision correcta.
 
-2. /legal decia que esta web "no tiene formularios, ni registro" y que no usa
-   almacenamiento local. Desde que existen las cuentas eso ya era falso, y ahora
-   ademas hay una lista guardada en el navegador. Esta reescrito: cuenta que
-   datos se guardan, que cookie hay, para que sirve el almacenamiento local y
-   como borrarlo. Leelo antes de publicar y confirma que estas de acuerdo con lo
-   que dice, porque lo firmas tu.
+2. Habia tres productos INVENTADOS publicados (MarcaDemo, OtraDemo, TerceraDemo,
+   con url demo.invalid). Estaban en el puesto 19 de /creatina, en el sitemap, en
+   /mejores/creatina-creapure y en los JSON abiertos, y uno tenia nivel 4. Ya
+   estan borrados y el agujero por el que entraron, cerrado.
+
+   Venian del SEED de data/db.py, que servia para validar el esquema pero corria
+   sobre la BD de verdad. Y dosis_referencia.json te mandaba a ejecutarlo. Ahora
+   la autocomprobacion usa una BD desechable y las dosis las carga actualizar.py
+   sola en cada pasada. NO hace falta ejecutar data/db.py para nada; si lo haces,
+   ya no puede tocar la base real.
 
 ================================================================================
 COMPROBAR QUE TODO SIGUE BIEN, EN CUALQUIER MOMENTO
 ================================================================================
-    python tests.py                 -> 63 comprobaciones
-    cd web && node --test           -> 15 comprobaciones
-    cd web && npm run build         -> 2.983 paginas
-    python seo_check.py             -> revisa esas 2.983
+    python tests.py                 -> 101 comprobaciones
+    cd web && node --test           -> 30 comprobaciones
+    cd web && npm run build         -> 5.336 paginas
+    python seo_check.py             -> revisa esas 5.336
 ================================================================================
