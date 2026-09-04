@@ -293,17 +293,20 @@ páginas → validar el SEO.
 para dar permiso):
 
 ```powershell
-cd web; npx wrangler pages deploy --branch main; cd ..
+cd web; npx wrangler pages deploy --branch master; cd ..
 ```
 
-> **Por qué `--branch main`:** la rama de producción del proyecto en Cloudflare se llama
-> `main`, pero tu repositorio local está en `master`. Wrangler mira en qué rama estás y,
-> si no coinciden, publica una **vista previa** en vez de producción: te dice
-> `Deployment alias URL: https://master.…pages.dev` y el sitio de verdad se queda como
+> **Por qué `--branch master`:** la rama de producción del proyecto conectado a Git es
+> `master`, que es donde está tu repositorio. Si despliegas con otra rama, Wrangler
+> publica una **vista previa** en vez de producción: te devuelve un
+> `Deployment alias URL: https://<rama>.…pages.dev` y el sitio de verdad se queda como
 > estaba. Peor todavía, las vistas previas usan los secretos del entorno *preview*, que
-> están vacíos, así que la API contesta *"La base de datos aun no esta configurada"*.
-> Con la bandera se publica donde toca. (La alternativa permanente es renombrar la rama
-> local a `main`, o cambiar la rama de producción a `master` en el panel de Cloudflare.)
+> están vacíos, así que la API contesta *"La base de datos aun no esta configurada"*
+> aunque los secretos de producción estén bien puestos.
+>
+> Esto pasó de verdad el 04/09/2026 y costó una mañana: un `--branch master` heredado de
+> esta guía dejó el login caído con los secretos ya cargados. **Si la API devuelve 503,
+> lo primero que hay que mirar es a qué rama se desplegó.**
 
 > **Por qué `cd web`:** desde el paso 9 la web lleva una pequeña API (cuentas y
 > reseñas) que vive en `web/functions/`. El comando tiene que ejecutarse dentro de
@@ -424,7 +427,7 @@ lo escribe el vendedor, así que la web **no** concede el nivel 4 automático po
 | `python tests.py` | 2 segundos | Siempre, antes de subir |
 | `npm run build` | ~1 min | Siempre |
 | `python seo_check.py` | ~20 segundos | Siempre, antes de subir |
-| `cd web; npx wrangler pages deploy --branch main` | 20 s - 3 min | Al subir |
+| `cd web; npx wrangler pages deploy --branch master` | 20 s - 3 min | Al subir |
 
 La carpeta `data/cache/` crece hasta cerca de **1 GB**. Es normal y está fuera del
 repositorio: son las páginas descargadas, caducan a las 6 horas y se pueden borrar enteras
@@ -625,6 +628,9 @@ vez de gastarte la cuota del mes.
 | El robot falla en el último paso: `permission denied to github-actions` | Falta el permiso de escritura | Settings → Actions → General → **Read and write permissions** (paso 8.3) |
 | `git push` rechazado: `file exceeds 100 MB` | Se coló `data/cache/` | El `.gitignore` ya lo excluye. Si ya hiciste `git add`, ejecuta `git rm -r --cached data/cache` |
 | El robot va en verde pero la web no cambia | No había cambios de precio, o Pages apunta al proyecto viejo | Mira si el paso final dijo `Sin cambios`. Si no, revisa que el dominio esté en el proyecto conectado a Git |
+| **El login no va y `/api/*` da 503 «La base de datos aun no esta configurada»** | Se desplegó a una rama que no es producción, o los secretos se pusieron en el proyecto viejo | `curl https://fitnesssupplementwiki.com/api/yo`. Comprueba `npx wrangler pages secret list --project-name fitnesssupplement` y vuelve a desplegar con `--branch master` |
+| El botón «Continuar con Google» no sale y `/api/yo` dice `"google":false` | Faltan `GOOGLE_ID` y `GOOGLE_SECRET` en el proyecto, o se pusieron y no se ha desplegado después | Ponlos con `--project-name fitnesssupplement` y despliega: los secretos nuevos no entran en vigor hasta el siguiente despliegue |
+| El correo de «he olvidado mi contraseña» no llega | Faltan `RESEND_KEY` y `CORREO_DESDE` | Sin ellos la API escribe el enlace en el log en vez de enviarlo. Mismo procedimiento |
 | Una tienda devuelve `403`/`429` solo en GitHub | IP de centro de datos bloqueada | Es lo esperado, no se fuerza. Si son varias, pásate a la tarea programada local (paso 8) |
 | Cloudflare falla con `Cannot find module` | Falta el **Root directory** `web` | Settings del proyecto de Pages → Builds → Root directory: `web` |
 | El robot tarda y se corta a los 120 min | Alguna tienda respondiendo muy lenta | Normal de vez en cuando; el `timeout-minutes` está para que no gaste la cuota. Al día siguiente reintenta solo |
@@ -632,7 +638,7 @@ vez de gastarte la cuota del mes.
 | Una categoría sale con **0 productos** y sin errores | Un filtro de `categorias.py` que se come lo que debía dejar pasar (le pasó a la cafeína con "café") o un listado de tienda que no trae `ItemList` en su primera página | Prueba `python run_scraper.py --categoria <slug>` y mira el log tienda por tienda |
 | El log dice `pasada parcial, no se retira nada` | Una tienda cortó a media categoría (429) | Es el comportamiento correcto: lo que no se llegó a mirar no es lo mismo que lo que ha dejado de venderse. Se arregla solo en la siguiente pasada |
 | `amazon: sigue pidiendo esperar` | Amazon está limitando por ratio | La pasada se marca parcial y no borra nada. Si se repite todos los días, baja la frecuencia |
-| La subida a Cloudflare se corta a media barra | 3.066 ficheros por el navegador | Usa `cd web; npx wrangler pages deploy --branch main` |
+| La subida a Cloudflare se corta a media barra | 3.066 ficheros por el navegador | Usa `cd web; npx wrangler pages deploy --branch master` |
 | `python actualizar.py` tarda 5 minutos en vez de 25 | La caché del scraper (6 h) sigue caliente de la pasada anterior | No es un error: no se vuelve a pedir lo que ya se pidió hoy |
 
 ---
@@ -655,6 +661,34 @@ vez de gastarte la cuota del mes.
 ---
 
 ## Paso 9 · Cuentas y reseñas de lectores
+
+> ## ⚠️ HAY DOS PROYECTOS DE PAGES. SOLO UNO SIRVE EL DOMINIO.
+>
+> | Proyecto | Dominios | Conectado a Git |
+> |---|---|---|
+> | **`fitnesssupplement`** | **fitnesssupplementwiki.com** + `fitnesssupplement.pages.dev` | **Sí. ES ESTE.** |
+> | `fitnesssupplementwiki` | `fitnesssupplementwiki.pages.dev` | No, subida directa. El viejo. |
+>
+> El segundo es el original, de subida directa. Al conectar el repositorio a GitHub hubo
+> que crear uno nuevo, porque **un proyecto de subida directa no se puede convertir en uno
+> conectado a Git**, y el dominio se movió al nuevo. El viejo sigue existiendo, sin
+> visitas, y ahí quedaron los secretos y la configuración originales.
+>
+> **Consecuencia práctica: todo comando lleva `--project-name fitnesssupplement`.** Sin esa
+> bandera, `wrangler pages secret put` escribe en el proyecto que no atiende a nadie, dice
+> `✨ Success!` y no cambia nada. Es exactamente lo que pasó el 04/09/2026.
+>
+> Comprueba en cualquier momento cuál es cuál:
+>
+> ```powershell
+> npx wrangler pages secret list --project-name fitnesssupplement
+> npx wrangler pages project list
+> ```
+>
+> Los secretos del proyecto viejo (`GOOGLE_ID`, `GOOGLE_SECRET`, `RESEND_KEY`,
+> `CORREO_DESDE`) **no se pueden leer**: Cloudflare los guarda cifrados. Hay que sacarlos
+> otra vez de su origen (Google Cloud Console y Resend) y volver a ponerlos en el nuevo.
+> **No borres el proyecto viejo** hasta haber comprobado que todo funciona en el nuevo.
 
 > **Estado (2026-08-31):** D1 creada y con su esquema aplicado; faltan los secretos y R2.
 > El detalle de lo que queda está en el **paso 10.1**, que es donde se descubrió.
@@ -715,7 +749,7 @@ fichero del repositorio**.
 Genera uno largo al azar y guárdalo en Cloudflare:
 
 ```powershell
-npx wrangler pages secret put SECRETO --project-name fitnesssupplementwiki
+npx wrangler pages secret put SECRETO --project-name fitnesssupplement
 ```
 
 Te pedirá el valor: pega una ristra larga (40 caracteres al azar valen). No hace falta
@@ -759,7 +793,7 @@ Las cuentas tienen estas puertas, y todas usan el mismo formulario:
 ### 9.5 · Subirlo
 
 ```powershell
-cd web; npx wrangler pages deploy --branch main
+cd web; npx wrangler pages deploy --branch master
 ```
 
 Este comando, ejecutado **dentro de `web`**, sube el sitio y la API. Si lo lanzas desde
@@ -797,8 +831,8 @@ un error. En cuanto las pongas, se enciende solo: no hay que tocar código.
 5. Google te da un **ID de cliente** y un **secreto de cliente**. Guárdalos en Cloudflare:
 
    ```powershell
-   npx wrangler pages secret put GOOGLE_ID --project-name fitnesssupplementwiki
-   npx wrangler pages secret put GOOGLE_SECRET --project-name fitnesssupplementwiki
+   npx wrangler pages secret put GOOGLE_ID --project-name fitnesssupplement
+   npx wrangler pages secret put GOOGLE_SECRET --project-name fitnesssupplement
    ```
 
 Para probarlo en local, descomenta las dos líneas de `web/.dev.vars` y pon ahí los
@@ -829,8 +863,8 @@ sobra:
 3. Guárdala en Cloudflare junto con la dirección desde la que se envía:
 
    ```powershell
-   npx wrangler pages secret put RESEND_KEY --project-name fitnesssupplementwiki
-   npx wrangler pages secret put CORREO_DESDE --project-name fitnesssupplementwiki
+   npx wrangler pages secret put RESEND_KEY --project-name fitnesssupplement
+   npx wrangler pages secret put CORREO_DESDE --project-name fitnesssupplement
    ```
 
    `CORREO_DESDE` es algo como `FitnessSupplementWiki <hola@fitnesssupplementwiki.com>`, y
@@ -922,7 +956,7 @@ En `ADMINS`, tu correo. Y después desplegar, porque hasta que no despliegues `/
 existe en el sitio publicado:
 
 ```powershell
-npx wrangler pages deploy --branch main
+npx wrangler pages deploy --branch master
 ```
 
 > **Ojo con `SECRETO`:** firma las cookies de sesión. Si algún día lo cambias, todas las
@@ -985,7 +1019,7 @@ Después: entra en la web con tu cuenta y abre `https://fitnesssupplementwiki.co
 ### 10.4 · Publicar lo corregido
 
 ```powershell
-cd C:\Users\f.munoz.THERMOLYMPIC\Desktop\Fran\Proyects\FitnessSupplementWiki ; python ediciones.py ; python exportar.py ; cd web ; npm run build ; npx wrangler pages deploy --branch main ; cd ..
+cd C:\Users\f.munoz.THERMOLYMPIC\Desktop\Fran\Proyects\FitnessSupplementWiki ; python ediciones.py ; python exportar.py ; cd web ; npm run build ; npx wrangler pages deploy --branch master ; cd ..
 ```
 
 `ediciones.py` baja las correcciones del panel y las mete en tu base de datos local; el
@@ -1026,7 +1060,7 @@ corrección se queda esperando por si vuelve y el pipeline lo avisa por pantalla
 ## Resumen de una línea
 
 ```
-python actualizar.py → python tests.py → cd web → npm run build → cd .. → python seo_check.py → cd web → npx wrangler pages deploy --branch main
+python actualizar.py → python tests.py → cd web → npm run build → cd .. → python seo_check.py → cd web → npx wrangler pages deploy --branch master
 ```
 
 Para probar en local
