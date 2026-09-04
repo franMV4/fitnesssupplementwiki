@@ -3,7 +3,16 @@
 # sube el sitio estatico y deja la API fuera.
 #
 # Los ids salen de crear los recursos una vez, ver PUBLICAR.md paso 9.
-name = "fitnesssupplementwiki"
+#
+# OJO CON EL NOMBRE. Hay DOS proyectos de Pages en la cuenta y solo uno sirve el
+# dominio:
+#   fitnesssupplement       -> fitnesssupplementwiki.com, conectado a Git. ES ESTE.
+#   fitnesssupplementwiki   -> solo *.pages.dev, subida directa, el viejo.
+# Aqui ponia el segundo, asi que "wrangler pages deploy" publicaba en el proyecto que
+# no atiende ninguna visita, y los "pages secret put" sin --project-name iban al
+# mismo sitio equivocado. Sintoma: la web se ve bien y /api/* devuelve 503 "La base
+# de datos aun no esta configurada", porque ese proyecto no tiene ni DB ni SECRETO.
+name = "fitnesssupplement"
 compatibility_date = "2026-08-28"
 pages_build_output_dir = "./dist"
 
