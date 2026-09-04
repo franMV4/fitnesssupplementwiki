@@ -19,7 +19,7 @@
 // Cuando se reviso este texto por ultima vez. NO es la fecha de recogida de precios
 // (esa sale del dataset y cambia cada pasada): es cuando una persona leyo estas cifras
 // contra sus fuentes. Se sube a mano al revisarlas, y solo entonces.
-export const REVISADO = '2026-08-25';
+export const REVISADO = '2026-09-04';
 
 export const EVIDENCIA = {
   creatina: {

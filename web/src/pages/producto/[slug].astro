@@ -123,7 +123,9 @@ const schema = [
     // El id del dataset como sku: dos fichas nunca comparten uno y Google necesita un
     // identificador para no fusionar dos variantes del mismo bote en un solo producto.
     sku: String(p.id),
-    offers: ofertas,
+    // Misma regla que productoLd en seo.js: sin imagen no hay ficha de comerciante
+    // posible, y declarar la oferta solo sirve para que Search Console la marque mal.
+    ...(p.imagen ? { offers: ofertas } : {}),
     // El score es una resena editorial de esta web, con su autor y su fecha. NO se
     // publica como aggregateRating: no hay opiniones de usuarios y fingirlas es lo
     // que hace que Google deje de creerse el marcado de un sitio entero.

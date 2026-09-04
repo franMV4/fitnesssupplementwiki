@@ -33,9 +33,14 @@ export const SITIO = {
              'nutricional.',
   },
 
-  // Token de Cloudflare Web Analytics: sin cookies y sin datos personales, asi que no
-  // obliga a banner de consentimiento. Vacio = no se carga ningun script.
-  analitica: '',
+  // Cloudflare Web Analytics: sin cookies y sin datos personales, asi que no obliga a
+  // banner de consentimiento. Tres valores:
+  //   ''     -> no hay medicion, y /legal lo dice con esas palabras.
+  //   'auto' -> Cloudflare inyecta el beacon en el borde (Web Analytics > Automatic setup).
+  //             Aqui NO se pinta script: pintarlo cargaria el beacon dos veces.
+  //   token  -> setup manual; Base.astro pinta el script con ese token.
+  // Lo que decide el texto de /legal es que esto no este vacio, no que sea un token.
+  analitica: 'auto',
 };
 
 // URL absoluta a partir de una ruta ("/creatina" -> "https://.../creatina").

@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import { ingredientesCaraACara, porQuePrecio, sobrecoste } from './src/datos/porque.js';
 import { RANKING } from './src/datos/tiendas.js';
 import { EFICACIA, OBJETIVOS_RESUELTOS } from './src/datos/eficacia.js';
+import { productoLd } from './src/datos/seo.js';
 
 const CAT = { unidad_precio: 'kg', termino: 'creatina' };
 const P = (over) => ({
@@ -77,4 +78,22 @@ test('la lista de eficacia va por nivel de evidencia', () => {
   for (let i = 1; i < EFICACIA.length; i++) {
     assert.ok(peso[EFICACIA[i - 1].nivel] <= peso[EFICACIA[i].nivel]);
   }
+});
+
+// --- Marcado de producto -------------------------------------------------------
+// Google exige `image` en toda ficha de comerciante (Product + offers con precio).
+// Un producto sin foto con oferta declarada no puede salir en Google Y ademas mete
+// un error en Search Console. La regla es: sin imagen, sin offers.
+test('un producto sin foto no declara oferta en el JSON-LD', () => {
+  const base = { slug: 's', id: 7, marca: 'Marca', nombre: 'Bote', tienda: 'hsn',
+                 precio_eur: 20, url: 'https://tienda.example/bote',
+                 fecha_scrape: '2026-09-04' };
+  const con = productoLd({ ...base, imagen: 'https://cdn.example/bote.jpg' });
+  assert.equal(con.image, 'https://cdn.example/bote.jpg');
+  assert.equal(con.offers.price, 20);
+
+  const sin = productoLd(base);
+  assert.equal(sin.image, undefined);
+  assert.equal(sin.offers, undefined, 'sin foto no puede haber oferta: falta image');
+  assert.equal(sin.name.length > 0, true, 'el producto se sigue publicando entero');
 });

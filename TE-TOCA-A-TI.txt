@@ -16,7 +16,7 @@ ESTADO DE HOY, medido y no recordado:
   4.340 productos  ·  50 categorias  ·  19 tiendas  ·  5.336 paginas
   50 categorias con guia de evidencia escrita (las 50, ya no falta ninguna)
   0 enlaces de afiliado activos
-  0 analitica instalada
+  analitica activa desde el 24/08/2026 (Cloudflare, sin cookies)
   48 productos en nivel de verificacion 4, sobre 4.340
 
 --------------------------------------------------------------------------------
@@ -69,14 +69,21 @@ retorno de la lista y el que lleva mas tiempo parado.
      productos: mirar si tienen programa sale a cuenta.
 
 --------------------------------------------------------------------------------
-3. INSTALAR LA ANALITICA  -  10 minutos  -  ESTAS A CIEGAS
+3. LA ANALITICA  -  HECHO 04/09/2026, no hay nada que hacer
 --------------------------------------------------------------------------------
-SITIO.analitica en web/src/sitio.js (linea 38) esta vacio. Sin eso no sabes que
-consultas te traen gente, y todas las decisiones de las proximas semanas se toman
-a ojo: que categorias reforzar, que guias ampliar, donde buscar enlaces.
+Cloudflare Web Analytics lleva midiendo fitnesssupplementwiki.com desde el
+24/08/2026, con "Automatic setup": el beacon lo inyecta Cloudflare en el borde y
+no hay script en el HTML. Sin cookies, sin banner.
 
-Cloudflare Web Analytics, sin cookies, no obliga a banner. Das de alta el dominio,
-copias el token y lo pegas en ese campo.
+Lo que si estaba mal y ya esta arreglado: SITIO.analitica seguia vacio, asi que
+/legal publicaba "no hay ninguna herramienta de medicion de visitas instalada"
+mientras se median visitas. Ahora SITIO.analitica vale 'auto', que enciende el
+texto correcto de /legal y NO pinta el script (pintarlo cargaria el beacon dos
+veces). Si algun dia se pasa a setup manual, se pone el token en ese mismo campo
+y Base.astro lo pinta solo.
+
+El dato ya esta ahi: mira que consultas y que categorias te traen gente antes de
+decidir el punto 4 y el 6.
 
 --------------------------------------------------------------------------------
 4. QUE GOOGLE VEA LAS 20 GUIAS NUEVAS  -  20 minutos

@@ -128,7 +128,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
     </style>
   </noscript>
   <Jsonld datos={grafo} />
-  {SITIO.analitica && (
+  {SITIO.analitica && SITIO.analitica !== 'auto' && (
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js"
             data-cf-beacon={`{"token": "${SITIO.analitica}"}`}></script>
   )}

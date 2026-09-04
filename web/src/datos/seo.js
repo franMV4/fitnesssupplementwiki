@@ -243,8 +243,11 @@ export const productoLd = (p) => ({
   url: abs(`/producto/${p.slug}`),
   sku: String(p.id),
   brand: { '@type': 'Brand', name: p.marca },
-  ...(p.imagen ? { image: p.imagen } : {}),
-  offers: ofertaLd(p),
+  // Sin foto NO se declara la oferta. Una ficha de comerciante exige `image` junto a
+  // `offers`, asi que un producto sin imagen con oferta no puede salir en Google y solo
+  // produce un error en Search Console ("Falta el campo image"). Sin `offers` deja de
+  // ser una ficha de comerciante y el producto se sigue publicando entero.
+  ...(p.imagen ? { image: p.imagen, offers: ofertaLd(p) } : {}),
 });
 
 /** Los diez primeros de una tabla como ItemList. Mas no aporta: nadie lee una de 120. */
