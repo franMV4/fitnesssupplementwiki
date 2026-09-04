@@ -32,6 +32,64 @@ CREATE TABLE IF NOT EXISTS resenas (
 
 CREATE INDEX IF NOT EXISTS idx_resenas_producto ON resenas (producto, creado DESC);
 
+-- "Me ha sido util" de cada resena. Una fila por persona y resena, y la clave primaria
+-- es justo eso: sin ella, votar veinte veces la misma resena sube veinte puntos.
+--
+-- ON DELETE CASCADE en los dos lados: borrar una resena desde /admin tiene que llevarse
+-- sus votos, y borrar una cuenta los suyos. Sin la cascada, o falla el borrado (las
+-- claves foraneas van activadas en D1) o quedan votos apuntando a filas que ya no estan
+-- y el recuento sigue contandolos.
+--
+-- El recuento NO se guarda: sale de un COUNT(*) sobre esta tabla en la misma consulta
+-- que lee las resenas, por el mismo motivo por el que la media tampoco se guarda.
+CREATE TABLE IF NOT EXISTS votos (
+  resena  INTEGER NOT NULL REFERENCES resenas(id) ON DELETE CASCADE,
+  usuario INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  creado  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (resena, usuario)
+);
+
+-- Preguntas y respuestas de la ficha de producto. Una sola tabla para las dos cosas: una
+-- respuesta es una pregunta con padre. Dos tablas casi identicas serian dos consultas,
+-- dos inserciones y dos sitios donde arreglar el mismo borrado.
+--
+-- Solo un nivel: se responde a una pregunta, no a una respuesta. Un hilo de hilos
+-- necesita sangrados, plegados y moderacion de discusiones, y esto es un tablon de dudas
+-- sobre un bote de creatina.
+--
+-- El producto es el slug, igual que en resenas y por el mismo motivo: los ids del
+-- catalogo cambian cada pasada del scraper y el slug no.
+CREATE TABLE IF NOT EXISTS preguntas (
+  id       INTEGER PRIMARY KEY,
+  usuario  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  producto TEXT NOT NULL,
+  -- NULL: es una pregunta. Con valor: es la respuesta a esa pregunta, y se va con ella.
+  padre    INTEGER REFERENCES preguntas(id) ON DELETE CASCADE,
+  texto    TEXT NOT NULL,
+  creado   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_preguntas_producto ON preguntas (producto, creado);
+
+-- Avisos de precio: "escribeme si este bote baja de 25 EUR".
+--
+-- Es lo unico de esta web que sale a buscar al lector en vez de esperarle. El precio NO
+-- se guarda aqui: lo mira el repaso (POST /api/alertas/revisar) contra el catalogo
+-- publicado, que es el mismo que ve todo el mundo. Una copia de precios en D1 seria una
+-- segunda verdad que mantener sincronizada con el scraper.
+--
+-- `avisado` es la fecha del ultimo correo enviado, y esta para no mandar el mismo aviso
+-- cada dos dias mientras el precio siga bajo. Vuelve a NULL en cuanto el precio sube por
+-- encima del objetivo: entonces la alerta esta viva otra vez.
+CREATE TABLE IF NOT EXISTS alertas (
+  usuario  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  producto TEXT NOT NULL,
+  objetivo REAL NOT NULL,
+  avisado  TEXT,
+  creado   TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (usuario, producto)
+);
+
 -- Ediciones hechas a mano desde /admin. NO es una copia del catalogo: el catalogo sigue
 -- viviendo en data/suplementos.sqlite y generandose con el scraper. Aqui solo se guarda
 -- LO QUE UNA PERSONA HA CORREGIDO, campo a campo, y el pipeline lo vuelve a aplicar

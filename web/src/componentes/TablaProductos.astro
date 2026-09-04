@@ -96,7 +96,10 @@ const fila = (p) => ({
     <label class="campo">
       <span>Ordenar por</span>
       <select name="orden">
-        {Object.entries(ORDENES).map(([k, v]) => <option value={k}>{v.etiqueta}</option>)}
+        {/* Los que no dependen de nada dinamico. El de la nota de los lectores lo anade
+            tabla.js si la API dice que en esta categoria hay resenas. */}
+        {Object.entries(ORDENES).filter(([, v]) => !v.tarde)
+          .map(([k, v]) => <option value={k}>{v.etiqueta}</option>)}
       </select>
     </label>
     {/* El chip de limpiar solo tiene sentido con algun filtro puesto: al cargar no hay
@@ -201,6 +204,10 @@ const fila = (p) => ({
                         una columna nueva: una columna mas estrecha la tabla en movil por
                         una funcion que no usa todo el mundo. */}
                     <button type="button" class="marcar" aria-pressed="false">+ comparar</button>
+                    {/* Comparar es para esta tarde: cuatro botes enfrentados y a decidir.
+                        Mi lista es para el mes que viene: lo que tomas, con tu dosis y lo
+                        que te cuesta. Son dos cosas distintas y por eso son dos botones. */}
+                    <button type="button" class="marcar mi-lista" aria-pressed="false">+ mi lista</button>
                   </div>
                 </div>
               </td>

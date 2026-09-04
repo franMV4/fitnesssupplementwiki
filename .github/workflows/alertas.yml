@@ -1,0 +1,41 @@
+# Repaso de los avisos de precio: mira que productos han bajado del precio que pidio cada
+# lector y le escribe. Una peticion HTTP y nada mas; el trabajo lo hace la API.
+#
+# Por que vive aqui y no en Cloudflare: Pages no tiene cron. Actions si, y ademas es donde
+# ya vive el scraper, asi que el reloj del proyecto es este.
+#
+# El orden importa: el scraper arranca a las 05:15 UTC, tarda ~92 minutos y luego Pages
+# tiene que construir y publicar el sitio. Esto corre a las 09:00 de los mismos dias
+# impares, con margen de sobra, y lee los precios del catalogo YA PUBLICADO. Si la pasada
+# de ese dia se retrasa (GitHub encola los cron cuando hay pico), este repaso mira los
+# precios de la pasada anterior: nadie recibe un aviso equivocado, como mucho lo recibe
+# dos dias despues.
+#
+# Necesita un secreto del repositorio, CRON_CLAVE, con el mismo valor que el secreto
+# CRON_CLAVE del proyecto de Cloudflare Pages. Sin el, la API contesta 401 y este robot
+# falla, que es lo que tiene que pasar: una ruta que lee todos los correos y manda mensajes
+# no puede quedarse abierta.
+#   npx wrangler pages secret put CRON_CLAVE --project-name fitnesssupplement
+
+name: Avisos de precio
+
+on:
+  schedule:
+    - cron: '0 9 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Repasar precios y enviar avisos
+        env:
+          CLAVE: ${{ secrets.CRON_CLAVE }}
+        run: |
+          # --fail para que un 401 o un 500 pare el workflow y llegue el correo de GitHub
+          # avisando: si esto se rompe en silencio, nadie se entera hasta que un lector
+          # pregunta por que no le avisamos.
+          curl --fail --silent --show-error -X POST \
+            -H "authorization: Bearer $CLAVE" \
+            https://fitnesssupplementwiki.com/api/alertas/revisar

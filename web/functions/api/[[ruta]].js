@@ -134,6 +134,17 @@ export async function onRequest({ request, env, params }) {
     if (ruta === 'google/vuelta' && metodo === 'GET') return await googleVuelta(request, env);
     if (ruta === 'resenas' && metodo === 'GET') return await listar(request, env);
     if (ruta === 'resenas' && metodo === 'POST') return await publicar(request, env);
+    if (ruta === 'valoraciones' && metodo === 'GET') return await valoraciones(env);
+    if (ruta === 'util' && metodo === 'POST') return await util(request, env);
+    if (ruta === 'lector' && metodo === 'GET') return await lector(request, env);
+    if (ruta === 'preguntas' && metodo === 'GET') return await verPreguntas(request, env);
+    if (ruta === 'preguntas' && metodo === 'POST') return await preguntar(request, env);
+    if (ruta === 'pregunta' && metodo === 'POST') return await borrarPregunta(request, env);
+    if (ruta === 'alertas' && metodo === 'GET') return await misAlertas(request, env);
+    if (ruta === 'alerta' && metodo === 'POST') return await alerta(request, env);
+    // El repaso de precios no lo llama un navegador: lo llama el robot de GitHub Actions
+    // despues de cada pasada del scraper, con su clave en la cabecera.
+    if (ruta === 'alertas/revisar' && metodo === 'POST') return await revisar(request, env);
     // HEAD ademas de GET: es la peticion que hacen los comprobadores de enlaces y los
     // monitores, y contestarles 404 sobre una foto que existe la da por rota. El runtime
     // ya se encarga de no mandar el cuerpo en un HEAD.
@@ -184,10 +195,16 @@ async function listar(request, env, producto = new URL(request.url).searchParams
   if (!producto) return error('Falta el producto.');
   const yo = await sesion(request, env);
 
+  // Los dos recuentos van en subconsultas dentro de la misma lectura: dos viajes mas a
+  // D1 para saber cuantos votos tiene cada resena serian dos viajes mas por ficha.
+  // `?2` es quien lee (0 si no ha entrado), y es lo que decide si el boton sale pulsado.
   const { results } = await env.DB.prepare(
-    `SELECT r.id, r.puntuacion, r.texto, r.foto, r.creado, r.usuario, u.nombre
+    `SELECT r.id, r.puntuacion, r.texto, r.foto, r.creado, r.usuario, u.nombre,
+            (SELECT COUNT(*) FROM votos v WHERE v.resena = r.id) AS utiles,
+            (SELECT COUNT(*) FROM votos v WHERE v.resena = r.id AND v.usuario = ?2) AS mio
        FROM resenas r JOIN usuarios u ON u.id = r.usuario
-      WHERE r.producto = ? ORDER BY r.creado DESC LIMIT 100`).bind(producto).all();
+      WHERE r.producto = ?1 ORDER BY r.creado DESC LIMIT 100`)
+    .bind(producto, yo ?? 0).all();
 
   // La media se calcula sobre las mismas filas que se envian: un contador guardado en
   // otra tabla acaba diciendo 4,8 cuando la lista visible dice 3,1.
@@ -196,7 +213,9 @@ async function listar(request, env, producto = new URL(request.url).searchParams
   return json({
     media,
     total: results.length,
-    resenas: results.map(({ usuario, ...r }) => ({ ...r, mia: usuario === yo })),
+    resenas: results.map(({ usuario, mio, ...r }) => ({
+      ...r, mia: usuario === yo, votada: Boolean(mio), lector: usuario,
+    })),
   });
 }
 
@@ -244,6 +263,256 @@ async function publicar(request, env) {
   return await listar(request, env, producto);
 }
 
+// La nota de los lectores de TODOS los productos que tienen alguna, en una consulta y un
+// objeto. Existe porque las 30 tablas de categoria son HTML generado de noche y las
+// resenas viven en D1: sin esto, la media de lectores solo existe dentro de la ficha, que
+// es justo donde ya no hace falta para elegir.
+//
+// Se cachea cinco minutos en el borde: es un dato que cambia cuando alguien escribe una
+// resena, no cuando alguien mira una tabla. Meterlo en el dataset del build seria mas
+// barato aun y estaria congelado hasta la pasada siguiente, que son hasta 48 horas.
+async function valoraciones(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT producto, ROUND(AVG(puntuacion), 2) AS media, COUNT(*) AS n
+       FROM resenas GROUP BY producto`).all();
+  // [media, cuantas] y no {media, n}: son dos numeros por producto repetidos cientos de
+  // veces, y las etiquetas pesan mas que los datos.
+  return json(Object.fromEntries(results.map((r) => [r.producto, [r.media, r.n]])),
+    200, { 'cache-control': 'public, max-age=300' });
+}
+
+// "Me ha sido util", que es lo unico que ordena las resenas sin que nadie modere: la que
+// ayuda sube y la de tres palabras se queda donde esta.
+//
+// Es un interruptor, no un contador: la segunda pulsacion quita el voto. Devuelve la
+// lista entera ya recalculada, como publicar(), para que el navegador no tenga que
+// volver a pedirla.
+async function util(request, env) {
+  const id = await sesion(request, env);
+  if (!id) return error('Hay que entrar para marcar una resena como util.', 401);
+  const { resena } = await request.json();
+  const rid = Number(resena);
+  if (!Number.isInteger(rid)) return error('Falta la resena.');
+
+  const fila = await env.DB.prepare('SELECT usuario, producto FROM resenas WHERE id = ?')
+    .bind(rid).first();
+  if (!fila) return error('Esa resena ya no existe.', 404);
+  // Votarse a uno mismo es la forma mas facil de subir la propia resena a lo alto de la
+  // ficha, y no cuesta nada impedirlo.
+  if (fila.usuario === id) return error('Tu propia resena no puedes votarla.', 403);
+
+  // DELETE ... RETURNING dice en el mismo viaje si habia voto que quitar. Un SELECT antes
+  // para decidir serian dos viajes y una carrera entre ellos.
+  const quitado = await env.DB.prepare(
+    'DELETE FROM votos WHERE resena = ? AND usuario = ? RETURNING resena').bind(rid, id).first();
+  if (!quitado) {
+    await env.DB.prepare('INSERT INTO votos (resena, usuario) VALUES (?, ?)').bind(rid, id).run();
+  }
+  return await listar(request, env, fila.producto);
+}
+
+// El perfil publico de un lector: su nombre, desde cuando esta y lo que ha escrito.
+//
+// Le da al que escribe una razon para escribir la segunda resena, que es lo que mas falta
+// hace cuando todavia hay pocas. El correo NO sale de aqui: es lo unico de la tabla de
+// usuarios que no es publico, y una pagina que lo ensenase convertiria cada resena en una
+// direccion recolectable.
+async function lector(request, env) {
+  const id = Number(new URL(request.url).searchParams.get('id'));
+  if (!Number.isInteger(id) || id <= 0) return error('Falta el lector.');
+  const u = await env.DB.prepare('SELECT nombre, creado FROM usuarios WHERE id = ?')
+    .bind(id).first();
+  if (!u) return error('Ese lector no existe.', 404);
+
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.producto, r.puntuacion, r.texto, r.foto, r.creado,
+            (SELECT COUNT(*) FROM votos v WHERE v.resena = r.id) AS utiles
+       FROM resenas r WHERE r.usuario = ? ORDER BY r.creado DESC LIMIT 50`).bind(id).all();
+  const media = results.length
+    ? results.reduce((s, r) => s + r.puntuacion, 0) / results.length : null;
+  return json({ lector: { nombre: u.nombre, desde: String(u.creado).slice(0, 10) },
+                media, total: results.length, resenas: results });
+}
+
+// --- Preguntas y respuestas de la ficha -------------------------------------------
+// Lo que un lector quiere saber antes de comprar y no esta en la tabla nutricional: si
+// sabe a algo, si el bote trae cuchara, si se apelmaza. Una tabla, un solo nivel de
+// respuesta y nada mas: ver schema.sql.
+
+const MAX_PREGUNTA = 700;
+
+async function verPreguntas(request, env, producto = new URL(request.url).searchParams.get('producto')) {
+  if (!producto) return error('Falta el producto.');
+  const yo = await sesion(request, env);
+
+  // El hilo entero en una consulta y el arbol se arma aqui: son como mucho 200 filas de
+  // una ficha, y una consulta por pregunta serian veinte viajes a D1 por visita.
+  const { results } = await env.DB.prepare(
+    `SELECT p.id, p.padre, p.texto, p.creado, p.usuario, u.nombre
+       FROM preguntas p JOIN usuarios u ON u.id = p.usuario
+      WHERE p.producto = ? ORDER BY p.creado LIMIT 200`).bind(producto).all();
+
+  const mio = ({ usuario, ...r }) => ({ ...r, mia: usuario === yo, lector: usuario });
+  const hilos = results.filter((r) => r.padre == null).map((r) => ({
+    ...mio(r),
+    // Las respuestas, en el orden en que se escribieron: es una conversacion.
+    respuestas: results.filter((x) => x.padre === r.id).map(mio),
+  }));
+  // Las preguntas al reves: la ultima arriba, que es la que sigue sin contestar.
+  return json({ preguntas: hilos.reverse(), total: results.length });
+}
+
+async function preguntar(request, env) {
+  const id = await sesion(request, env);
+  if (!id) return error('Hay que entrar para preguntar o responder.', 401);
+  const { producto, texto, padre } = await request.json();
+  const slug = String(producto ?? '');
+  const limpio = String(texto ?? '').trim().slice(0, MAX_PREGUNTA);
+  if (!slug) return error('Falta el producto.');
+  if (limpio.length < 5) return error('Escribelo con un poco mas de detalle.');
+
+  let padreId = null;
+  if (padre != null) {
+    padreId = Number(padre);
+    const arriba = await env.DB.prepare('SELECT padre, producto FROM preguntas WHERE id = ?')
+      .bind(padreId).first();
+    // Un solo nivel, y dentro de la misma ficha. Sin esto, una respuesta puede colgar de
+    // otra respuesta (y entonces no se pinta) o salir en un producto que no es el suyo.
+    if (!arriba || arriba.padre != null || arriba.producto !== slug) {
+      return error('Esa pregunta ya no esta.', 404);
+    }
+  }
+
+  await env.DB.prepare(
+    'INSERT INTO preguntas (usuario, producto, padre, texto) VALUES (?, ?, ?, ?)')
+    .bind(id, slug, padreId, limpio).run();
+  return await verPreguntas(request, env, slug);
+}
+
+// Toda la moderacion que hay, y llega: cada uno borra lo suyo y un administrador borra
+// cualquier cosa. Una cola de revision con estados es para cuando entran cien mensajes al
+// dia; para lo que hay, es una pantalla mas que mantener.
+async function borrarPregunta(request, env) {
+  const id = await sesion(request, env);
+  if (!id) return error('Hay que entrar.', 401);
+  const pid = Number((await request.json()).id);
+  if (!Number.isInteger(pid)) return error('Falta la pregunta.');
+
+  const fila = await env.DB.prepare('SELECT usuario, producto FROM preguntas WHERE id = ?')
+    .bind(pid).first();
+  if (!fila) return error('Eso ya no existe.', 404);
+  if (fila.usuario !== id) {
+    const u = await env.DB.prepare('SELECT email FROM usuarios WHERE id = ?').bind(id).first();
+    if (!esAdmin(env.ADMINS, u?.email)) return error('Solo puedes borrar lo que escribes tu.', 403);
+  }
+  // Las respuestas se van con su pregunta por la cascada de la clave foranea.
+  await env.DB.prepare('DELETE FROM preguntas WHERE id = ?').bind(pid).run();
+  return await verPreguntas(request, env, fila.producto);
+}
+
+// --- Avisos de precio --------------------------------------------------------------
+// "Escribeme si este bote baja de 25 EUR". Es lo unico de la web que sale a buscar al
+// lector en vez de esperarle, y por eso lo unico que usa su correo de verdad.
+
+async function misAlertas(request, env) {
+  const id = await sesion(request, env);
+  // Sin sesion no es un error: la ficha pregunta siempre y con esto no tiene que saber
+  // antes si hay alguien dentro.
+  if (!id) return json({ alertas: [] });
+  const { results } = await env.DB.prepare(
+    'SELECT producto, objetivo, avisado FROM alertas WHERE usuario = ? ORDER BY creado DESC')
+    .bind(id).all();
+  return json({ alertas: results });
+}
+
+async function alerta(request, env) {
+  const id = await sesion(request, env);
+  if (!id) return error('Hay que entrar para que podamos avisarte.', 401);
+  const { producto, objetivo, borrar } = await request.json();
+  const slug = String(producto ?? '');
+  if (!slug) return error('Falta el producto.');
+
+  if (borrar) {
+    await env.DB.prepare('DELETE FROM alertas WHERE usuario = ? AND producto = ?')
+      .bind(id, slug).run();
+    return json({ ok: true, alerta: null });
+  }
+
+  const tope = Math.round(Number(objetivo) * 100) / 100;
+  if (!(tope > 0) || tope > 100000) return error('Escribe a partir de que precio quieres el aviso.');
+
+  // `avisado = NULL` al cambiar el objetivo: si ya se aviso a 30 EUR y ahora se pide a
+  // 25, aquel aviso viejo no puede tapar el nuevo.
+  await env.DB.prepare(
+    `INSERT INTO alertas (usuario, producto, objetivo) VALUES (?, ?, ?)
+     ON CONFLICT (usuario, producto) DO UPDATE
+        SET objetivo = excluded.objetivo, avisado = NULL, creado = datetime('now')`)
+    .bind(id, slug, tope).run();
+  return json({ ok: true, alerta: { producto: slug, objetivo: tope, avisado: null } });
+}
+
+// El repaso. No lo llama un navegador: lo llama el robot de GitHub Actions cuando ya se
+// ha publicado el sitio con los precios del dia (.github/workflows/alertas.yml).
+//
+// Por que no un cron de Cloudflare: Pages no tiene. El scraper ya vive en Actions, que si
+// lo tiene, asi que el aviso se dispara desde donde ya hay reloj.
+//
+// Los precios NO se leen de D1 sino del catalogo publicado, que es exactamente el que ve
+// el lector. Asi no hay dos verdades: si la web dice 24 EUR, el correo dice 24 EUR.
+async function revisar(request, env) {
+  // Sin clave configurada no se puede llamar. Una ruta que lee todas las alertas y manda
+  // correos no puede quedarse abierta porque falte un secreto.
+  if (!env.CRON_CLAVE || request.headers.get('authorization') !== `Bearer ${env.CRON_CLAVE}`) {
+    return error('No autorizado.', 401);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT a.usuario, a.producto, a.objetivo, a.avisado, u.email
+       FROM alertas a JOIN usuarios u ON u.id = a.usuario`).all();
+  if (results.length === 0) return json({ alertas: 0, avisos: 0, rearmadas: 0 });
+
+  const origen = new URL(request.url).origin;
+  const catalogo = await fetch(`${origen}/datos/catalogo.json`).then((r) => r.json());
+  const precios = new Map(catalogo.productos.map((p) => [p.slug, p]));
+
+  let avisos = 0;
+  let rearmadas = 0;
+  for (const a of results) {
+    const p = precios.get(a.producto);
+    // Un producto que hoy no esta en el catalogo no se toca ni se borra: las tiendas
+    // quitan y devuelven referencias continuamente, y borrar la alerta a la primera
+    // pasada en que no aparece es perderla para siempre por un mal dia de la tienda.
+    if (!p || p.precio_eur == null) continue;
+
+    if (p.precio_eur > a.objetivo) {
+      // Ha vuelto a subir: la alerta se rearma y volvera a avisar la proxima bajada.
+      if (a.avisado) {
+        await env.DB.prepare('UPDATE alertas SET avisado = NULL WHERE usuario = ? AND producto = ?')
+          .bind(a.usuario, a.producto).run();
+        rearmadas++;
+      }
+      continue;
+    }
+    if (a.avisado) continue;   // ya avisado y sigue barato: no se repite
+
+    // ponytail: los correos salen de uno en uno. Con las alertas que puede haber aqui son
+    // unas pocas peticiones cada dos dias; si algun dia son cientos, el escalon es el
+    // envio por lotes de Resend (/emails/batch), que acepta 100 en una peticion.
+    const euros = (n) => n.toFixed(2).replace('.', ',');
+    await enviarCorreo(env, a.email, `Ha bajado de precio: ${p.marca} ${p.nombre}`,
+      `${p.marca} ${p.nombre} esta a ${euros(p.precio_eur)} EUR, por debajo de los `
+      + `${euros(a.objetivo)} EUR que pediste.\n\n`
+      + `${origen}/producto/${a.producto}\n\n`
+      + `El precio es el de la ultima recogida; el bueno es siempre el de la tienda.\n`
+      + `Para dejar de recibir este aviso, quitalo desde la ficha del producto.`);
+    await env.DB.prepare(
+      "UPDATE alertas SET avisado = datetime('now') WHERE usuario = ? AND producto = ?")
+      .bind(a.usuario, a.producto).run();
+    avisos++;
+  }
+  return json({ alertas: results.length, avisos, rearmadas });
+}
+
 // --- Recuperar la contrasena ----------------------------------------------------
 // Sin tabla de tokens. El enlace lleva "id.caduca.firma" y la firma se calcula sobre el
 // hash de la clave actual: en cuanto la clave cambia, el hash cambia y el enlace deja de
@@ -280,7 +549,13 @@ async function olvide(request, env) {
 
   const token = await tokenClave(env.SECRETO, u.id, u.clave, Date.now() + HORA);
   const enlace = `${new URL(request.url).origin}/recuperar?t=${encodeURIComponent(token)}`;
-  await enviarCorreo(env, correo, enlace);
+  await enviarCorreo(env, correo, 'Recuperar tu contraseña en FitnessSupplementWiki',
+    `Para poner una contraseña nueva, entra aquí:
+
+${enlace}
+
+El enlace caduca en una hora y solo sirve una vez.
+Si no has pedido nada, ignora este correo: tu cuenta sigue como estaba.`);
   return respuesta;
 }
 
@@ -300,9 +575,10 @@ async function restablecer(request, env) {
 // Resend por HTTP y sin SDK: es un POST con una clave en la cabecera. Sin configurar, el
 // enlace sale por el log del servidor, que en local es justo donde se lee, y en
 // produccion deja constancia de que falta poner RESEND_KEY.
-export async function enviarCorreo(env, para, enlace) {
+export async function enviarCorreo(env, para, asunto, texto) {
   if (!env.RESEND_KEY || !env.CORREO_DESDE) {
-    console.log(`[recuperar] Sin RESEND_KEY configurada. Enlace para ${para}: ${enlace}`);
+    console.log(`[correo] Sin RESEND_KEY configurada. Para ${para} — ${asunto}
+${texto}`);
     return;
   }
   const r = await fetch('https://api.resend.com/emails', {
@@ -314,20 +590,14 @@ export async function enviarCorreo(env, para, enlace) {
       // Nadie lee el buzon del que sale: CORREO_DESDE es una direccion del dominio, no
       // una cuenta de correo. Sin esto, contestar al aviso es escribirle a la nada.
       reply_to: SITIO.contacto,
-      subject: 'Recuperar tu contraseña en FitnessSupplementWiki',
-      text: `Para poner una contraseña nueva, entra aquí:
-
-${enlace}
-
-`
-          + `El enlace caduca en una hora y solo sirve una vez.
-`
-          + `Si no has pedido nada, ignora este correo: tu cuenta sigue como estaba.`,
+      subject: asunto,
+      text: texto,
     }),
   });
-  // Un fallo del proveedor no se le cuenta a quien lo pidio: la respuesta ya es siempre
-  // la misma, y decir "no se pudo enviar" volveria a delatar que ese correo existe.
-  if (!r.ok) console.log(`[recuperar] Resend ha fallado (${r.status}): ${await r.text()}`);
+  // Un fallo del proveedor no se le cuenta a quien lo pidio: en el caso de la contrasena
+  // la respuesta ya es siempre la misma, y decir "no se pudo enviar" volveria a delatar
+  // que ese correo existe.
+  if (!r.ok) console.log(`[correo] Resend ha fallado (${r.status}): ${await r.text()}`);
 }
 
 // --- Entrar con Google ---------------------------------------------------------
@@ -651,6 +921,12 @@ const LIMITES = {
   olvide: [5, 60],        // y ademas cada uno manda un correo
   restablecer: [10, 60],
   resenas: [20, 60],      // solo el POST; leerlas no se limita
+  // Votar es un clic y se hacen varios seguidos leyendo una ficha: el tope esta para
+  // frenar un robot, no a quien lee.
+  util: [120, 60],
+  preguntas: [10, 60],    // escribir una pregunta o una respuesta
+  pregunta: [20, 60],     // borrar la propia
+  alerta: [30, 60],
 };
 
 // Una de cada cincuenta peticiones limitadas barre los tramos viejos. Un cron para esto

@@ -63,7 +63,7 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 
 - `python actualizar.py` — hace los 4 primeros pasos de todas las categorías.
 - `python tests.py` — 72 asserts, sin red ni framework. Correr siempre antes de terminar.
-- `cd web && node --test` — 15 asserts de la API y del filtrado de la tabla.
+- `cd web && node --test` — 39 asserts: API, filtrado de la tabla y mi lista.
 - `cd web && npm run dev` (puerto 4322) / `npm run build`.
 
 ## Mapa de ficheros
@@ -85,12 +85,18 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `ediciones.py` | Las correcciones de `/admin`: las baja de D1 con wrangler y las aplica a la BD **antes del scoring**. Existe porque el upsert del scraper machacaría cada corrección manual. |
 | `web/src/componentes/Admin.jsx` | El panel entero, ocho pestañas. Distingue en pantalla lo que se edita en vivo (reseñas, cuentas) de lo que va en cola hasta la próxima publicación (catálogo). |
 | `web/src/pages/datos/catalogo.json.js` | El volcado que lee el panel: campos editables, sin históricos ni desglose. |
-| `web/functions/api/[[ruta]].js` | **Toda la API** (cuentas y reseñas de lectores), una sola Pages Function. Sin dependencias: PBKDF2 y HMAC de WebCrypto. |
-| `web/schema.sql` | Tablas de D1 (`usuarios`, `resenas`). Ojo: NO es `data/schema.sql`, que es la de SQLite del catálogo. |
+| `web/functions/api/[[ruta]].js` | **Toda la API** (cuentas, reseñas, votos, preguntas y avisos de precio), una sola Pages Function. Sin dependencias: PBKDF2 y HMAC de WebCrypto. |
+| `web/schema.sql` | Tablas de D1 (`usuarios`, `resenas`, `votos`, `preguntas`, `alertas`, `ediciones`, `intentos`). Ojo: NO es `data/schema.sql`, que es la de SQLite del catálogo. |
 | `web/wrangler.toml` | Bindings de D1 y R2. Existe para que `wrangler pages deploy` suba también las funciones. |
 | `web/api.test.mjs` | `cd web && node --test`. Prueba claves, firma de sesión y el filtro de `?volver`. |
 | `web/tabla.test.mjs` | El filtrado y el orden de la tabla, y que `paraTabla` no deje pasar campos que la isla no pinta. |
-| `web/src/datos/util.js` | Helpers compartidos **y** `filtrar`/`ORDENES` (fuera del componente para poder probarlos sin navegador), `paraTabla` (adelgaza las props de la isla) y la selección de `/comparar` en localStorage. |
+| `web/lista.test.mjs` | Las cuentas con dosis (lo que dura un envase y lo que cuesta el mes) y las tres listas de localStorage, incluido el enlace para compartir. |
+| `web/src/componentes/MiLista.jsx` | `/mis-suplementos`: lo que toma el lector, con su dosis, su gasto al mes, la lista que le pasan por enlace y sus avisos de precio. |
+| `web/src/componentes/Dosis.jsx` | La calculadora de la ficha: dosis → días que dura el envase, €/mes y cuándo recomprar. Guarda el producto en mi lista con esa dosis. |
+| `web/src/componentes/Preguntas.jsx` | Preguntas y respuestas de la ficha. Un solo nivel: se responde a una pregunta, no a una respuesta. |
+| `web/src/componentes/Alerta.jsx` | "Avísame si baja de X €". Lo único de la web que necesita cuenta de verdad: sin correo no hay a dónde escribir. |
+| `.github/workflows/alertas.yml` | El robot que repasa los avisos de precio y manda los correos. Un `curl` a `/api/alertas/revisar` con `CRON_CLAVE`. Pages no tiene cron; Actions sí. |
+| `web/src/datos/util.js` | Helpers compartidos **y** `filtrar`/`ORDENES` (fuera del componente para poder probarlos sin navegador), `paraTabla` (adelgaza las props de la isla) y las tres listas de localStorage: la selección de `/comparar`, mi lista y los vistos. |
 | `web/src/componentes/Cifras.astro` | Las tres cifras que resumen una tabla (productos, horquilla de precio, nivel 4). La usan `/[categoria]` y `/mejores`. Separadores verticales a propósito: horizontales ya sobraban. |
 | `web/src/componentes/Historico.astro` | La serie de precios de la ficha, SVG dibujado en build. No pinta nada hasta que haya dos lecturas. |
 | `web/src/componentes/Comparador.jsx` | `/comparar`: lo que el lector guarda con "+ comparar". Lee `localStorage` y pide `/datos/<categoria>.json`; no lleva datos en el HTML. |

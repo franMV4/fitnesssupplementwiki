@@ -1,0 +1,24 @@
+---
+import Base from '../layouts/Base.astro';
+import Lector from '../componentes/Lector.jsx';
+
+// El perfil publico de un lector: /lector?id=12.
+//
+// noindex como /entrar o /comparar: es una utilidad, y ademas su contenido lo pone la API
+// segun la query, asi que la pagina que se genera en el build esta vacia.
+---
+<Base titulo="Opiniones de un lector"
+      descripcion="Todas las opiniones que ha escrito un lector en FitnessSupplementWiki, con su nota media."
+      noindex>
+
+  <p class="migas"><a href="/">Inicio</a> / Lector</p>
+
+  <Lector client:load />
+
+  <p class="nota">
+    <strong>Las opiniones de los lectores no cuentan en el score.</strong>
+    La nota que ordena las tablas la calcula esta web con la composicion, la certificacion
+    y el precio; esto es lo que cuenta quien lo ha comprado.
+    <a href="/metodologia#formula">Como se calcula el score</a>.
+  </p>
+</Base>

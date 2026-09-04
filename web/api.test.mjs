@@ -89,13 +89,17 @@ test('sin RESEND_KEY no se llama a nadie, y con ella el correo va bien montado',
   let cuerpo = null;
   globalThis.fetch = async (_u, o) => { cuerpo = JSON.parse(o.body); return { ok: true }; };
   try {
-    await api.enviarCorreo({ SECRETO: 'x' }, 'quien@sea.com', 'https://x/recuperar?t=1');
+    await api.enviarCorreo({ SECRETO: 'x' }, 'quien@sea.com', 'Asunto',
+      'Entra aqui: https://x/recuperar?t=1');
     assert.equal(cuerpo, null, 'sin clave de Resend no se envia nada');
 
+    // El asunto y el texto los pone quien llama (recuperar la contrasena, un aviso de
+    // precio): esta funcion solo sabe de mandar correos.
     await api.enviarCorreo(
       { RESEND_KEY: 're_x', CORREO_DESDE: 'Web <no-reply@fitnesssupplementwiki.com>' },
-      'quien@sea.com', 'https://x/recuperar?t=1');
+      'quien@sea.com', 'Ha bajado de precio', 'Entra aqui: https://x/recuperar?t=1');
     assert.equal(cuerpo.to, 'quien@sea.com');
+    assert.equal(cuerpo.subject, 'Ha bajado de precio');
     // El buzon del que sale no existe: quien conteste tiene que acabar en el de contacto.
     assert.equal(cuerpo.reply_to, 'franmunozvillanova@gmail.com');
     assert.ok(cuerpo.text.includes('https://x/recuperar?t=1'));

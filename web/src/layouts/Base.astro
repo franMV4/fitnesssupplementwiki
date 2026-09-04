@@ -219,6 +219,10 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         </details>
         <a href="/metodologia" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
         <a href="/quienes-somos" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
+        {/* Mi lista va en el menu de las 2.985 paginas y no solo en la ficha: lo que se
+            guarda en el navegador no existe para el lector si no hay una puerta visible
+            desde cualquier sitio para volver a ello. */}
+        <a href="/mis-suplementos" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
         <a class="comparar" href="/guias#categorias">Comparar</a>
 
         {/* El pie del panel: lo que no es navegar por el catalogo. En escritorio solo

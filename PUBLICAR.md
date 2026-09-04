@@ -730,6 +730,11 @@ npx wrangler d1 execute suplementos --remote --file=schema.sql
 
 > **Qué tienes que ver:** varios bloques `"success": true`.
 
+> Este paso se repite **cada vez que `schema.sql` cambia** (por ejemplo al añadir los
+> votos, las preguntas o los avisos de precio). Todas las sentencias llevan
+> `IF NOT EXISTS`, así que volver a ejecutarlo entero no rompe nada ni borra datos:
+> crea lo que falte y deja lo que ya está.
+
 ### 9.2 · Crear el almacén de fotos
 
 ```powershell
@@ -907,6 +912,36 @@ Los dos primeros se añaden el día que hagan falta de verdad, no antes.
 
 ---
 
+### 9.8 · Los avisos de precio (`CRON_CLAVE`)
+
+Los avisos ("avísame si este bote baja de 25 €") usan el **mismo** Resend del paso
+anterior: si ya lo tienes puesto, aquí solo falta una clave más, la que permite al robot
+disparar el repaso.
+
+1. Inventa una ristra larga y guárdala **en los dos sitios**, con el mismo valor:
+
+   ```powershell
+   node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+   npx wrangler pages secret put CRON_CLAVE --project-name fitnesssupplement
+   ```
+
+   Y en GitHub: **Settings → Secrets and variables → Actions → New repository secret**,
+   con nombre `CRON_CLAVE` y ese mismo valor.
+2. Ya está. `.github/workflows/alertas.yml` llama solo a `/api/alertas/revisar` los días
+   impares a las 09:00 UTC, cuando el sitio del día ya está publicado.
+
+Sin `CRON_CLAVE` la ruta contesta **401 y no manda nada**, que es lo que tiene que pasar:
+es la única que lee todos los correos de la base y escribe a la gente. Para probarla a
+mano:
+
+```powershell
+curl.exe -X POST -H "authorization: Bearer TU-CLAVE" https://fitnesssupplementwiki.com/api/alertas/revisar
+```
+
+> **Qué tienes que ver:** `{"alertas":3,"avisos":1,"rearmadas":0}` — cuántos avisos hay
+> puestos, a cuántos les tocaba correo hoy y cuántos han vuelto a quedar armados porque su
+> producto ha subido otra vez por encima del objetivo.
+
 ## Paso 10 · El panel de administración (`/admin`)
 
 Una pantalla desde la que ver, corregir y quitar cualquier cosa de la web sin abrir el
@@ -937,7 +972,9 @@ ordenador y en el sitio de verdad devolvían *"La base de datos aun no esta conf
 Lo que ya está hecho:
 
 - Base de datos D1 `suplementos` creada (región WEUR) y su id puesto en `web/wrangler.toml`.
-- `schema.sql` aplicado en remoto: tablas `usuarios`, `resenas` y `ediciones`.
+- `schema.sql` aplicado en remoto: tablas `usuarios`, `resenas`, `votos`, `preguntas`,
+  `alertas`, `ediciones` e `intentos`. Si añades algo al esquema, vuelve a ejecutarlo
+  (paso 9.1): es idempotente.
 - R2 activado, bucket `suplementos-fotos` creado y su binding (`FOTOS`) puesto en
   `wrangler.toml`. Ojo: el binding se llama **FOTOS**, no el `suplementos_fotos` que sugiere
   wrangler al crear el bucket; el nombre es el contrato con `env.FOTOS` de la API.

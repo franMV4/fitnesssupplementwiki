@@ -13,6 +13,22 @@ import { pedir } from './api.js';
 const MAX_LADO = 1400;
 const ESTRELLAS = [1, 2, 3, 4, 5];
 
+// Como se pueden ordenar las opiniones. Ordenar en el navegador y no en la API: las cien
+// filas ya estan aqui, y volver a pedirlas al servidor por cambiar de criterio seria un
+// viaje por cada clic.
+//
+// "Las mas utiles" primero de la lista de opciones pero no por defecto: lo primero que
+// tiene que ver quien abre una ficha es lo ultimo que se ha escrito, no lo que voto la
+// gente hace tres meses.
+const ORDEN = {
+  recientes: { etiqueta: 'Las mas recientes', cmp: (a, b) => b.creado.localeCompare(a.creado) },
+  utiles: { etiqueta: 'Las mas utiles', cmp: (a, b) => b.utiles - a.utiles },
+  mejor: { etiqueta: 'Mejor nota', cmp: (a, b) => b.puntuacion - a.puntuacion },
+  peor: { etiqueta: 'Peor nota', cmp: (a, b) => a.puntuacion - b.puntuacion },
+};
+// Debajo de esto la barra de filtros ocupa mas que lo que filtra.
+const MINIMO_PARA_FILTRAR = 3;
+
 const estrellas = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
 
 // El movil saca fotos de 8 MB y el limite del servidor son 2. Redimensionar en el
@@ -39,6 +55,8 @@ export default function Resenas({ producto }) {
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [visibles, setVisibles] = useState(5);
+  const [orden, setOrden] = useState('recientes');
+  const [soloFoto, setSoloFoto] = useState(false);
 
   const recargar = () => fetch(`/api/resenas?producto=${encodeURIComponent(producto)}`)
     .then((r) => r.json()).then(setDatos)
@@ -84,7 +102,22 @@ export default function Resenas({ producto }) {
     }
   };
 
+  // El voto devuelve la lista entera ya recalculada, asi que no hay que volver a pedirla.
+  // Si falla, se dice donde se ha pulsado y no en lo alto del formulario de escribir.
+  const votar = async (id) => {
+    setError('');
+    try {
+      setDatos(await pedir('/api/util', { resena: id }));
+    } catch (fallo) {
+      setError(fallo.message);
+    }
+  };
+
   if (!datos) return <p className="sutil">Cargando opiniones…</p>;
+
+  const lista = datos.resenas
+    .filter((r) => !soloFoto || r.foto)
+    .sort(ORDEN[orden].cmp);
 
   const vuelta = typeof location === 'undefined' ? '/' : location.pathname;
 
@@ -153,12 +186,27 @@ export default function Resenas({ producto }) {
         </p>
       )}
 
+      {datos.resenas.length >= MINIMO_PARA_FILTRAR && (
+        <div className="filtros-resenas">
+          <label className="campo">
+            <span>Ordenar por</span>
+            <select value={orden} onChange={(e) => setOrden(e.target.value)}>
+              {Object.entries(ORDEN).map(([k, v]) => <option key={k} value={k}>{v.etiqueta}</option>)}
+            </select>
+          </label>
+          <div className="grupo-chips">
+            <button type="button" className="chip" aria-pressed={soloFoto}
+                    onClick={() => setSoloFoto(!soloFoto)}>Solo con foto</button>
+          </div>
+        </div>
+      )}
+
       <ul className="lista-resenas">
-        {datos.resenas.slice(0, visibles).map((r) => (
+        {lista.slice(0, visibles).map((r) => (
           <li className="resena" key={r.id}>
             <p className="cabecera-resena">
               <span className="astros" title={`${r.puntuacion} de 5`}>{estrellas(r.puntuacion)}</span>
-              <b>{r.nombre}</b>
+              <a className="quien-resena" href={`/lector?id=${r.lector}`}>{r.nombre}</a>
               {r.mia && <span className="marca-mia">tu resena</span>}
               <time className="mono sutil" dateTime={r.creado.replace(' ', 'T')}>{r.creado.slice(0, 10)}</time>
             </p>
@@ -168,13 +216,29 @@ export default function Resenas({ producto }) {
                 <img className="foto-resena" src={`/api/foto/${r.foto}`} alt={`Foto de ${r.nombre}`} loading="lazy" />
               </a>
             )}
+            {/* Sin cuenta el recuento se ve pero no se vota: un boton que solo sirve para
+                mandarte a /entrar es un boton que enfada. La suya tampoco la vota nadie:
+                el servidor lo rechaza, asi que aqui no se ensena. */}
+            <p className="pie-resena">
+              {usuario && !r.mia ? (
+                <button type="button" className="voto" aria-pressed={r.votada}
+                        onClick={() => votar(r.id)}>
+                  {r.votada ? 'te ha sido util' : 'me ha sido util'}
+                  {r.utiles > 0 && <span className="cuantos"> {r.utiles}</span>}
+                </button>
+              ) : r.utiles > 0 && (
+                <span className="sutil">
+                  {r.utiles} {r.utiles === 1 ? 'persona la ha' : 'personas la han'} encontrado util
+                </span>
+              )}
+            </p>
           </li>
         ))}
       </ul>
-      {datos.resenas.length > visibles && (
+      {lista.length > visibles && (
         <p className="mas-resenas">
           <button type="button" className="boton" onClick={() => setVisibles(visibles + 5)}>
-            Ver 5 opiniones mas <span className="cuantas">({datos.resenas.length - visibles} restantes)</span>
+            Ver 5 opiniones mas <span className="cuantas">({lista.length - visibles} restantes)</span>
           </button>
         </p>
       )}

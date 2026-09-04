@@ -2174,7 +2174,6 @@ body > * { position: relative; z-index: 1; }
 }
 /* El coste al mes, debajo del boton de la tienda: el numero en el que piensa quien
    compra, pegado a lo que va a pulsar. */
-.accion-lateral .sutil { display: block; margin-top: var(--e2); text-align: center; }
 /* El aviso de que los precios llevan dias sin refrescarse. Va sobre banda de senal
    porque es lo unico de la pagina que el lector tiene que ver antes que el contenido:
    comparar con precios viejos es justo lo que esta web promete no hacer. */
@@ -2807,3 +2806,124 @@ td.num .explica { font-variant-numeric: normal; }
   table.apilable td[data-et] .explica { flex: 0 0 100%; text-align: left; margin-top: .15rem; }
   td .explica { max-width: none; }
 }
+
+/* --- 30. Con tu dosis, mi lista y vistos recientemente ---------------------
+   Las tres piezas que el lector usa como herramienta y no como lectura: la calculadora de
+   la ficha, la tabla que suma el mes en /mis-suplementos y la franja de lo que acaba de
+   mirar. Reutilizan lo que ya habia (chips, tablas apilables, .contador): son funciones
+   nuevas, no un sistema visual nuevo. */
+.calculadora {
+  margin: 0 0 var(--e5); padding-top: var(--e3); border-top: 1px solid var(--regla);
+}
+.rotulo-calc, .rotulo-vistos {
+  font-family: var(--mono); font-size: .69rem; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--tinta-3); margin: 0 0 var(--e2);
+}
+.mando-dosis {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  margin-bottom: var(--e3);
+}
+/* Cinco chips dentro de una columna de 18 rem: con el relleno de los filtros (0,9 rem por
+   lado) el mando se salia de la columna. Mas pequeno porque la columna lo es. */
+.mando-dosis .chip { padding: .45rem .6rem; font-size: .72rem; letter-spacing: .04em; }
+/* Los dos numeros de la cuenta, uno por linea: en la columna lateral no caben en la
+   misma. Van al cuerpo del display porque son la respuesta a lo que ha venido a
+   preguntar quien mueve el mando. */
+.cuentas-dosis { display: flex; flex-direction: column; gap: .1rem; margin: 0 0 var(--e3); }
+.cuentas-dosis b {
+  font-family: var(--display); font-size: 1.45rem; line-height: 1;
+  color: var(--tinta); margin-right: .3rem;
+}
+.calculadora .boton { width: 100%; justify-content: center; }
+.calculadora .enlace-accion { display: block; margin-top: var(--e2); text-align: center; }
+
+/* El gasto del mes: es el numero por el que se vuelve a /mis-suplementos, asi que va en
+   su propia banda y al cuerpo mas grande de la pagina. */
+.total-lista {
+  display: flex; flex-direction: column; gap: .15rem;
+  margin: var(--e4) 0 0; padding: var(--e3) var(--e4);
+  background: var(--neg); color: var(--neg-tinta); border-left: 3px solid var(--senal);
+}
+.total-lista b { font-family: var(--display); font-size: 2.6rem; line-height: 1; }
+.rotulo-total {
+  font-family: var(--mono); font-size: .69rem; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--neg-tinta-2);
+}
+.mi-lista-tabla select { font: inherit; font-size: .85rem; padding: .2rem .3rem; }
+
+/* Lo que el lector ha mirado antes, al pie de la ficha: una linea de enlaces, no una
+   rejilla de tarjetas. Son ocho nombres como mucho y no son una seccion de la pagina. */
+.vistos { margin-top: var(--e6); padding-top: var(--e3); border-top: 1px solid var(--regla); }
+.vistos ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: var(--e2) var(--e4);
+}
+.vistos li { font-size: .9rem; }
+
+/* La nota de los lectores DE AQUI, al lado de la de la tienda en la celda del nombre.
+   Va en el color de senal para que no se confundan: una es de 9.626 compradores de HSN y
+   la otra de tres personas que han escrito aqui, y leidas del mismo color parecen lo
+   mismo. */
+.opinion.lectores { color: var(--senal-txt); }
+
+/* --- 31. Ordenar las opiniones, votarlas y quien las escribe ---------------
+   Tres anadidos a la seccion 19, que sigue mandando en como se ve una resena. */
+.filtros-resenas {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e3);
+  margin-bottom: var(--e4);
+}
+.filtros-resenas .campo { margin: 0; }
+/* El nombre de quien escribe era un <b>; ahora lleva a su perfil. Se queda con el mismo
+   peso y sin subrayado hasta que el raton entra: una lista de diez resenas con diez
+   nombres subrayados parece una lista de enlaces, no de opiniones. */
+.quien-resena { font-weight: 700; color: var(--tinta); text-decoration: none; }
+.quien-resena:hover { text-decoration: underline; }
+.pie-resena { margin: var(--e2) 0 0; }
+/* El voto: el mismo boton discreto que "+ comparar" en las tablas, y por lo mismo. Es
+   una accion pequena al pie de un texto, no una llamada a la accion. */
+.voto {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .45rem;
+  font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--tinta-3);
+  background: none; border: 1px solid var(--regla-2); cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.voto:hover { color: var(--senal-txt); border-color: var(--senal); }
+.voto[aria-pressed="true"] {
+  color: var(--senal-sobre); background: var(--senal); border-color: var(--senal);
+}
+.voto .cuantos { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- 32. Preguntas, avisos de precio y avisos puestos ----------------------
+   Las preguntas reutilizan casi todo de la seccion 19 (cabecera, marca "tu pregunta",
+   enlaces de accion): es el mismo objeto, texto de alguien con su nombre y su fecha. Lo
+   unico propio es la sangria de las respuestas, que es lo que distingue una conversacion
+   de una lista. */
+.preguntas { margin-top: var(--e4); }
+.form-pregunta { margin-bottom: var(--e5); }
+.form-pregunta textarea {
+  font: inherit; font-size: .95rem; color: var(--tinta); background: var(--papel);
+  border: 1px solid var(--regla-2); border-radius: 0; padding: var(--e2); resize: vertical;
+}
+.form-pregunta p { margin: var(--e2) 0 0; }
+.lista-preguntas, .lista-respuestas { list-style: none; margin: 0; padding: 0; }
+.pregunta { border-top: 1px solid var(--regla); padding: var(--e4) 0; }
+.texto-pregunta { margin: 0 0 var(--e2); max-width: var(--medida); }
+/* La respuesta va sangrada y con filete a la izquierda: es la unica pista de que cuelga
+   de la pregunta de arriba, y en una lista de diez sin ella no se sabe quien contesta a
+   quien. */
+.lista-respuestas { margin: var(--e3) 0 0 var(--e4); border-left: 2px solid var(--regla-2); }
+.respuesta { padding: var(--e2) 0 var(--e2) var(--e4); }
+.pie-resena .enlace-accion + .enlace-accion { margin-left: var(--e3); }
+
+/* El aviso de precio, debajo de la calculadora de la ficha y en su misma columna. */
+.aviso-precio { margin: 0 0 var(--e5); padding-top: var(--e3); border-top: 1px solid var(--regla); }
+.aviso-precio .campo { margin-bottom: var(--e2); }
+.aviso-precio input { width: 100%; }
+.aviso-precio .boton { width: 100%; justify-content: center; }
+
+/* Los avisos que ya tiene puestos, al pie de /mis-suplementos. */
+.avisos-puestos { margin-top: var(--e6); }
+.avisos-puestos ul { list-style: none; margin: 0; padding: 0; }
+.avisos-puestos li { padding: var(--e2) 0; border-top: 1px solid var(--regla); }
+.avisos-puestos li .enlace-accion { margin-left: var(--e3); }

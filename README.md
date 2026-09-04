@@ -30,7 +30,7 @@ comprobaciones del proyecto (sin red, sin framework).
 | `scoring/motor.py` | Motor de scoring: logica pura, con desglose explicable. |
 | `exportar.py` | Vuelca la BD a `web/src/datos/dataset.json`. |
 | `web/` | Sitio Astro estatico + islas React (filtros de la tabla y comparativa del lector). |
-| `tests.py` | Comprobaciones de todo lo anterior (72). `cd web && node --test` prueba la API y el filtrado de la tabla (15). |
+| `tests.py` | Comprobaciones de todo lo anterior (72). `cd web && node --test` prueba la API, el filtrado de la tabla y mi lista (39). |
 
 ## Que hay dentro de cada pieza
 

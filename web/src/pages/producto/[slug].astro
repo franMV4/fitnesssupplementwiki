@@ -3,6 +3,10 @@ import Base from '../../layouts/Base.astro';
 import datos from '../../datos/dataset.json';
 import Aviso from '../../componentes/Aviso.astro';
 import Resenas from '../../componentes/Resenas.jsx';
+import Dosis from '../../componentes/Dosis.jsx';
+import Vistos from '../../componentes/Vistos.jsx';
+import Alerta from '../../componentes/Alerta.jsx';
+import Preguntas from '../../componentes/Preguntas.jsx';
 import Historico from '../../componentes/Historico.astro';
 import { abs } from '../../sitio.js';
 import { NIVEL, TIENDAS, costeMes, duracionDias, eur, nombreIngrediente, precioReferencia,
@@ -198,12 +202,18 @@ const schema = [
            rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'} target="_blank">
           Ver en {TIENDAS[p.tienda] ?? p.tienda} <span class="flecha">→</span>
         </a>
-        {costeMes(p) != null && (
-          <span class="sutil">
-            {eur(costeMes(p))} al mes a un servicio al dia · el envase dura {Math.round(duracionDias(p))} dias
-          </span>
-        )}
       </p>
+
+      {/* La misma cuenta con la dosis de quien lee, y el boton de guardarlo en su lista.
+          `client:load` y no `client:visible`: va en la primera pantalla del movil, donde
+          `visible` es "cargar ya" con un parpadeo de por medio. */}
+      <Dosis client:load slug={p.slug} categoria={p.categoria}
+             servicios={p.servicios_por_envase} precio={p.precio_eur} />
+
+      {/* El aviso de precio, debajo de la calculadora: las dos hablan del mismo numero.
+          `client:load` como la calculadora, y por lo mismo: en escritorio esto cae en la
+          primera pantalla, donde `visible` es "cargar ya" con un parpadeo de propina. */}
+      <Alerta client:load producto={p.slug} precio={p.precio_eur} />
 
       <dl class="ficha-tecnica">
         <div class="grande">
@@ -261,6 +271,15 @@ const schema = [
                 la dosis de cada persona no la decide esta web. */}
             <dt>Al mes (1 servicio/dia)</dt>
             <dd>{eur(costeMes(p))}</dd>
+          </div>
+        )}
+        {duracionDias(p) != null && (
+          <div>
+            {/* Lo que dura el envase estaba debajo del boton de la tienda, repetido por
+                la calculadora en cuanto carga. Aqui esta una sola vez, al lado del resto
+                de los numeros, y sigue estando para quien navegue sin JavaScript. */}
+            <dt>Dura (1 servicio/dia)</dt>
+            <dd>{Math.round(duracionDias(p))}<small> dias</small></dd>
           </div>
         )}
         <div>
@@ -462,6 +481,15 @@ const schema = [
       {/* Isla React: solo se carga cuando el lector llega a esta altura de la ficha.
           Es la unica parte de la web que habla con una base de datos (/api/*). */}
       <Resenas client:visible producto={p.slug} />
+
+      <h2 id="preguntas">Preguntas de los lectores</h2>
+      <p class="sutil">
+        Lo que no esta en la ficha. Pregunta lo que eches en falta y contesta lo que sepas:
+        las dos cosas se quedan aqui para el siguiente que llegue.
+      </p>
+      <Preguntas client:visible producto={p.slug} />
+
+      <Vistos client:visible slug={p.slug} nombre={nom(p)} />
 
       <p class="volver">
         <a class="boton" href={`/${p.categoria}`}>← Volver a {categoria?.nombre.toLowerCase() ?? p.categoria}</a>

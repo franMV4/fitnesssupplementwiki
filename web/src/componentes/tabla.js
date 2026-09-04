@@ -11,8 +11,8 @@
 // `data-` de cada <tr>. Si un dia cambia una regla de filtrado, se cambia alli y esto no
 // se entera, que es justo lo que se queria.
 
-import { ORDENES, TOPE_SELECCION, filtrar, guardarSeleccion,
-         leerSeleccion } from '../datos/util.js';
+import { ORDENES, TOPE_SELECCION, alternarEnLista, enLista, filtrar, guardarMiLista,
+         guardarSeleccion, leerMiLista, leerSeleccion } from '../datos/util.js';
 
 // `filtrar` compara `${marca} ${nombre}`, y en el HTML las dos ya vienen juntas y en
 // minusculas en data-busca: la marca va vacia para no meter un espacio de mas.
@@ -25,6 +25,9 @@ const producto = (tr) => ({
   tienda: tr.dataset.tienda,
   nivel_verificacion: Number(tr.dataset.nivel),
   certificaciones: tr.dataset.sellos ? tr.dataset.sellos.split(' ').map((t) => ({ tipo: t })) : [],
+  // La nota de los lectores no viene del build: la trae /api/valoraciones y se rellena
+  // aqui cuando llega. Hasta entonces es null, que es lo que la deja al final del orden.
+  lectores: null,
   precio_referencia: tr.dataset.ref === '' ? null : Number(tr.dataset.ref),
   precio_eur: tr.dataset.precio === '' ? null : Number(tr.dataset.precio),
   score_final: tr.dataset.score === '' ? null : Number(tr.dataset.score),
@@ -57,6 +60,7 @@ export function montarTabla(raiz) {
   // vuelve a recortarse. Si no, un filtro que deja 300 filas las suelta todas de golpe.
   let todo = false;
   let elegidos = leerSeleccion();
+  let mios = leerMiLista();
 
   const estado = () => ({
     busqueda: campos.busqueda.value,
@@ -117,9 +121,14 @@ export function montarTabla(raiz) {
   function pintaSeleccion() {
     for (const p of productos) {
       const dentro = elegidos.some((e) => e.s === p.slug);
-      const boton = p.tr.querySelector('.marcar');
+      const boton = p.tr.querySelector('.marcar:not(.mi-lista)');
       boton.setAttribute('aria-pressed', String(dentro));
       boton.textContent = dentro ? 'en tu comparativa' : '+ comparar';
+
+      const guardado = enLista(mios, p.slug);
+      const suyo = p.tr.querySelector('.mi-lista');
+      suyo.setAttribute('aria-pressed', String(guardado));
+      suyo.textContent = guardado ? 'en tu lista' : '+ mi lista';
     }
     barra.hidden = elegidos.length === 0;
     barra.querySelector('[data-cuenta]').textContent = elegidos.length;
@@ -176,6 +185,17 @@ export function montarTabla(raiz) {
 
     if (boton === verMas) { todo = true; pinta(); return; }
 
+    // Antes que `.marcar`: el boton de mi lista lleva las dos clases (comparte estilo)
+    // y sin este orden caeria en el guardado de la comparativa.
+    if (boton.classList.contains('mi-lista')) {
+      const fila = boton.closest('tr');
+      const p = productos.find((o) => o.tr === fila);
+      mios = alternarEnLista(mios, { s: p.slug, c: p.categoria });
+      guardarMiLista(mios);
+      pintaSeleccion();
+      return;
+    }
+
     if (boton.classList.contains('marcar')) {
       const fila = boton.closest('tr');
       const p = productos.find((o) => o.tr === fila);
@@ -191,4 +211,28 @@ export function montarTabla(raiz) {
   // La seleccion vive en localStorage y por eso no puede venir pintada del build: el HTML
   // es el mismo para todo el mundo. Se aplica en cuanto carga el script.
   pintaSeleccion();
+
+  // La nota que le ponen los lectores DE ESTA WEB, que hasta ahora solo se veia dentro de
+  // la ficha. Una peticion por pagina para las 200 filas, cacheada cinco minutos en el
+  // borde, y si falla la tabla se queda exactamente como estaba: es un dato de mas, no
+  // uno del que dependa nada.
+  fetch('/api/valoraciones')
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((notas) => {
+      const conNota = productos.filter((p) => notas[p.slug]);
+      if (conNota.length === 0) return;
+      for (const p of conNota) {
+        const [media, cuantas] = notas[p.slug];
+        p.lectores = media;
+        const marca = document.createElement('span');
+        marca.className = 'opinion lectores';
+        marca.title = `${cuantas} ${cuantas === 1 ? 'opinion' : 'opiniones'} de lectores de esta web`;
+        marca.textContent = ` · ${media.toFixed(1).replace('.', ',')}★ ${cuantas} aqui`;
+        // Delante de los botones de guardar, que son lo ultimo de la celda del nombre.
+        p.tr.querySelector('.celda-producto').insertBefore(marca, p.tr.querySelector('.marcar'));
+      }
+      // El orden solo aparece cuando hay con que ordenar (ver ORDENES.lectores).
+      campos.orden.add(new Option(ORDENES.lectores.etiqueta, 'lectores'));
+    })
+    .catch(() => {});
 }

@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import MiLista from '../componentes/MiLista.jsx';
+
+// Lo que toma el lector, con su dosis y lo que le cuesta el mes.
+//
+// noindex por lo mismo que /comparar: su contenido lo pone el navegador de cada
+// visitante, asi que para Google esta pagina esta vacia. Es una utilidad, no contenido.
+---
+<Base titulo="Mi lista de suplementos: dosis, duracion y gasto al mes"
+      descripcion="Los suplementos que tomas, con tu dosis: cuanto dura cada envase, cuanto cuesta al mes y cuando toca volver a comprar."
+      noindex>
+
+  <p class="migas"><a href="/">Inicio</a> / Mi lista</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Lo que tomas</p>
+    <h1 class="aparece d1">Mi lista</h1>
+    <p class="entradilla aparece d2">
+      Los suplementos que has ido guardando, cada uno con la dosis que tomas tu: lo que
+      dura el envase, lo que sale al mes y lo que suman todos juntos. La lista se guarda
+      en tu navegador: no hace falta cuenta, no viaja a ningun servidor y sigue aqui la
+      proxima vez que entres.
+    </p>
+  </section>
+
+  <MiLista client:load />
+
+  <p class="nota">
+    <strong>El mes se calcula a 30 dias y con el precio de la ultima recogida.</strong>
+    Ni el precio de la tienda ni tu dosis son fijos: esto sirve para saber en que orden de
+    magnitud esta tu gasto, no para cuadrar una factura.
+    <a href="/metodologia">Como se calculan los precios</a>.
+  </p>
+</Base>
