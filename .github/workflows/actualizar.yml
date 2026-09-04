@@ -25,8 +25,18 @@ on:
   schedule:
     # 05:15 UTC = 07:15 en horario de verano peninsular, 06:15 en invierno. Temprano y a
     # una hora rara a proposito: menos carga para las tiendas y menos cola en Actions.
-    # GitHub retrasa los cron cuando hay pico, asi que la hora exacta no esta garantizada.
-    - cron: '15 5 * * *'
+    # GitHub retrasa los cron cuando hay pico, asi que la hora exacta no esta garantizada:
+    # el 03/09/2026 esta misma pasada arranco a las 09:51 UTC, cuatro horas y media tarde.
+    #
+    # DIAS ALTERNOS, y es una decision de presupuesto, no de frescura. Cada pasada dura
+    # ~92 minutos (50 categorias x 19 tiendas), asi que a diario salian ~2.760 min/mes
+    # contra los 2.000 gratis de un repositorio privado: el robot se habria parado solo
+    # hacia el dia 22 de cada mes. Con "*/2" son ~15 pasadas, unos 1.400 min, con margen.
+    # "*/2" en el dia del MES son los dias impares (1, 3, 5... 31), no "cada 48 horas":
+    # en los meses de 31 dias corre el 31 y otra vez el 1. Es inofensivo.
+    # Los precios de suplementos no se mueven a diario; si un dia hace falta el dato
+    # fresco, esta el boton Run workflow de la pestana Actions.
+    - cron: '15 5 */2 * *'
   # Para poder lanzarlo a mano desde la pestana Actions sin esperar a manana.
   workflow_dispatch:
 
@@ -42,10 +52,17 @@ concurrency:
 jobs:
   actualizar:
     runs-on: ubuntu-latest
-    # Una pasada completa son 30 categorias por 8 tiendas, con espera entre peticiones
+    # Una pasada completa son 50 categorias por 19 tiendas, con espera entre peticiones
     # (2 s en general, 6 s en Zumub y 4 s en Prozis, que limitan por rafaga). Desde una IP
-    # de centro de datos son 30-45 minutos. Si algo se atasca, que muera solo en vez de
+    # de centro de datos son ~92 minutos MEDIDOS (no los 30-45 que decia este comentario
+    # cuando habia 30 categorias y 8 tiendas). Si algo se atasca, que muera solo en vez de
     # gastar la cuota del mes: en repositorio privado son 2.000 minutos gratis.
+    #
+    # OJO AL MARGEN: 92 minutos reales contra 120 de tope es solo un 23 % de holgura. Cada
+    # tienda o categoria nueva lo estrecha, y una pasada cortada por el timeout deja el
+    # trabajo a medias. Si empieza a rozar el limite, la salida no es subir el tope (mas
+    # tope = mas minutos del mes por pasada fallida): es repartir el scraper en varios
+    # jobs o recortar categorias.
     timeout-minutes: 120
 
     steps:
