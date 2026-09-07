@@ -95,7 +95,7 @@ export default function Dosis({ slug, categoria, servicios, precio }) {
         <button type="button" className={`boton ${dentro ? '' : 'primario'}`} onClick={alternar}>
           {dentro ? 'Quitar de mi lista' : 'Guardar en mi lista'}
         </button>
-        {dentro && <a className="enlace-accion" href="/mis-suplementos">ver mi lista →</a>}
+        {dentro && <a className="enlace-accion" href="/mis-suplementos/">ver mi lista →</a>}
       </p>
       <p className="sutil">
         Mi lista se guarda en tu navegador: no hace falta cuenta y no sale de tu ordenador.

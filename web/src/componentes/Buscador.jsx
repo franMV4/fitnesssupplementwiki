@@ -129,7 +129,7 @@ export default function Buscador({ categorias = [], total = 0 }) {
 
   useEffect(() => { setSel(0); }, [texto]);
 
-  const destino = (r) => (r.tipo === 'cat' ? `/${r.slug}` : `/producto/${r.s}`);
+  const destino = (r) => (r.tipo === 'cat' ? `/${r.slug}/` : `/producto/${r.s}/`);
   const ir = (r) => { if (r) window.location.href = destino(r); };
 
   const teclado = (e) => {
@@ -214,7 +214,7 @@ export default function Buscador({ categorias = [], total = 0 }) {
               return (
                 <Fragment key={`c-${r.slug}`}>
                   {titulo}
-                  <a className={`resultado categoria${activo ? ' activo' : ''}`} href={`/${r.slug}`}
+                  <a className={`resultado categoria${activo ? ' activo' : ''}`} href={`/${r.slug}/`}
                      role="option" aria-selected={activo}
                      onMouseEnter={() => setSel(i)}>
                     <span className="linea1">{r.nombre}</span>
@@ -228,7 +228,7 @@ export default function Buscador({ categorias = [], total = 0 }) {
             return (
               <Fragment key={r.s}>
               {titulo}
-              <a className={`resultado${activo ? ' activo' : ''}`} href={`/producto/${r.s}`}
+              <a className={`resultado${activo ? ' activo' : ''}`} href={`/producto/${r.s}/`}
                  role="option" aria-selected={activo}
                  onMouseEnter={() => setSel(i)}>
                 <span className="linea1">{r.n}</span>

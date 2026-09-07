@@ -64,7 +64,7 @@ const schema = [
 <Base ancho="completo" titulo={l.titulo} descripcion={descripcionComparativa(l)} schema={schema}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href={`/${cat.slug}`}>{cat.nombre}</a> / {na} vs {nb}
+    <a href="/">Inicio</a> / <a href={`/${cat.slug}/`}>{cat.nombre}</a> / {na} vs {nb}
   </p>
 
   <section class="cabecera-pagina">
@@ -100,7 +100,7 @@ const schema = [
         </p>
         {lado.r.lider && (
           <p class="sutil">
-            Su mejor nota: <a href={`/producto/${lado.r.lider.slug}`}>{nom(lado.r.lider)}</a>,
+            Su mejor nota: <a href={`/producto/${lado.r.lider.slug}/`}>{nom(lado.r.lider)}</a>,
             {' '}{lado.r.lider.score_final?.toFixed(0)}/100 a
             {' '}{precioReferencia(lado.r.lider).valor}/{precioReferencia(lado.r.lider).unidad}.
           </p>
@@ -198,7 +198,7 @@ const schema = [
       <p class="apunte">Mismo dataset, otra pregunta</p>
     </div>
     <div class="lista-categorias">
-      <a class="fila-categoria" href={`/${cat.slug}`}>
+      <a class="fila-categoria" href={`/${cat.slug}/`}>
         <span class="nombre">{cat.consultas?.mejor
           ? cat.consultas.mejor.charAt(0).toUpperCase() + cat.consultas.mejor.slice(1)
           : cat.nombre}</span>
@@ -206,14 +206,14 @@ const schema = [
         <span class="cuenta">{cat.productos} prod.</span>
       </a>
       {hermanas.map((o) => (
-        <a class="fila-categoria" href={`/comparativa/${o.slug}`}>
+        <a class="fila-categoria" href={`/comparativa/${o.slug}/`}>
           <span class="nombre">{o.na} o {o.nb} en {cat.termino}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{o.productos.length} prod.</span>
         </a>
       ))}
       {selecciones.map((o) => (
-        <a class="fila-categoria" href={`/mejores/${o.slug}`}>
+        <a class="fila-categoria" href={`/mejores/${o.slug}/`}>
           <span class="nombre">{o.h1.split(':')[0]}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{o.productos.length} prod.</span>

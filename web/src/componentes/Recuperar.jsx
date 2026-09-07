@@ -88,7 +88,7 @@ export default function Recuperar() {
                 {enviando ? 'Un momento…' : 'Guardar y entrar'}
                 {!enviando && <span className="flecha">→</span>}
               </button>
-              <a className="enlace-accion" href="/recuperar">Pedir otro enlace</a>
+              <a className="enlace-accion" href="/recuperar/">Pedir otro enlace</a>
             </p>
           </form>
         </div>
@@ -109,7 +109,7 @@ export default function Recuperar() {
           <p className="sutil">¿No llega? Mira en spam, o vuelve a pedirlo. Si creaste la cuenta
              con Google no hay contraseña que recuperar: entra con el botón de Google.</p>
           <p className="acciones-acceso">
-            <a className="boton primario" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>
+            <a className="boton primario" href={`/entrar/?volver=${encodeURIComponent(vuelta)}`}>
               Volver a entrar <span className="flecha">→</span>
             </a>
           </p>
@@ -137,7 +137,7 @@ export default function Recuperar() {
               {enviando ? 'Un momento…' : 'Enviar enlace'}
               {!enviando && <span className="flecha">→</span>}
             </button>
-            <a className="enlace-accion" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>
+            <a className="enlace-accion" href={`/entrar/?volver=${encodeURIComponent(vuelta)}`}>
               Volver a entrar
             </a>
           </p>

@@ -131,7 +131,7 @@ const schema = [
               {porNivel(nivel).map((x) => (
                 <tr>
                   <td class="principal marca">
-                    <a href={`/guia/${x.slug}`}>{x.cat.nombre}</a>
+                    <a href={`/guia/${x.slug}/`}>{x.cat.nombre}</a>
                     {x.dosis && <span class="explica">{x.dosis}</span>}
                   </td>
                   <td data-et="Lo que se ha medido">
@@ -151,7 +151,7 @@ const schema = [
                     )}
                   </td>
                   <td class="num" data-et="Productos">
-                    <a href={`/${x.slug}`}>{x.productos}</a>
+                    <a href={`/${x.slug}/`}>{x.productos}</a>
                   </td>
                 </tr>
               ))}
@@ -178,13 +178,13 @@ const schema = [
     </div>
     <div class="lista-categorias">
       {OBJETIVOS.map((o) => (
-        <a class="fila-categoria" href={`/para/${o.slug}`}>
+        <a class="fila-categoria" href={`/para/${o.slug}/`}>
           <span class="nombre">{o.nombre}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{o.incluye.length} suplementos</span>
         </a>
       ))}
-      <a class="fila-categoria" href="/tiendas">
+      <a class="fila-categoria" href="/tiendas/">
         <span class="nombre">Donde sale mas barato</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">tiendas</span>

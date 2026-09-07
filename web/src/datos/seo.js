@@ -369,3 +369,13 @@ export const descripcionProducto = (p, productos, cat) => {
     `${total} en ${cat.nombre.toLowerCase()}, nivel ${p.nivel_verificacion} de verificacion y ` +
     `el desglose de su nota linea a linea.`, 200);
 };
+
+// Que ficha se le ofrece a Google. Las 746 de marca "Desconocida" son listados de
+// Amazon a los que el scraper no le saco la marca: su titulo empieza por "Desconocida",
+// no responden ninguna busqueda y son el 17 % del sitio. Se publican igual (la tabla de
+// categoria las compara y el precio es real), pero con noindex y fuera del sitemap:
+// pedir que se indexen 746 paginas que nadie va a buscar es gastar el presupuesto de
+// rastreo que necesitan las 50 categorias y las guias.
+// Cuando el scraper aprenda a sacar la marca de esos listados, esta regla las devuelve
+// al indice sola.
+export const indexable = (p) => p.marca !== 'Desconocida';

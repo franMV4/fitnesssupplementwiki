@@ -70,7 +70,7 @@ export default function Alerta({ producto, precio }) {
         <p className="sutil">
           Hoy cuesta {eur(precio)}. Si entras con tu cuenta, te escribimos cuando baje del
           precio que tu digas.{' '}
-          <a className="enlace-accion" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>entrar →</a>
+          <a className="enlace-accion" href={`/entrar/?volver=${encodeURIComponent(vuelta)}`}>entrar →</a>
         </p>
       ) : mia ? (
         <>

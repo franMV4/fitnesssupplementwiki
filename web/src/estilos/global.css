@@ -311,6 +311,10 @@ main { display: block; padding-bottom: var(--e8); }
 header.sitio {
   position: sticky; top: 0; z-index: 50;
   background: var(--papel);
+  /* Filete de senal arriba y filete de tinta abajo: la cabecera es la mancheta del
+     diario, no una barra de aplicacion. Son 3 px sin ningun dato dentro, asi que no
+     gastan una de las cinco apariciones del naranja. */
+  border-top: 3px solid var(--senal);
   border-bottom: 2px solid var(--tinta);
 }
 header.sitio .envoltorio {
@@ -326,6 +330,9 @@ header.sitio .envoltorio {
   font-size: 1.7rem; line-height: 1; text-transform: uppercase;
 }
 .marca-sitio:hover { color: var(--tinta); }
+.marca-sitio .glifo { transition: transform .18s ease; }
+.marca-sitio:hover .glifo { transform: rotate(-6deg) scale(1.08); }
+.marca-sitio:hover .fina { color: var(--senal-txt); }
 /* El glifo es /favicon.svg: la marca se dibuja una vez y la comparten cabecera,
    pestana del navegador, icono de iOS y og:image. */
 .marca-sitio .glifo { width: 24px; height: 24px; flex: none; }
@@ -420,44 +427,59 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
 .acceso-cabecera.dentro:hover .inicial { background: var(--papel); color: var(--tinta); }
 
 /* Desplegable de categorias con <details>: sin una linea de JS. */
-.menu-cat { position: relative; display: flex; }
+.menu-cat { position: static; display: flex; }
 .menu-cat > summary { list-style: none; }
 .menu-cat > summary::-webkit-details-marker { display: none; }
 .menu-cat > summary::after { content: "\25BE"; font-size: .8em; opacity: .6; }
 .menu-cat[open] > summary { background: var(--tinta); color: var(--papel); }
 .menu-cat .lamina {
-  /* Anclada a la DERECHA: el menu vive en el lado derecho de la cabecera y la lamina,
-     con treinta categorias en tres columnas, mide 700px. Anclada a la izquierda se salia
-     de la pantalla y metia scroll horizontal en el documento con solo abrir el menu. */
-  position: absolute; top: 100%; right: 0; z-index: 20;
-  min-width: 16rem; padding: var(--e2) 0;
-  background: var(--papel); border: 2px solid var(--tinta);
-  /* Sombra dura y desplazada, no difuminada: es un papel encima de otro papel. */
-  box-shadow: 9px 9px 0 rgba(20, 18, 16, .13);
-  /* Con treinta categorias una sola columna mide mas que la pantalla: se reparte en
-     columnas segun quepa, con tope de alto y scroll propio. */
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
-  width: max-content; max-width: min(46rem, calc(100vw - 2rem));
-  max-height: min(70vh, 34rem); overflow-y: auto;
+  /* De borde a borde de la cabecera, NO colgando de la pestana. Antes iba absoluta
+     contra el <summary> y anclada a su derecha: con 50 categorias la lamina mide
+     860 px y, con el menu a media barra, su borde izquierdo se salia por la izquierda
+     de la ventana y cortaba las dos primeras columnas. Anclada a la cabecera (que es
+     sticky, o sea, ya es el bloque contenedor de esto) mide exactamente lo que la
+     ventana: no queda ancho que se pueda salir. El contenido se alinea al envoltorio
+     con el mismo calculo que usa `.envoltorio`, para que la primera columna caiga
+     debajo de la marca. */
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  padding: var(--e3) 0 0;
+  padding-inline: max(var(--margen), calc((100% - var(--ancho)) / 2 + var(--margen)));
+  background: var(--papel);
+  border-bottom: 2px solid var(--tinta);
+  /* Sombra dura, no difuminada: es un papel encima de otro papel. Cae recta hacia
+     abajo porque la hoja ya no tiene bordes laterales que desplazar. */
+  box-shadow: 0 8px 0 rgba(20, 18, 16, .10);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 0 var(--e3);
+  max-height: min(78vh, 40rem); overflow-y: auto;
+  animation: lamina-baja .18s ease both;
+}
+/* La banda entra bajando: sin esto aparece de golpe y parece un cambio de pagina en
+   vez de un cajon que se abre. La respeta el bloque de `prefers-reduced-motion`. */
+@keyframes lamina-baja {
+  from { opacity: 0; transform: translateY(-8px); }
 }
 .menu-cat .lamina a {
-  display: flex; justify-content: space-between; gap: var(--e4);
-  padding: .4rem 1rem; text-decoration: none; color: var(--tinta-2); font-size: .88rem;
+  display: flex; justify-content: space-between; gap: var(--e3);
+  padding: .32rem .55rem; text-decoration: none; color: var(--tinta-2); font-size: .88rem;
   transition: background .12s ease, padding-left .12s ease;
 }
-.menu-cat .lamina a:hover { background: var(--papel-3); color: var(--tinta); padding-left: 1.35rem; }
+.menu-cat .lamina a:hover { background: var(--papel-3); color: var(--tinta); padding-left: .95rem; }
 .menu-cat .lamina a[aria-current="page"] { color: var(--senal-txt); box-shadow: inset 3px 0 0 var(--senal); }
 .menu-cat .lamina a span { color: var(--tinta-3); font-size: .78rem; font-variant-numeric: tabular-nums; }
 
 /* Menu de guias: los mismos treinta enlaces, pero por estante. Una lista plana de
    treinta "para que sirve X" no se lee, se escanea y se abandona. */
 .lamina.laminas-grupos {
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-  max-width: min(54rem, calc(100vw - 2rem)); padding-bottom: 0;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
 }
-.laminas-grupos .grupo-menu { padding: .3rem 0 var(--e2); }
+/* Sin filete vertical entre columnas: en una rejilla que envuelve, el filete de la
+   primera columna de cada fila cae en el borde de la banda y parece una linea suelta.
+   Lo que separa los estantes es el subrayado del rotulo, que ya mide una columna. */
+.laminas-grupos .grupo-menu { padding: .2rem 0 var(--e3); }
 .rotulo-menu {
-  margin: 0 0 .2rem; padding: 0 1rem;
+  margin: 0 0 .35rem; padding: 0 .55rem .3rem;
+  border-bottom: 1px solid var(--regla);
   font-family: var(--mono);
   font-size: .66rem; letter-spacing: var(--rotulo-esp); text-transform: uppercase;
   color: var(--senal-txt);
@@ -465,11 +487,12 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
 .laminas-grupos .grupo-menu a { display: block; }
 /* Ultima fila del menu, cruzando todas las columnas: la salida al indice completo. */
 .laminas-grupos .pie-menu {
-  grid-column: 1 / -1; border-top: 2px solid var(--tinta);
-  color: var(--tinta); font-weight: 700; padding: .6rem 1rem;
+  grid-column: 1 / -1; border-top: 2px solid var(--tinta); border-left: 0;
+  color: var(--tinta); font-weight: 700; padding: .75rem .55rem;
   font-size: .69rem; letter-spacing: .11em; text-transform: uppercase;
+  justify-content: flex-start; gap: .5rem; margin-top: var(--e2);
 }
-.laminas-grupos .pie-menu:hover { background: var(--tinta); color: var(--papel); padding-left: 1rem; }
+.laminas-grupos .pie-menu:hover { background: var(--tinta); color: var(--papel); padding-left: .55rem; }
 
 /* Indice de /guias: los mismos estantes, ya sin menu que quepa en pantalla. */
 .estantes {
@@ -1137,25 +1160,17 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
   line-height: 1.6; max-width: var(--medida);
 }
 
-/* --- 16. Movil: la tabla se convierte en anuncios por palabras ------------ */
-/* La regla de esta seccion: en movil no hay raton, hay un dedo de 9 mm y una mano
-   que sujeta el telefono. Nada que se pulse baja de 44 px, nada que se lea baja de
-   12 px y ninguna fila de la tabla se lee como media fila de tabla. */
-@media (max-width: 46rem) {
-  h2 { font-size: 1.8rem; }
-  /* La cabecera de movil son 343 px: el icono de cuenta y el del tema no pueden
-     comerse la marca entre los dos. */
-  header.sitio .envoltorio { padding-right: 2.8rem; }
-  .acceso-cabecera { width: 2.8rem; }
-  .disposicion-ficha h2 { font-size: 1.5rem; }
-
-  /* La marca y cuatro enlaces nunca han cabido en una linea de 343 px. En vez de
-     romper la cabecera en tres filas, en movil son tres cosas y una sola fila:
-     tres rayas, marca y perfil. Las secciones y el tema se van al panel lateral. */
-  header.sitio .envoltorio {
-    min-height: 0; gap: .25rem; flex-wrap: nowrap; align-items: center;
-    padding-inline: var(--e2);
-  }
+/* --- 15c. Hasta 78rem la barra no cabe: menu en panel lateral ------------
+   Las siete pestanas + la marca + el icono de cuenta piden 1.100 px de barra. El
+   corte a panel estaba en 46rem (736 px), asi que entre 736 y 1.100 px las pestanas
+   se salian de la ventana y la pagina entera cogia scroll horizontal. El panel
+   lateral no es "la version de movil": es lo que toca en cuanto la barra no cabe,
+   asi que sube a 78rem. Lo de 46rem sigue siendo lo que solo vale para 375 px (el
+   cuerpo de la marca, el hueco del icono y el alto de la fila).
+   Ojo al cambiar el ancho de la barra: si se anaden pestanas, este numero sube. */
+@media (max-width: 78rem) {
+  /* Tres rayas y marca no pueden ir pegadas. */
+  header.sitio .envoltorio { gap: .5rem; }
   .hamburguesa {
     display: inline-flex; align-items: center; justify-content: center;
     background: none; border: 0; color: var(--tinta);
@@ -1199,17 +1214,13 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
   }
   nav.principal > a.comparar { display: flex; border-bottom: 0; margin-top: var(--e3); }
   .menu-cat { display: block; }
-  /* La segunda mitad del nombre no se esconde en movil: es parte de la marca, y
-     "FitnessSupplement" a secas no es el nombre de nada. Encoge, que es distinto. */
-  .marca-sitio { font-size: 1.15rem; gap: .4rem; min-height: 40px; }
-  .marca-sitio .fina { font-size: .55rem; padding-bottom: .18rem; }
-  .marca-sitio .glifo { width: 20px; height: 20px; }
   /* En escritorio la lamina cuelga del <summary> como una hoja encima de la pagina.
      Dentro del panel no cuelga de nada: es una lista mas, empujando lo que tiene
      debajo, y el panel entero es el que hace scroll. */
   .menu-cat .lamina {
     position: static; width: auto; min-width: 0; max-width: none;
-    max-height: none; overflow: visible;
+    max-height: none; overflow: visible; animation: none;
+    padding-inline: 0; box-shadow: none;
     border: 0; border-bottom: 1px solid var(--regla); box-shadow: none;
     background: var(--papel-2); padding: var(--e2) 0;
     /* Dos columnas de 187 px parten "Aminoacidos esenciales" en dos lineas y
@@ -1218,6 +1229,7 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
     grid-template-columns: 1fr;
   }
   .lamina.laminas-grupos { grid-template-columns: 1fr; max-width: none; }
+  .laminas-grupos .pie-menu { margin-top: 0; }
   .menu-cat .lamina a { padding: .6rem 1rem; min-height: 44px; align-items: center; }
   .rotulo-menu { font-size: .72rem; }
 
@@ -1326,6 +1338,32 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
   }
   .tema .sol, .tema .luna { font-size: 1.25rem; }
   .tema .texto-tema { display: inline; }
+}
+
+/* --- 16. Movil: la tabla se convierte en anuncios por palabras ------------ */
+/* La regla de esta seccion: en movil no hay raton, hay un dedo de 9 mm y una mano
+   que sujeta el telefono. Nada que se pulse baja de 44 px, nada que se lea baja de
+   12 px y ninguna fila de la tabla se lee como media fila de tabla. */
+@media (max-width: 46rem) {
+  h2 { font-size: 1.8rem; }
+  /* La cabecera de movil son 343 px: el icono de cuenta y el del tema no pueden
+     comerse la marca entre los dos. */
+  header.sitio .envoltorio { padding-right: 2.8rem; }
+  .acceso-cabecera { width: 2.8rem; }
+  .disposicion-ficha h2 { font-size: 1.5rem; }
+
+  /* La marca y cuatro enlaces nunca han cabido en una linea de 343 px. En vez de
+     romper la cabecera en tres filas, en movil son tres cosas y una sola fila:
+     tres rayas, marca y perfil. Las secciones y el tema se van al panel lateral. */
+  header.sitio .envoltorio {
+    min-height: 0; gap: .25rem; flex-wrap: nowrap; align-items: center;
+    padding-inline: var(--e2);
+  }
+  /* La segunda mitad del nombre no se esconde en movil: es parte de la marca, y
+     "FitnessSupplement" a secas no es el nombre de nada. Encoge, que es distinto. */
+  .marca-sitio { font-size: 1.15rem; gap: .4rem; min-height: 40px; }
+  .marca-sitio .fina { font-size: .55rem; padding-bottom: .18rem; }
+  .marca-sitio .glifo { width: 20px; height: 20px; }
 
   /* Fuera de pantalla por la izquierda, no recortada: el recorte no quita las
      celdas del ancho del documento y el movil acababa con scroll horizontal.

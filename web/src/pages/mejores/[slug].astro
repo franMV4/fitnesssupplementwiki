@@ -67,7 +67,7 @@ const schema = [
 <Base ancho="completo" titulo={l.titulo} descripcion={descripcionMejores(l)} schema={schema}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href={`/${cat.slug}`}>{cat.nombre}</a> / seleccion
+    <a href="/">Inicio</a> / <a href={`/${cat.slug}/`}>{cat.nombre}</a> / seleccion
   </p>
 
   <section class="cabecera-pagina">
@@ -100,9 +100,9 @@ const schema = [
 
   <p class="nota">
     <strong>Esto es un filtro, no otro ranking.</strong> El score que ordena esta tabla es
-    exactamente el mismo de <a href={`/${cat.slug}`}>la comparativa completa de {cat.termino}</a>:
+    exactamente el mismo de <a href={`/${cat.slug}/`}>la comparativa completa de {cat.termino}</a>:
     aqui solo se han quitado los productos que no cumplen el criterio de arriba.
-    <a href="/metodologia#formula">Como se calcula</a>.
+    <a href="/metodologia/#formula">Como se calcula</a>.
   </p>
 
   <Faq faqs={faqs} titulo={`Preguntas sobre esta seleccion de ${cat.termino}`} />
@@ -114,7 +114,7 @@ const schema = [
         <p class="apunte">Mismo dataset, otra pregunta</p>
       </div>
       <div class="lista-categorias">
-        <a class="fila-categoria" href={`/${cat.slug}`}>
+        <a class="fila-categoria" href={`/${cat.slug}/`}>
           <span class="nombre">{cat.consultas?.mejor
             ? cat.consultas.mejor.charAt(0).toUpperCase() + cat.consultas.mejor.slice(1)
             : cat.nombre}</span>
@@ -122,14 +122,14 @@ const schema = [
           <span class="cuenta">{cat.productos} prod.</span>
         </a>
         {hermanas.map((o) => (
-          <a class="fila-categoria" href={`/mejores/${o.slug}`}>
+          <a class="fila-categoria" href={`/mejores/${o.slug}/`}>
             <span class="nombre">{o.h1.split(':')[0]}</span>
             <span class="guia" aria-hidden="true"></span>
             <span class="cuenta">{o.productos.length} prod.</span>
           </a>
         ))}
         {versus.map((o) => (
-          <a class="fila-categoria" href={`/comparativa/${o.slug}`}>
+          <a class="fila-categoria" href={`/comparativa/${o.slug}/`}>
             <span class="nombre">{o.na} o {o.nb} en {cat.termino}</span>
             <span class="guia" aria-hidden="true"></span>
             <span class="cuenta">{o.productos.length} prod.</span>

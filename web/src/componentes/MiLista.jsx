@@ -153,7 +153,7 @@ export default function MiLista() {
                 return (
                   <tr key={f.s}>
                     <td className="principal">
-                      <a href={`/producto/${f.s}`}>{f.ficha ? f.ficha.nombre : comoSeLee(f.s)}</a>
+                      <a href={`/producto/${f.s}/`}>{f.ficha ? f.ficha.nombre : comoSeLee(f.s)}</a>
                       {f.ficha
                         ? <span className="sutil"> · {TIENDAS[f.ficha.tienda] ?? f.ficha.tienda}</span>
                         : <span className="sutil"> · ya no esta en el ranking</span>}
@@ -204,7 +204,7 @@ export default function MiLista() {
           <ul>
             {alertas.map((a) => (
               <li key={a.producto}>
-                <a href={`/producto/${a.producto}`}>{comoSeLee(a.producto)}</a>
+                <a href={`/producto/${a.producto}/`}>{comoSeLee(a.producto)}</a>
                 <span className="sutil"> · te avisamos si baja de {eur(a.objetivo)}</span>
                 <button type="button" className="enlace-accion peligro"
                         onClick={() => quitarAlerta(a.producto)}>quitar</button>

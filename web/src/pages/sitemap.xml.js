@@ -4,6 +4,7 @@ import { EVIDENCIA, REVISADO } from '../datos/evidencia.js';
 import { RUTAS_LANDING } from '../datos/landings.js';
 import { RUTAS_EFICACIA } from '../datos/eficacia.js';
 import { RUTAS_TIENDAS } from '../datos/tiendas.js';
+import { indexable } from '../datos/seo.js';
 
 // ponytail: 20 lineas de XML en vez de @astrojs/sitemap. Las URLs ya estan todas en el
 // dataset, y asi el lastmod es la fecha real de recogida de precios y no la del build:
@@ -34,7 +35,7 @@ export function GET() {
     ...RUTAS_EFICACIA.map((r) => url(r, '0.9', REVISADO, 'weekly')),
     ...RUTAS_TIENDAS.map((r) => url(r, '0.8')),
     ...RUTAS_LANDING.map((r) => url(r, '0.7')),
-    ...datos.productos.map((p) => url(`/producto/${p.slug}`, '0.6')),
+    ...datos.productos.filter(indexable).map((p) => url(`/producto/${p.slug}`, '0.6')),
   ];
   return new Response(
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

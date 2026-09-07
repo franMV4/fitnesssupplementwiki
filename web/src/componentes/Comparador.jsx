@@ -104,7 +104,7 @@ export default function Comparador() {
                       <th />
                       {productos.map((p) => (
                         <th key={p.slug}>
-                          <a href={`/producto/${p.slug}`}>{p.nombre}</a>
+                          <a href={`/producto/${p.slug}/`}>{p.nombre}</a>
                           <button type="button" className="chip" onClick={() => quitar(p.slug)}>
                             quitar
                           </button>

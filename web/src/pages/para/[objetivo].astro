@@ -83,7 +83,7 @@ const schema = [
 <Base ancho="completo" titulo={o.titulo} descripcion={descripcion} schema={schema}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href="/suplementos-que-funcionan">Que funciona</a> / {o.nombre}
+    <a href="/">Inicio</a> / <a href="/suplementos-que-funcionan/">Que funciona</a> / {o.nombre}
   </p>
 
   <section class="cabecera-pagina">
@@ -112,7 +112,7 @@ const schema = [
         {o.nucleo.map((x) => (
           <div class="bloque destacado-bloque">
             <span class="rotulo-destacado">{NIVELES[x.nivel].etiqueta}</span>
-            <h3><a href={`/guia/${x.slug}`}>{x.cat.nombre}</a></h3>
+            <h3><a href={`/guia/${x.slug}/`}>{x.cat.nombre}</a></h3>
             <p class="linea-destacado">
               <span class="cifra">{mes(x.alMes)}</span>
               <span class="sutil">al mes</span>
@@ -120,7 +120,7 @@ const schema = [
             <p>{x.dosis}</p>
             {x.barato && (
               <p class="sutil">
-                Mas barato a esa dosis: <a href={`/producto/${x.barato.slug}`}>{nom(x.barato)}</a>
+                Mas barato a esa dosis: <a href={`/producto/${x.barato.slug}/`}>{nom(x.barato)}</a>
                 {' '}de {x.tiendaBarato}, {precioReferencia(x.barato).valor}/{precioReferencia(x.barato).unidad}.
               </p>
             )}
@@ -160,13 +160,13 @@ const schema = [
             {o.incluye.map((x) => (
               <tr>
                 <td class="principal marca">
-                  <a href={`/guia/${x.slug}`}>{x.cat.nombre}</a>
+                  <a href={`/guia/${x.slug}/`}>{x.cat.nombre}</a>
                   {x.dosis && <span class="explica">{x.dosis}</span>}
                 </td>
                 <td data-et="Evidencia">
                   {NIVELES[x.nivel].etiqueta}
                   <span class="explica">
-                    <a href={`/${x.slug}`}>{x.productos} productos comparados</a>
+                    <a href={`/${x.slug}/`}>{x.productos} productos comparados</a>
                     {x.mejor && <> · mejor nota: {nom(x.mejor)} de {tiendaDe(x.mejor)}</>}
                   </span>
                 </td>
@@ -209,7 +209,7 @@ const schema = [
               {o.descarta.map((x) => (
                 <tr>
                   <td class="principal marca">
-                    <a href={`/guia/${x.slug}`}>{x.cat.nombre}</a>
+                    <a href={`/guia/${x.slug}/`}>{x.cat.nombre}</a>
                     <span class="explica">{x.resumen?.split('. ')[0]}.</span>
                   </td>
                   <td data-et="Lo que se ha medido">
@@ -245,13 +245,13 @@ const schema = [
     </div>
     <div class="lista-categorias">
       {OBJETIVOS_RESUELTOS.filter((x) => x.slug !== o.slug).map((x) => (
-        <a class="fila-categoria" href={`/para/${x.slug}`}>
+        <a class="fila-categoria" href={`/para/${x.slug}/`}>
           <span class="nombre">{x.nombre}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{x.incluye.length} suplementos</span>
         </a>
       ))}
-      <a class="fila-categoria" href="/suplementos-que-funcionan">
+      <a class="fila-categoria" href="/suplementos-que-funcionan/">
         <span class="nombre">Todos, por evidencia</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">30 guias</span>

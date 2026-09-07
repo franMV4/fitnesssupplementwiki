@@ -116,7 +116,7 @@ const filas = [
                    `su indice de precio y cuantos productos publican analisis. Datos del ${datos.generado}.`}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href="/tiendas">Tiendas</a> / {a.nombre} vs {b.nombre}
+    <a href="/">Inicio</a> / <a href="/tiendas/">Tiendas</a> / {a.nombre} vs {b.nombre}
   </p>
 
   <section class="cabecera-pagina">
@@ -170,10 +170,10 @@ const filas = [
               return (
                 <tr>
                   <td class="principal marca">
-                    <a href={`/${x.cat.slug}`}>{x.cat.nombre}</a>
+                    <a href={`/${x.cat.slug}/`}>{x.cat.nombre}</a>
                     <span class="explica">
                       {x.a.n} productos de {a.nombre} y {x.b.n} de {b.nombre}.
-                      {d && <> <a href={`/comparativa/${d.slug}`}>Ver el cara a cara completo</a>.</>}
+                      {d && <> <a href={`/comparativa/${d.slug}/`}>Ver el cara a cara completo</a>.</>}
                     </span>
                   </td>
                   <td class="num" data-et={a.nombre}>
@@ -244,13 +244,13 @@ const filas = [
     </div>
     <div class="lista-categorias">
       {v.comunes.map((x) => detalle(x.cat.slug)).filter(Boolean).map((d) => (
-        <a class="fila-categoria" href={`/comparativa/${d.slug}`}>
+        <a class="fila-categoria" href={`/comparativa/${d.slug}/`}>
           <span class="nombre">{d.na} o {d.nb} en {d.cat.termino}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{d.productos.length} prod.</span>
         </a>
       ))}
-      <a class="fila-categoria" href="/tiendas">
+      <a class="fila-categoria" href="/tiendas/">
         <span class="nombre">Todas las tiendas, por indice de precio</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">ranking</span>

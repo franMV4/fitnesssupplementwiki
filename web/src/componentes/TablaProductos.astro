@@ -165,7 +165,7 @@ const fila = (p) => ({
                          loading="lazy" decoding="async" width="55" height="55" />
                   )}
                   <div class="celda-producto">
-                    <a href={`/producto/${p.slug}`}>
+                    <a href={`/producto/${p.slug}/`}>
                       {/* En Amazon la marca no viene en ningun campo y el scraper la deja
                           en "Desconocida": es lo honesto en la BD, pero pintarla delante
                           de cada nombre llena la columna de una palabra que no es un
@@ -256,7 +256,7 @@ const fila = (p) => ({
 
   <div class="barra-comparar" hidden>
     <span><b data-cuenta>0</b> <span data-etiqueta>productos guardados</span></span>
-    <a class="boton primario" href="/comparar">Ver la comparativa →</a>
+    <a class="boton primario" href="/comparar/">Ver la comparativa →</a>
   </div>
 </div>
 

@@ -16,7 +16,7 @@ import datos from '../datos/dataset.json';
   </div>
   <div class="lista-categorias">
     {datos.categorias.map((c) => (
-      <a class="fila-categoria" href={`/${c.slug}`}>
+      <a class="fila-categoria" href={`/${c.slug}/`}>
         <span class="nombre">{c.nombre}</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">{c.productos} prod.</span>

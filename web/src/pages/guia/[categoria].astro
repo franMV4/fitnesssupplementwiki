@@ -81,7 +81,7 @@ const schema = [
 ---
 <Base ancho="completo" titulo={ev.titulo} descripcion={ev.descripcion} schema={schema}>
 
-  <p class="migas"><a href="/">Inicio</a> / <a href={`/${cat.slug}`}>{cat.nombre}</a> / Guia</p>
+  <p class="migas"><a href="/">Inicio</a> / <a href={`/${cat.slug}/`}>{cat.nombre}</a> / Guia</p>
 
   <section class="cabecera-pagina">
     <p class="antetitulo aparece">{cat.nombre} · {nivel.etiqueta}</p>
@@ -198,7 +198,7 @@ const schema = [
       {barato != null && <> desde <b>{eur(barato, dec)}</b> por {unidad}</>}, ordenados por
       precio y por lo comprobable que es su certificacion.
     </p>
-    <p><a class="boton" href={`/${cat.slug}`}>Ver la comparativa de {cat.nombre.toLowerCase()}</a></p>
+    <p><a class="boton" href={`/${cat.slug}/`}>Ver la comparativa de {cat.nombre.toLowerCase()}</a></p>
   </section>
 
   <section class="seccion">
@@ -208,7 +208,7 @@ const schema = [
     </div>
     <div class="lista-categorias">
       {datos.categorias.filter((c) => c.slug !== cat.slug && EVIDENCIA[c.slug]).map((c) => (
-        <a class="fila-categoria" href={`/guia/${c.slug}`}>
+        <a class="fila-categoria" href={`/guia/${c.slug}/`}>
           <span class="nombre">{EVIDENCIA[c.slug].h1}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{NIVEL_EVIDENCIA[EVIDENCIA[c.slug].nivel].etiqueta.replace('Evidencia ', '')}</span>

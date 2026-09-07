@@ -78,8 +78,8 @@ const schema = [
         lo que declara la ficha de la tienda, y si ese sello se ha podido comprobar contra
         quien lo emite. Ningun efecto se atribuye a un producto: la evidencia se cita
         siempre por <strong>ingrediente</strong>, con su dosis y su DOI, en
-        {' '}<a href="/metodologia#referencias">la metodologia</a> y en
-        {' '}<a href="/guias">las guias de evidencia</a>.
+        {' '}<a href="/metodologia/#referencias">la metodologia</a> y en
+        {' '}<a href="/guias/">las guias de evidencia</a>.
       </p>
     </section>
 
@@ -115,7 +115,7 @@ const schema = [
         </li>
       </ul>
       <p>
-        Todo eso esta escrito con detalle en <a href="/metodologia">la metodologia</a>, que es
+        Todo eso esta escrito con detalle en <a href="/metodologia/">la metodologia</a>, que es
         el documento que hay que leer para llevarle la contraria a esta web con argumentos.
         Los datos de cada categoria se publican tambien
         {' '}<a href={`/datos/${datos.categorias[0].slug}.json`}>en JSON</a>, para que
@@ -129,8 +129,8 @@ const schema = [
         {datos.hay_afiliados
           ? 'Algunos enlaces a tienda son de afiliado: si compras, esta web puede llevarse una comision, sin coste extra para ti. El score se calcula antes y sin mirar esos enlaces.'
           : 'Hoy no hay ningun programa de afiliado activo: ningun enlace de esta web genera comision. Si algun dia lo hay, se avisara en cada pagina donde haya enlaces a tienda y el criterio no cambiara, porque el score se calcula sin mirarlos.'}
-        {' '}<a href="/metodologia#afiliacion">Como funciona la afiliacion aqui</a> ·
-        {' '}<a href="/legal">Aviso legal</a>.
+        {' '}<a href="/metodologia/#afiliacion">Como funciona la afiliacion aqui</a> ·
+        {' '}<a href="/legal/">Aviso legal</a>.
       </p>
       <p>
         Ninguna marca ni tienda paga por aparecer, por subir puestos ni por llevarse un sello.
@@ -140,5 +140,5 @@ const schema = [
     </section>
   </div>
 
-  <p class="volver"><a class="boton" href="/metodologia">Leer la metodologia completa →</a></p>
+  <p class="volver"><a class="boton" href="/metodologia/">Leer la metodologia completa →</a></p>
 </Base>

@@ -25,7 +25,7 @@ export default function Vistos({ slug, nombre }) {
       <p className="rotulo-vistos">Antes has mirado</p>
       <ul>
         {vistos.map((v) => (
-          <li key={v.s}><a href={`/producto/${v.s}`}>{v.n}</a></li>
+          <li key={v.s}><a href={`/producto/${v.s}/`}>{v.n}</a></li>
         ))}
       </ul>
     </nav>

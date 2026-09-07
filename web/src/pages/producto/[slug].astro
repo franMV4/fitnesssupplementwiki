@@ -12,7 +12,7 @@ import { abs } from '../../sitio.js';
 import { NIVEL, TIENDAS, costeMes, duracionDias, eur, nombreIngrediente, precioReferencia,
          puntos } from '../../datos/util.js';
 import {
-  descripcionProducto, nom, ofertaLd, tituloProducto, veredictoProducto,
+  descripcionProducto, indexable, nom, ofertaLd, tituloProducto, veredictoProducto,
 } from '../../datos/seo.js';
 
 export function getStaticPaths() {
@@ -174,10 +174,11 @@ const schema = [
 ---
 <Base titulo={tituloProducto(p, datos.productos)}
       descripcion={descripcionProducto(p, datos.productos, cat)}
+      noindex={!indexable(p)}
       schema={schema}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href={`/${p.categoria}`}>{categoria?.nombre ?? p.categoria}</a> / {p.marca}
+    <a href="/">Inicio</a> / <a href={`/${p.categoria}/`}>{categoria?.nombre ?? p.categoria}</a> / {p.marca}
   </p>
 
   <div class="disposicion-ficha">
@@ -313,13 +314,13 @@ const schema = [
         </p>
       )}
       {p.sellos.length > 0 && (
-        <p class="sutil"><a href="/metodologia#sellos">Que prueba cada sello</a>.</p>
+        <p class="sutil"><a href="/metodologia/#sellos">Que prueba cada sello</a>.</p>
       )}
       {p.flag_infradosaje && <p class="infradosis">producto infradosificado</p>}
 
       <h2>Por que puntua asi</h2>
       <p class="sutil">
-        Calidad {p.score_calidad?.toFixed(0) ?? '—'}/100 · <a href="/metodologia">como se calcula</a>.
+        Calidad {p.score_calidad?.toFixed(0) ?? '—'}/100 · <a href="/metodologia/">como se calcula</a>.
       </p>
       <ul class="desglose">
         {p.desglose.map((d) => <li>{d}</li>)}
@@ -331,7 +332,7 @@ const schema = [
           <p class="sutil">
             Lo que tiene que cumplir un producto para ser lo que esta categoria dice que es.
             Solo se listan los que se han podido comprobar en su ficha.
-            {' '}<a href="/metodologia#requisitos">Como se decide cada uno</a>.
+            {' '}<a href="/metodologia/#requisitos">Como se decide cada uno</a>.
           </p>
           <ul class="requisitos">
             {p.requisitos.map((r) => (
@@ -492,7 +493,7 @@ const schema = [
       <Vistos client:visible slug={p.slug} nombre={nom(p)} />
 
       <p class="volver">
-        <a class="boton" href={`/${p.categoria}`}>← Volver a {categoria?.nombre.toLowerCase() ?? p.categoria}</a>
+        <a class="boton" href={`/${p.categoria}/`}>← Volver a {categoria?.nombre.toLowerCase() ?? p.categoria}</a>
       </p>
     </div>
   </div>

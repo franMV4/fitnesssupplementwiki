@@ -54,7 +54,7 @@ export default function Lector() {
           <li className="resena" key={r.id}>
             <p className="cabecera-resena">
               <span className="astros" title={`${r.puntuacion} de 5`}>{estrellas(r.puntuacion)}</span>
-              <a className="quien-resena" href={`/producto/${r.producto}`}>{comoSeLee(r.producto)}</a>
+              <a className="quien-resena" href={`/producto/${r.producto}/`}>{comoSeLee(r.producto)}</a>
               <time className="mono sutil" dateTime={r.creado.replace(' ', 'T')}>{r.creado.slice(0, 10)}</time>
             </p>
             {r.texto && <p className="texto-resena">{r.texto}</p>}

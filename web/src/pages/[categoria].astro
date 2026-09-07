@@ -109,7 +109,7 @@ const schema = [
     </p>
     {guia && (
       <p class="entradilla aparece d3">
-        <a href={`/guia/${cat.slug}`}>{guia.h1}</a> — la otra mitad: que hace el ingrediente,
+        <a href={`/guia/${cat.slug}/`}>{guia.h1}</a> — la otra mitad: que hace el ingrediente,
         en que dosis y con que evidencia detras. Aqui solo estan los precios.
       </p>
     )}
@@ -137,7 +137,7 @@ const schema = [
     <strong>Que estas mirando.</strong> El score es mitad precio por {unidad} frente al mas
     barato de la categoria y mitad calidad: nivel de verificacion, forma quimica del activo y,
     donde la tienda publica las dosis, si la formula llega a la dosis efectiva. Cada producto
-    explica su nota linea a linea en su ficha. <a href="/metodologia#formula">Como se calcula</a>.
+    explica su nota linea a linea en su ficha. <a href="/metodologia/#formula">Como se calcula</a>.
   </p>
 
   <Faq faqs={faqs} titulo={`Preguntas sobre ${cat.termino}`} />
@@ -150,14 +150,14 @@ const schema = [
       </div>
       <div class="lista-categorias">
         {selecciones.map((l) => (
-          <a class="fila-categoria" href={`/mejores/${l.slug}`}>
+          <a class="fila-categoria" href={`/mejores/${l.slug}/`}>
             <span class="nombre">{l.h1.split(':')[0]}</span>
             <span class="guia" aria-hidden="true"></span>
             <span class="cuenta">{l.productos.length} prod.</span>
           </a>
         ))}
         {versus.map((l) => (
-          <a class="fila-categoria" href={`/comparativa/${l.slug}`}>
+          <a class="fila-categoria" href={`/comparativa/${l.slug}/`}>
             <span class="nombre">{l.na} o {l.nb} en {cat.termino}</span>
             <span class="guia" aria-hidden="true"></span>
             <span class="cuenta">{l.productos.length} prod.</span>
@@ -174,7 +174,7 @@ const schema = [
     </div>
     <div class="lista-categorias">
       {otras.map((c) => (
-        <a class="fila-categoria" href={`/${c.slug}`}>
+        <a class="fila-categoria" href={`/${c.slug}/`}>
           <span class="nombre">{c.consultas?.mejor
             ? c.consultas.mejor.charAt(0).toUpperCase() + c.consultas.mejor.slice(1)
             : c.nombre}</span>

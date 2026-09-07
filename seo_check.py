@@ -56,6 +56,19 @@ def existe(ruta):
     return base.is_file() or (base / "index.html").is_file() or base.with_suffix(".html").is_file()
 
 
+def con_barra(url):
+    """Si una URL absoluta apunta a la forma que sirve un 200 y no un 308.
+
+    Cloudflare Pages sirve cada pagina desde su directorio: /creatina responde 308 a
+    /creatina/. Un canonical o un sitemap escritos sin la barra mandan a Google a una
+    redireccion, y Google archiva la pagina como "pagina con redireccion" en vez de
+    indexarla. Paso con las 5.300 URLs del sitio. Los ficheros (llevan extension) van
+    sin barra y son correctos.
+    """
+    camino = urllib.parse.urlparse(url).path
+    return camino.endswith("/") or re.search(r"\.[a-z0-9]+$", camino, re.I) is not None
+
+
 def revisa_ld(url, nodo, fallos=None):
     """Recorre el JSON-LD entero comprobando lo que Google penaliza a mano.
 
@@ -149,6 +162,8 @@ def main():
             fallos.append(f"{url}: sin canonical")
         elif not es_404 and urllib.parse.urlparse(c.group(1)).path.rstrip("/") != url.rstrip("/"):
             fallos.append(f"{url}: canonical apunta a {c.group(1)}")
+        elif not es_404 and not con_barra(c.group(1)):
+            fallos.append(f"{url}: canonical sin barra final -> {c.group(1)}")
 
         # Un H1 por pagina. La excepcion son las paginas noindex que se pintan enteras
         # en el navegador (/admin): su H1 lo escribe React al montar la isla, asi que en
@@ -196,8 +211,12 @@ def main():
         fallos.append("no hay sitemap.xml")
     else:
         norm = lambda u: (urllib.parse.urlparse(u).path.rstrip("/") or "/")
-        locs = {norm(u) for u in re.findall(r"<loc>(.*?)</loc>",
-                                            sitemap.read_text(encoding="utf-8"))}
+        crudas = re.findall(r"<loc>(.*?)</loc>", sitemap.read_text(encoding="utf-8"))
+        sin_barra = [u for u in crudas if not con_barra(u)]
+        if sin_barra:
+            fallos.append(f"{len(sin_barra)} URLs del sitemap sin barra final "
+                          f"(la primera, {sin_barra[0]})")
+        locs = {norm(u) for u in crudas}
         for html in paginas:
             url = ruta_url(html)
             if url == "/404" or url in sin_indexar:

@@ -47,7 +47,7 @@ for (const d of candidatos) {
       return (
         <div class="bloque destacado-bloque">
           <span class="rotulo-destacado">{d.rotulo}</span>
-          <h3><a href={`/producto/${d.p.slug}`}>{nom(d.p)}</a></h3>
+          <h3><a href={`/producto/${d.p.slug}/`}>{nom(d.p)}</a></h3>
           <p class="linea-destacado">
             <span class="cifra">{precioReferencia(d.p).valor}<span class="unidad">/{precioReferencia(d.p).unidad}</span></span>
             <span class={`nivel ${n.clase}`}>
@@ -57,7 +57,7 @@ for (const d of candidatos) {
           </p>
           {d.razones.map((r) => <p>{r}</p>)}
           <p class="sutil">
-            En {TIENDAS[d.p.tienda] ?? d.p.tienda} · <a href={`/producto/${d.p.slug}`}>ver el desglose de su nota</a>
+            En {TIENDAS[d.p.tienda] ?? d.p.tienda} · <a href={`/producto/${d.p.slug}/`}>ver el desglose de su nota</a>
           </p>
         </div>
       );

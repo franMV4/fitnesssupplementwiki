@@ -77,7 +77,7 @@ export default function Preguntas({ producto }) {
         </form>
       ) : (
         <p className="accion-resena">
-          <a className="boton" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>
+          <a className="boton" href={`/entrar/?volver=${encodeURIComponent(vuelta)}`}>
             Entrar para preguntar <span className="flecha">→</span>
           </a>
         </p>
@@ -95,7 +95,7 @@ export default function Preguntas({ producto }) {
           {datos.preguntas.map((p) => (
             <li className="pregunta" key={p.id}>
               <p className="cabecera-resena">
-                <a className="quien-resena" href={`/lector?id=${p.lector}`}>{p.nombre}</a>
+                <a className="quien-resena" href={`/lector/?id=${p.lector}`}>{p.nombre}</a>
                 {p.mia && <span className="marca-mia">tu pregunta</span>}
                 <time className="mono sutil" dateTime={p.creado.replace(' ', 'T')}>{p.creado.slice(0, 10)}</time>
               </p>
@@ -106,7 +106,7 @@ export default function Preguntas({ producto }) {
                   {p.respuestas.map((r) => (
                     <li className="respuesta" key={r.id}>
                       <p className="cabecera-resena">
-                        <a className="quien-resena" href={`/lector?id=${r.lector}`}>{r.nombre}</a>
+                        <a className="quien-resena" href={`/lector/?id=${r.lector}`}>{r.nombre}</a>
                         {r.mia && <span className="marca-mia">tu respuesta</span>}
                         <time className="mono sutil" dateTime={r.creado.replace(' ', 'T')}>{r.creado.slice(0, 10)}</time>
                       </p>

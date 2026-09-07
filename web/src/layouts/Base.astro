@@ -166,13 +166,13 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
               <div class="grupo-menu">
                 <p class="rotulo-menu">{g.nombre}</p>
                 {g.cats.map((c) => (
-                  <a href={`/${c.slug}`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
+                  <a href={`/${c.slug}/`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
                     {c.nombre} <span>{c.productos}</span>
                   </a>
                 ))}
               </div>
             ))}
-            <a class="pie-menu" href="/guias#categorias">Ver todas las categorias &rarr;</a>
+            <a class="pie-menu" href="/guias/#categorias">Ver todas las categorias &rarr;</a>
           </div>
         </details>
         <details class="menu-cat" name="menu">
@@ -182,13 +182,13 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
               <div class="grupo-menu">
                 <p class="rotulo-menu">{g.nombre}</p>
                 {g.cats.map((c) => (
-                  <a href={`/guia/${c.slug}`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
+                  <a href={`/guia/${c.slug}/`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
                     {c.nombre}
                   </a>
                 ))}
               </div>
             ))}
-            <a class="pie-menu" href="/guias">Ver todas las guias y categorias &rarr;</a>
+            <a class="pie-menu" href="/guias/">Ver todas las guias y categorias &rarr;</a>
           </div>
         </details>
         <details class="menu-cat" name="menu">
@@ -196,7 +196,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
           <div class="lamina laminas-grupos">
             <div class="grupo-menu">
               <p class="rotulo-menu">Por evidencia</p>
-              <a href="/suplementos-que-funcionan"
+              <a href="/suplementos-que-funcionan/"
                  aria-current={aqui === '/suplementos-que-funcionan' ? 'page' : undefined}>
                 Que suplementos funcionan
               </a>
@@ -204,26 +204,26 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             <div class="grupo-menu">
               <p class="rotulo-menu">Por objetivo</p>
               {OBJETIVOS.map((o) => (
-                <a href={`/para/${o.slug}`} aria-current={aqui === `/para/${o.slug}` ? 'page' : undefined}>
+                <a href={`/para/${o.slug}/`} aria-current={aqui === `/para/${o.slug}` ? 'page' : undefined}>
                   {o.nombre}
                 </a>
               ))}
             </div>
             <div class="grupo-menu">
               <p class="rotulo-menu">Por tienda</p>
-              <a href="/tiendas" aria-current={aqui === '/tiendas' ? 'page' : undefined}>
+              <a href="/tiendas/" aria-current={aqui === '/tiendas' ? 'page' : undefined}>
                 Que tienda es mas barata
               </a>
             </div>
           </div>
         </details>
-        <a href="/metodologia" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
-        <a href="/quienes-somos" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
+        <a href="/metodologia/" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
+        <a href="/quienes-somos/" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
         {/* Mi lista va en el menu de las 2.985 paginas y no solo en la ficha: lo que se
             guarda en el navegador no existe para el lector si no hay una puerta visible
             desde cualquier sitio para volver a ello. */}
-        <a href="/mis-suplementos" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
-        <a class="comparar" href="/guias#categorias">Comparar</a>
+        <a href="/mis-suplementos/" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
+        <a class="comparar" href="/guias/#categorias">Comparar</a>
 
         {/* El pie del panel: lo que no es navegar por el catalogo. En escritorio solo
             se ve el boton de tema, en su sitio de siempre a la derecha de la barra.
@@ -231,7 +231,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             /api/yo dice que este visitante es admin: la pagina es estatica y va
             cacheada, asi que no puede saberlo al generarse. */}
         <div class="pie-panel">
-          <a class="enlace-admin" href="/admin" hidden>
+          <a class="enlace-admin" href="/admin/" hidden>
             <span class="glifo-panel" aria-hidden="true">&#9881;</span>Panel de administracion
           </a>
           <button class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
@@ -245,7 +245,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         centrado, asi que en una pantalla ancha su borde derecho no es el de la
         ventana. Este va posicionado contra la cabecera, que si llega a la esquina.
         El href lleva de vuelta a la pagina desde la que se pulsa. */}
-    <a class="acceso-cabecera" href="/entrar" aria-label="Entrar en tu cuenta" title="Entrar">
+    <a class="acceso-cabecera" href="/entrar/" aria-label="Entrar en tu cuenta" title="Entrar">
       <svg class="silueta" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
         <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9" />
         <path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0" fill="none" stroke="currentColor"
@@ -284,7 +284,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             Las {datos.categorias.length} categorias comparadas por precio real, cada una con
             su tabla ordenable y su ganador.
           </p>
-          <a class="boton" href="/guias#categorias">Ver todas las categorias <span class="flecha">&rarr;</span></a>
+          <a class="boton" href="/guias/#categorias">Ver todas las categorias <span class="flecha">&rarr;</span></a>
         </div>
         <div>
           <h4>Guias</h4>
@@ -292,18 +292,18 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             Para que sirve cada suplemento, con la dosis y la fuente al lado. Sin precios
             dentro: eso esta en la categoria.
           </p>
-          <a class="boton" href="/guias#guias">Ver todas las guias <span class="flecha">&rarr;</span></a>
+          <a class="boton" href="/guias/#guias">Ver todas las guias <span class="flecha">&rarr;</span></a>
         </div>
         <div>
           <h4>Transparencia</h4>
           <ul>
-            <li><a href="/quienes-somos">Quienes somos</a></li>
-            <li><a href="/metodologia">Metodologia</a></li>
-            <li><a href="/metodologia#niveles">Niveles de verificacion</a></li>
-            <li><a href="/metodologia#formula">La formula del score</a></li>
-            <li><a href="/metodologia#afiliacion">Afiliacion</a></li>
+            <li><a href="/quienes-somos/">Quienes somos</a></li>
+            <li><a href="/metodologia/">Metodologia</a></li>
+            <li><a href="/metodologia/#niveles">Niveles de verificacion</a></li>
+            <li><a href="/metodologia/#formula">La formula del score</a></li>
+            <li><a href="/metodologia/#afiliacion">Afiliacion</a></li>
             <li><a href="/llms.txt">Resumen para modelos de IA</a></li>
-            <li><a href="/legal">Aviso legal y privacidad</a></li>
+            <li><a href="/legal/">Aviso legal y privacidad</a></li>
             <li><a href={`mailto:${SITIO.contacto}`}>Contacto</a></li>
           </ul>
         </div>
@@ -311,7 +311,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
       <div class="colofon">
         <p class="mono">Recogida de precios del <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time> · {total} productos · {datos.categorias.length} categorias</p>
         <p>
-          Datos recogidos y metodo mantenido por <a href="/quienes-somos">{SITIO.autor.nombre}</a>.
+          Datos recogidos y metodo mantenido por <a href="/quienes-somos/">{SITIO.autor.nombre}</a>.
           {' '}{SITIO.autor.no_hace}
         </p>
         <p>
@@ -321,7 +321,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         <p>
           Esta web informa de hechos verificables sobre productos e ingredientes. No da consejo
           medico ni nutricional. Ningun efecto se atribuye a un producto: la evidencia se cita
-          por ingrediente en <a href="/metodologia">la metodologia</a>.
+          por ingrediente en <a href="/metodologia/">la metodologia</a>.
         </p>
       </div>
     </div>
@@ -367,7 +367,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
       const icono = document.querySelector('.acceso-cabecera');
       const aqui = location.pathname + location.search;
       if (!/^\/(entrar|registro|recuperar)/.test(location.pathname)) {
-        icono.href = '/entrar?volver=' + encodeURIComponent(aqui);
+        icono.href = '/entrar/?volver=' + encodeURIComponent(aqui);
       }
       try {
         const { usuario, admin } = await (await fetch('/api/yo')).json();

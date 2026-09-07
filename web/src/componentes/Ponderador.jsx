@@ -74,7 +74,7 @@ export default function Ponderador({ filas = [] }) {
                       es lo unico que se lee de un vistazo bajando por treinta. */}
                   <tr className="cabecera-cat">
                     <td className="principal" colSpan={5}>
-                      <a href={`/${f.slug}`}>
+                      <a href={`/${f.slug}/`}>
                         <i aria-hidden="true" />
                         {f.nombre}
                         <span className="flecha" aria-hidden="true">&rarr;</span>
@@ -94,7 +94,7 @@ export default function Ponderador({ filas = [] }) {
                                referrerPolicy="no-referrer"
                                loading="lazy" decoding="async" width="55" height="55" />
                         )}
-                        <a href={`/producto/${f.p.s}`} className="celda-producto">
+                        <a href={`/producto/${f.p.s}/`} className="celda-producto">
                           {/* En Amazon la marca no viene en ningun campo y el scraper la deja
                               en "Desconocida". Es lo honesto en la BD, pero pintarla delante
                               del nombre llena la columna de una palabra que no es un dato.

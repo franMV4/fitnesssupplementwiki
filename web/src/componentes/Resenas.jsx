@@ -180,7 +180,7 @@ export default function Resenas({ producto }) {
         // Un enlace a /entrar, no el formulario montado aqui: el acceso vive en su
         // pagina y no en las 2.665 fichas. `volver` trae de vuelta a esta misma ficha.
         <p className="accion-resena">
-          <a className="boton primario" href={`/entrar?volver=${encodeURIComponent(vuelta)}`}>
+          <a className="boton primario" href={`/entrar/?volver=${encodeURIComponent(vuelta)}`}>
             Entrar <span className="flecha">→</span>
           </a>
         </p>
@@ -206,7 +206,7 @@ export default function Resenas({ producto }) {
           <li className="resena" key={r.id}>
             <p className="cabecera-resena">
               <span className="astros" title={`${r.puntuacion} de 5`}>{estrellas(r.puntuacion)}</span>
-              <a className="quien-resena" href={`/lector?id=${r.lector}`}>{r.nombre}</a>
+              <a className="quien-resena" href={`/lector/?id=${r.lector}`}>{r.nombre}</a>
               {r.mia && <span className="marca-mia">tu resena</span>}
               <time className="mono sutil" dateTime={r.creado.replace(' ', 'T')}>{r.creado.slice(0, 10)}</time>
             </p>

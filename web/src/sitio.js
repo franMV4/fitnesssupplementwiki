@@ -43,5 +43,15 @@ export const SITIO = {
   analitica: 'auto',
 };
 
-// URL absoluta a partir de una ruta ("/creatina" -> "https://.../creatina").
-export const abs = (ruta) => new URL(ruta, SITIO.url).href;
+// URL absoluta a partir de una ruta ("/creatina" -> "https://.../creatina/").
+// La barra final NO es cosmetica: Cloudflare Pages sirve cada pagina desde su
+// directorio y responde 308 a la version sin barra. Con el canonical, el sitemap y el
+// JSON-LD escribiendo la forma sin barra, Google archivaba las 5.300 URLs del sitio
+// como "pagina con redireccion" y no indexaba ninguna. Se pone aqui porque este es el
+// unico sitio del proyecto que construye una URL absoluta.
+// Se dejan tal cual los ficheros (llevan extension) y se respeta el fragmento.
+export const abs = (ruta) => {
+  const [camino, ancla] = ruta.split('#');
+  const conBarra = camino.endsWith('/') || /\.[a-z0-9]+$/i.test(camino) ? camino : `${camino}/`;
+  return new URL(ancla === undefined ? conBarra : `${conBarra}#${ancla}`, SITIO.url).href;
+};

@@ -44,19 +44,19 @@ const schema = [{
       contestan lo de antes: si hace falta, para que objetivo y en que tienda.
     </p>
     <div class="lista-categorias">
-      <a class="fila-categoria" href="/suplementos-que-funcionan">
+      <a class="fila-categoria" href="/suplementos-que-funcionan/">
         <span class="nombre">Que suplementos funcionan</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">por evidencia</span>
       </a>
       {OBJETIVOS.map((o) => (
-        <a class="fila-categoria" href={`/para/${o.slug}`}>
+        <a class="fila-categoria" href={`/para/${o.slug}/`}>
           <span class="nombre">{o.nombre}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">por objetivo</span>
         </a>
       ))}
-      <a class="fila-categoria" href="/tiendas">
+      <a class="fila-categoria" href="/tiendas/">
         <span class="nombre">Que tienda es mas barata</span>
         <span class="guia" aria-hidden="true"></span>
         <span class="cuenta">ranking</span>
@@ -77,7 +77,7 @@ const schema = [{
           <ul>
             {g.cats.map((c) => (
               <li>
-                <a class="fila-indice" href={`/${c.slug}`}>
+                <a class="fila-indice" href={`/${c.slug}/`}>
                   <span class="nombre">{c.nombre}</span>
                   <span class="cuenta">{c.productos} · €/{unidad(c)}</span>
                 </a>
@@ -102,7 +102,7 @@ const schema = [{
           <ul>
             {g.cats.map((c) => (
               <li>
-                <a class="fila-indice" href={`/guia/${c.slug}`}>
+                <a class="fila-indice" href={`/guia/${c.slug}/`}>
                   <span class="nombre">{c.nombre}</span>
                 </a>
               </li>

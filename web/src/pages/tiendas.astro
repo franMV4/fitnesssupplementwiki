@@ -171,7 +171,7 @@ const schema = [
     </div>
     <div class="lista-categorias">
       {VERSUS_TIENDAS.map((v) => (
-        <a class="fila-categoria" href={`/tiendas/${v.slug}`}>
+        <a class="fila-categoria" href={`/tiendas/${v.slug}/`}>
           <span class="nombre">{v.a.nombre} o {v.b.nombre}</span>
           <span class="guia" aria-hidden="true"></span>
           <span class="cuenta">{v.comunes.length} categorias</span>

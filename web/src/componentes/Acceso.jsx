@@ -170,7 +170,7 @@ export default function Acceso({ modo: inicial = 'entrar', volver = null, onList
             {/* Solo al entrar: en el registro todavia no hay ninguna contrasena que
                 olvidar. */}
             {!registrando && (
-              <a className="enlace-accion" href={`/recuperar?volver=${encodeURIComponent(vuelta)}`}>
+              <a className="enlace-accion" href={`/recuperar/?volver=${encodeURIComponent(vuelta)}`}>
                 He olvidado mi contraseña
               </a>
             )}
