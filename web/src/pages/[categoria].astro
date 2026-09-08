@@ -7,7 +7,7 @@ import Faq from '../componentes/Faq.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { abs } from '../sitio.js';
-import { eur, paraTabla, reparto, UNIDAD } from '../datos/util.js';
+import { eur, paraTabla, UNIDAD } from '../datos/util.js';
 import {
   agregadoLd, descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
   respuestaCategoria, tituloCategoria,
@@ -101,16 +101,17 @@ const schema = [
         <b>La respuesta corta.</b> {respuesta}
       </p>
     )}
-    <p class="entradilla aparece d2">
-      {productos.length} productos de {tiendas} {tiendas === 1 ? 'tienda' : 'tiendas'},
-      ordenados por score: {reparto(unidad)}. {verificados === 0
-        ? 'Ninguno tiene ahora mismo una certificacion verificada contra la fuente oficial (nivel 4).'
-        : `${verificados} tienen certificacion verificada contra fuente oficial (nivel 4).`}
-    </p>
+    {/* Aqui iba un parrafo con el reparto del score ("35 % precio por kg frente al mas
+        barato, 35 % calidad verificable, 20 %...") y otro con el enlace a la guia. El
+        primero decia palabra por palabra lo mismo que la nota que va DEBAJO de la tabla
+        ("Que estas mirando"), o sea que la pagina explicaba su formula dos veces antes
+        de ensenar un solo precio. El segundo era tres renglones para un enlace.
+        Los dos costaban ~200 px por encima de la tabla, que es lo unico a lo que se
+        viene. El enlace se queda, en una linea. */}
     {guia && (
-      <p class="entradilla aparece d3">
-        <a href={`/guia/${cat.slug}/`}>{guia.h1}</a> — la otra mitad: que hace el ingrediente,
-        en que dosis y con que evidencia detras. Aqui solo estan los precios.
+      <p class="pase-guia aparece d2">
+        <a href={`/guia/${cat.slug}/`}>Que hace {cat.termino}, en que dosis y con que
+        evidencia</a> — aqui solo estan los precios.
       </p>
     )}
   </section>
@@ -126,10 +127,15 @@ const schema = [
     </p>
   )}
 
-  <h2 id="tabla" class="titulo-bloque">Comparativa completa</h2>
-  <div class="aparece d3 tabla-categoria">
+  {/* El titulo y las tres cifras van en la MISMA linea, no uno encima del otro: son la
+      cabecera de la tabla, no dos bloques. Apilados costaban 157 px justo donde mas
+      caro sale, entre el titular de la pagina y la primera fila de datos. */}
+  <div class="cabecera-tabla titulo-bloque">
+    <h2 id="tabla">Comparativa completa</h2>
     <Cifras n={productos.length} min={barato} max={caro} unidad={unidad} dec={dec}
             nivel4={verificados} />
+  </div>
+  <div class="aparece d3 tabla-categoria">
     <TablaProductos productos={productos.map(paraTabla)} />
   </div>
 
@@ -142,47 +148,58 @@ const schema = [
 
   <Faq faqs={faqs} titulo={`Preguntas sobre ${cat.termino}`} />
 
+  {/* Las dos colas de enlaces internos median 3.981 px en escritorio y 10.232 en movil,
+      o sea el 64 % de la pagina en un movil, para 142 enlaces que nadie recorre de
+      arriba abajo. Van dentro de un <details> cerrado, con su recuento en el resumen.
+      NO se pierde SEO: esto es Astro estatico, los 142 <a> siguen en el HTML servido y
+      Google los rastrea dentro de un details igual que fuera. Lo unico que cambia es
+      que no son lo ultimo que ve una persona antes de irse. */}
   {(selecciones.length > 0 || versus.length > 0) && (
     <section class="seccion">
-      <div class="cabecera-seccion">
-        <h2>Preguntas mas concretas sobre {cat.termino}</h2>
-        <p class="apunte">La misma tabla, filtrada</p>
-      </div>
-      <div class="lista-categorias">
-        {selecciones.map((l) => (
-          <a class="fila-categoria" href={`/mejores/${l.slug}/`}>
-            <span class="nombre">{l.h1.split(':')[0]}</span>
-            <span class="guia" aria-hidden="true"></span>
-            <span class="cuenta">{l.productos.length} prod.</span>
-          </a>
-        ))}
-        {versus.map((l) => (
-          <a class="fila-categoria" href={`/comparativa/${l.slug}/`}>
-            <span class="nombre">{l.na} o {l.nb} en {cat.termino}</span>
-            <span class="guia" aria-hidden="true"></span>
-            <span class="cuenta">{l.productos.length} prod.</span>
-          </a>
-        ))}
-      </div>
+      <details class="cola-enlaces">
+        <summary>
+          <span class="titulo-cola">Preguntas mas concretas sobre {cat.termino}</span>
+          <span class="cuenta-cola">{selecciones.length + versus.length} comparativas
+            {' '}&mdash; la misma tabla, filtrada</span>
+        </summary>
+        <div class="lista-categorias compacta">
+          {selecciones.map((l) => (
+            <a class="fila-categoria" href={`/mejores/${l.slug}/`}>
+              <span class="nombre">{l.h1.split(':')[0]}</span>
+              <span class="guia" aria-hidden="true"></span>
+              <span class="cuenta">{l.productos.length} prod.</span>
+            </a>
+          ))}
+          {versus.map((l) => (
+            <a class="fila-categoria" href={`/comparativa/${l.slug}/`}>
+              <span class="nombre">{l.na} o {l.nb} en {cat.termino}</span>
+              <span class="guia" aria-hidden="true"></span>
+              <span class="cuenta">{l.productos.length} prod.</span>
+            </a>
+          ))}
+        </div>
+      </details>
     </section>
   )}
 
   <section class="seccion">
-    <div class="cabecera-seccion">
-      <h2>Otras comparativas</h2>
-      <p class="apunte">Mismo metodo, otra categoria</p>
-    </div>
-    <div class="lista-categorias">
-      {otras.map((c) => (
-        <a class="fila-categoria" href={`/${c.slug}/`}>
-          <span class="nombre">{c.consultas?.mejor
-            ? c.consultas.mejor.charAt(0).toUpperCase() + c.consultas.mejor.slice(1)
-            : c.nombre}</span>
-          <span class="guia" aria-hidden="true"></span>
-          <span class="cuenta">{c.productos} prod.</span>
-        </a>
-      ))}
-    </div>
+    <details class="cola-enlaces">
+      <summary>
+        <span class="titulo-cola">Otras comparativas</span>
+        <span class="cuenta-cola">{otras.length} categorias &mdash; mismo metodo</span>
+      </summary>
+      <div class="lista-categorias compacta">
+        {otras.map((c) => (
+          <a class="fila-categoria" href={`/${c.slug}/`}>
+            <span class="nombre">{c.consultas?.mejor
+              ? c.consultas.mejor.charAt(0).toUpperCase() + c.consultas.mejor.slice(1)
+              : c.nombre}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{c.productos} prod.</span>
+          </a>
+        ))}
+      </div>
+    </details>
   </section>
 
   <p class="nota">

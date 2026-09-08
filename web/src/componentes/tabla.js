@@ -169,7 +169,10 @@ export function montarTabla(raiz) {
       return;
     }
 
-    if (limpiar && limpiar.contains(boton)) {
+    // `closest` y no `limpiar.contains`: hay DOS sitios desde los que se limpia, el chip
+    // de la barra de filtros y el boton del estado vacio, y `limpiar` solo apunta al
+    // primero (es el que se ensena y se esconde segun haya filtros puestos).
+    if (boton.closest('[data-limpiar]')) {
       campos.busqueda.value = '';
       campos.tienda.value = '';
       campos.precioMax.value = '';

@@ -75,6 +75,18 @@ const filasPeso = portada.filter((c) => c.r.lider).map((c) => ({
   })),
 }));
 
+// La portada ensenaba las CINCUENTA categorias con su ficha entera: 13.070 px de los
+// 15.805 que medía la pagina, o sea el 83 %, en una sola lista que nadie recorre hasta
+// abajo. Ahora la tabla de lideres se queda con las diez mas surtidas -que son las que
+// se buscan- y las otras cuarenta bajan al indice, que las sigue enlazando todas. Ni un
+// enlace menos, y una decima parte de pagina.
+// Como efecto de propina, al navegador viajan diez frentes de Pareto en vez de cincuenta.
+const EN_PORTADA = 10;
+const porTamano = (a, b) => b.productos - a.productos;
+const destacadas = filasPeso.slice().sort(porTamano).slice(0, EN_PORTADA);
+const enDestacadas = new Set(destacadas.map((f) => f.slug));
+const restoCategorias = portada.filter((c) => !enDestacadas.has(c.slug)).sort(porTamano);
+
 // La portada responde a la pregunta de arriba del embudo ("que suplementos merecen la
 // pena"); cada categoria responde a la suya. Las dos con la misma frase generada.
 // El unico parrafo de la portada: es la respuesta que copia un modelo y el fragmento
@@ -222,12 +234,13 @@ const schema = [
 
   <section class="seccion">
     <div class="cabecera-seccion">
-      <h2>Lo mejor de cada categoria ahora mismo</h2>
+      <h2>Lo mejor de las {EN_PORTADA} categorias mas surtidas</h2>
+      <p class="apunte">Las otras {restoCategorias.length}, en el indice de abajo</p>
     </div>
 
     {/* La tabla se reordena moviendo el peso del score. Es la metodologia funcionando
         delante del lector: convence mas que jurar que es neutral. */}
-    <Ponderador client:visible filas={filasPeso} />
+    <Ponderador client:visible filas={destacadas} />
 
     <p class="nota">
       <strong>El orden lo manda el score.</strong> Ni la afiliacion ni ningun acuerdo comercial
@@ -239,6 +252,34 @@ const schema = [
         cuerpo. <a href="/metodologia/#sellos">Criterio de los sellos</a>.</>
       )}
     </p>
+  </section>
+
+  {/* Las otras cuarenta. Antes cada una traia su ficha entera aqui arriba (foto del
+      lider, horquilla de precios, recuentos): 260 px por categoria. Aqui son una fila
+      con su nombre, su precio de salida y cuantos productos tiene, que es lo que hace
+      falta para decidir si se entra. Los cincuenta enlaces siguen en la portada. */}
+  <section class="seccion" id="categorias">
+    <div class="cabecera-seccion">
+      <h2>Las otras {restoCategorias.length} categorias</h2>
+      <p class="apunte">Mismo metodo, misma tabla</p>
+    </div>
+    {/* Cajas y no filas: cuarenta renglones seguidos en tres columnas se leian como un
+        listin de telefonos. Cada categoria es una pieza con su borde, su aire y su
+        precio de salida, que es el dato con el que se decide si se entra. */}
+    <div class="rejilla-categorias">
+      {restoCategorias.map((c) => (
+        <a class="caja-categoria" href={`/${c.slug}/`}>
+          <span class="nombre">{c.nombre}</span>
+          {c.min != null && (
+            <span class="desde-caja">desde <b>{c.min.toFixed(c.dec)} €</b>/{c.unidad}</span>
+          )}
+          {/* El recuento de tiendas va en su propio span porque en movil la caja mide
+              170 px y la linea entera son dos renglones: alli se esconde. */}
+          <span class="pie-caja">{c.productos} productos<span class="tiendas-caja">
+            {' '}· {c.r.tiendas} {c.r.tiendas === 1 ? 'tienda' : 'tiendas'}</span></span>
+        </a>
+      ))}
+    </div>
   </section>
 
   <section class="seccion negativo">

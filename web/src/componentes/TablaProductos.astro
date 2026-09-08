@@ -77,24 +77,32 @@ const fila = (p) => ({
 <div class="tabla-comparador" data-tope={TOPE} data-unidad={unidadPrecio}
      data-total={productos.length}>
 
+  {/* El rotulo de cada filtro ya no va ENCIMA del control, va DENTRO: en el hueco del
+      campo vacio, o como primera opcion del desplegable. Cuatro rotulos apilados
+      costaban 318 px de mandos en escritorio y 448 en movil por encima de la primera
+      fila de datos, que es a lo que se viene. El texto no se pierde: sigue en el
+      <label>, que es de donde lo lee un lector de pantalla. */}
   <div class="barra-filtros">
     <label class="campo ancho">
-      <span>Buscar</span>
-      <input type="search" name="busqueda" placeholder="marca o producto" />
+      <span class="solo-lector">Buscar</span>
+      <input type="search" name="busqueda" placeholder="Buscar marca o producto" />
     </label>
     <label class="campo">
-      <span>Tienda</span>
+      <span class="solo-lector">Tienda</span>
       <select name="tienda">
-        <option value="">Todas</option>
+        <option value="">Todas las tiendas</option>
         {tiendas.map((t) => <option value={t}>{TIENDAS[t] ?? t}</option>)}
       </select>
     </label>
     <label class="campo">
-      <span>Maximo {unidadPrecio}</span>
-      <input type="number" name="precioMax" min="0" step="1" placeholder="sin limite" />
+      <span class="solo-lector">Maximo {unidadPrecio}</span>
+      <input type="number" name="precioMax" min="0" step="1" placeholder={`Maximo ${unidadPrecio}`} />
     </label>
-    <label class="campo">
-      <span>Ordenar por</span>
+    {/* Este es el unico que no puede llevar el rotulo dentro: un desplegable ensena
+        siempre lo elegido, y "Score (recomendado)" a secas no dice que sea el orden.
+        Lleva el glifo de ordenar delante, que ocupa una letra en vez de una linea. */}
+    <label class="campo campo-orden">
+      <span class="solo-lector">Ordenar por</span>
       <select name="orden">
         {/* Los que no dependen de nada dinamico. El de la nota de los lectores lo anade
             tabla.js si la API dice que en esta categoria hay resenas. */}
@@ -105,14 +113,16 @@ const fila = (p) => ({
     {/* El chip de limpiar solo tiene sentido con algun filtro puesto: al cargar no hay
         ninguno, asi que sale oculto y lo ensena el script. */}
     <div class="campo linea" data-limpiar hidden>
-      <span>&nbsp;</span>
       <div class="grupo-chips">
         <button type="button" class="chip">limpiar filtros</button>
       </div>
     </div>
     {hayVerificacion && (
       <div class="campo linea">
-        <span>Verificacion minima</span>
+        {/* El rotulo baja a un renglon de mando en mono, del mismo tono que las reglas:
+            no es un titulo de campo, es lo que hay escrito al lado de una fila de
+            botones. */}
+        <span class="rotulo-mando">Verificacion minima</span>
         <div class="grupo-chips">
           {NIVELES_CHIP.map((n) => (
             <button type="button" class="chip" data-nivel={n.v}
@@ -246,7 +256,19 @@ const fila = (p) => ({
       <span class="flecha">↓</span>
     </button>
     <a class="volver-arriba" href="#contenido" hidden>↑ Volver arriba</a>
-    <p class="vacio" hidden>Ningun producto cumple esos filtros.</p>
+    {/* Era una linea de mono en gris que decia "Ningun producto cumple esos filtros" y
+        dejaba al lector en un callejon: la tabla vacia, los filtros arriba fuera de la
+        pantalla y ningun sitio donde pulsar. Ahora dice de cuantos habla y trae la
+        salida puesta. El boton lleva `data-limpiar` como el chip de arriba: los dos los
+        atiende el mismo `closest('[data-limpiar]')` de tabla.js. */}
+    <div class="vacio" hidden>
+      <p class="vacio-titulo">Ningun producto pasa ese corte</p>
+      <p class="vacio-pie">De los {productos.length} de esta tabla, ninguno cumple a la vez
+        todos los filtros que hay puestos.</p>
+      <div data-limpiar>
+        <button type="button" class="chip">Quitar los filtros</button>
+      </div>
+    </div>
   </div>
 
   {/* El recuento va DEBAJO, como el pie de una tabla impresa: arriba repetia la cifra

@@ -185,13 +185,22 @@ const schema = [
     <div class="lateral aparece">
       {p.imagen && (
         <figure class="foto-producto">
-          {/* La sirve la CDN de la tienda; aqui no se aloja ninguna imagen. El onerror
-              se traga la foto que la tienda ha borrado de su servidor: sin el sale el
-              icono de imagen rota y debajo un pie que dice de quien es. */}
+          {/* La sirve la CDN de la tienda; aqui no se aloja ninguna imagen. El catalogo
+              de una tienda se pudre solo (Zumub publica en su JSON-LD ficheros que ya ha
+              borrado), asi que la foto que no carga necesita un plan.
+              Antes el plan era esconder la figura entera: la columna se quedaba
+              empezando por el boton de la tienda y el bloque saltaba de sitio al fallar
+              la carga. Ahora se queda el marco, con la trama de una plancha en blanco, y
+              un pie que dice lo que ha pasado. Las dos leyendas van escritas en el HTML y
+              las cambia el CSS: asi el `onerror` sigue siendo una linea. */}
           <img src={p.imagen} alt={`${p.marca} ${p.nombre}`} loading="lazy" decoding="async"
                referrerpolicy="no-referrer"
-               onerror="this.closest('figure').hidden = true" />
-          <figcaption>Imagen de {TIENDAS[p.tienda] ?? p.tienda}</figcaption>
+               onerror="this.closest('figure').classList.add('sin-foto'); this.remove();" />
+          <figcaption>
+            <span class="pie-con-foto">Imagen de {TIENDAS[p.tienda] ?? p.tienda}</span>
+            <span class="pie-sin-foto">{TIENDAS[p.tienda] ?? p.tienda} ya no publica la
+              foto de este producto</span>
+          </figcaption>
         </figure>
       )}
 

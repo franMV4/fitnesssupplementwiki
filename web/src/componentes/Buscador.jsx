@@ -49,7 +49,10 @@ const mejor = (...encajes) => {
   return buenos.length ? Math.min(...buenos) : -1;
 };
 
-export default function Buscador({ categorias = [], total = 0 }) {
+// `etiqueta` es el texto del campo vacio. Por defecto, el de la portada, que tiene el
+// ancho de la pagina; el de la cabecera lo pasa mas corto porque su campo mide un tercio.
+export default function Buscador({ categorias = [], total = 0,
+                                   etiqueta = 'Busca una marca, un producto o un suplemento' }) {
   const [q, setQ] = useState('');
   const [indice, setIndice] = useState(null);
   const [abierto, setAbierto] = useState(false);
@@ -159,7 +162,7 @@ export default function Buscador({ categorias = [], total = 0 }) {
           aria-controls="resultados-buscador"
           aria-autocomplete="list"
           aria-label={`Buscar entre ${total} productos y sus comparativas`}
-          placeholder="Busca una marca, un producto o un suplemento"
+          placeholder={etiqueta}
           autoComplete="off"
           spellCheck="false"
           enterKeyHint="go"

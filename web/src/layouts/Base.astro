@@ -1,6 +1,7 @@
 ---
 import datos from '../datos/dataset.json';
 import Jsonld from '../componentes/Jsonld.astro';
+import Buscador from '../componentes/Buscador.jsx';
 import { SITIO, abs } from '../sitio.js';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { porFamilia } from '../datos/familias.js';
@@ -154,6 +155,17 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         <img class="glifo" src="/favicon.svg" alt="" width="22" height="22" />
         FitnessSupplement<span class="fina">Wiki</span>
       </a>
+      {/* La navegacion real de una web de 50 categorias y 4.300 productos es escribir,
+          no bajar por un menu. Hasta ahora el campo solo estaba en la portada: desde
+          cualquier otra pagina habia que volver a ella para buscar algo.
+          En la portada NO se pinta: alli ya hay uno grande, y dos campos con el mismo
+          atajo de teclado ("/") se pelean por el foco. */}
+      {aqui !== '/' && (
+        <div class="buscador-cabecera">
+          <Buscador client:idle categorias={datos.categorias} total={total}
+                    etiqueta="Buscar un producto o una categoria" />
+        </div>
+      )}
       <nav class="principal" id="menu-principal" aria-label="Secciones">
         {/* Solo se ve en movil, dentro del panel: sin un titulo arriba, el panel
             empieza directamente en "Categorias" y no se sabe que es lo que se ha
@@ -175,24 +187,13 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             <a class="pie-menu" href="/guias/#categorias">Ver todas las categorias &rarr;</a>
           </div>
         </details>
+        {/* "Que funciona" era una cuarta pestana con tres grupos de tres enlaces, y
+            "Guias" otra con cincuenta. Las dos contestan a la misma pregunta ("que me
+            leo antes de elegir"), asi que son una sola: los tres grupos de evidencia
+            entran ARRIBA de la misma lamina, delante de los estantes de guias. Una
+            pestana menos en una barra que ya no cabia en una linea. */}
         <details class="menu-cat" name="menu">
-          <summary aria-current={enGuia ? 'page' : undefined}>Guias</summary>
-          <div class="lamina laminas-grupos">
-            {guias.map((g) => (
-              <div class="grupo-menu">
-                <p class="rotulo-menu">{g.nombre}</p>
-                {g.cats.map((c) => (
-                  <a href={`/guia/${c.slug}/`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
-                    {c.nombre}
-                  </a>
-                ))}
-              </div>
-            ))}
-            <a class="pie-menu" href="/guias/">Ver todas las guias y categorias &rarr;</a>
-          </div>
-        </details>
-        <details class="menu-cat" name="menu">
-          <summary aria-current={enFunciona ? 'page' : undefined}>Que funciona</summary>
+          <summary aria-current={enGuia || enFunciona ? 'page' : undefined}>Guias</summary>
           <div class="lamina laminas-grupos">
             <div class="grupo-menu">
               <p class="rotulo-menu">Por evidencia</p>
@@ -215,14 +216,26 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
                 Que tienda es mas barata
               </a>
             </div>
+            {guias.map((g) => (
+              <div class="grupo-menu">
+                <p class="rotulo-menu">{g.nombre}</p>
+                {g.cats.map((c) => (
+                  <a href={`/guia/${c.slug}/`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
+                    {c.nombre}
+                  </a>
+                ))}
+              </div>
+            ))}
+            <a class="pie-menu" href="/guias/">Ver todas las guias y categorias &rarr;</a>
           </div>
         </details>
         <a href="/metodologia/" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
-        <a href="/quienes-somos/" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
-        {/* Mi lista va en el menu de las 2.985 paginas y no solo en la ficha: lo que se
-            guarda en el navegador no existe para el lector si no hay una puerta visible
-            desde cualquier sitio para volver a ello. */}
-        <a href="/mis-suplementos/" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
+        {/* Estos dos siguen en el menu de las 2.985 paginas, pero en escritorio no gastan
+            pestana: "quienes somos" ya esta en el pie y "mi lista" pasa a icono al lado
+            del de cuenta, que es donde una tienda pone su carrito. En movil, donde el
+            menu es un panel y no una barra, se ven los dos con su nombre escrito. */}
+        <a class="solo-panel" href="/quienes-somos/" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
+        <a class="solo-panel" href="/mis-suplementos/" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
         <a class="comparar" href="/guias/#categorias">Comparar</a>
 
         {/* El pie del panel: lo que no es navegar por el catalogo. En escritorio solo
@@ -241,10 +254,18 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         </div>
       </nav>
     </div>
-    {/* El acceso va FUERA del envoltorio: el envoltorio esta limitado a 82rem y
+    {/* Los iconos van FUERA del envoltorio: el envoltorio esta limitado a 82rem y
         centrado, asi que en una pantalla ancha su borde derecho no es el de la
-        ventana. Este va posicionado contra la cabecera, que si llega a la esquina.
-        El href lleva de vuelta a la pagina desde la que se pulsa. */}
+        ventana. Estos van posicionados contra la cabecera, que si llega a la esquina.
+        El href del acceso lleva de vuelta a la pagina desde la que se pulsa. */}
+    <a class="mi-lista-cabecera" href="/mis-suplementos/" title="Mi lista"
+       aria-label="Mi lista de suplementos guardados"
+       aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
+           stroke="currentColor" stroke-width="1.9" stroke-linecap="square">
+        <path d="M4 5h16M4 11h16M4 17h9" />
+      </svg>
+    </a>
     <a class="acceso-cabecera" href="/entrar/" aria-label="Entrar en tu cuenta" title="Entrar">
       <svg class="silueta" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
         <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9" />
