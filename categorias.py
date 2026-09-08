@@ -50,10 +50,12 @@ CAPSULAS = r"c[aá]psulas?|[a-z]*caps\b|softgels?|perlas|tabletas|tabs\b|comprim
 # Cortado") y un kilo de arroz integral. Los dos encabezaban su tabla por precio, que es
 # justo lo que avisa el comentario de arriba. "pan" va con \b a los dos lados por lo mismo
 # que "cafe": sin ellos se comia "pancake" y cualquier marca con "pan" dentro.
+# "pure" va SOLO con acento y con \b: sin el acento se comia "Creapure", "Carnipure",
+# "Pureway-C" y cualquier "100% Pure Whey", que son media tabla de creatina y de whey.
 NO_ES_UN_BOTE = (r"crema|\bcaf[eé]\b|smoothie|oats|avena|muesli|granola|cereal|galleta|"
                  r"cookie|tortita|bebida|shot\b|mug\s*cake|\bcake\b|gofre|pancake|"
                  r"harina|porridge|mermelada|sirope|\bpan(es)?\b|\barroz\b|"
-                 r"barrita|\bbarra\b|snack|\bchips\b")
+                 r"barrita|\bbarra\b|snack|\bchips\b|pudding|pud[ií]n|\bpuré\b")
 
 CATEGORIAS = {
     "creatina": dict(
@@ -111,7 +113,13 @@ CATEGORIAS = {
             "certificacion": "que certificacion tiene que tener una proteina whey",
             "dosis": "cuanta proteina whey hay que tomar al dia",
         },
-        filtro=r"whey|suero|prote",
+        # Whey es whey: el nombre lo tiene que decir. Antes valia un "prote" suelto y
+        # entraba cualquier comida con proteina anadida (wraps, tostadas, un pure de
+        # marmitako de atun), cualquier marca que se llame asi ("Best Protein" vendiendo
+        # carbohidratos) y hasta una crema antiarrugas ("InSkin Protect"). El wrap salia
+        # el PRIMERO de la tabla, porque a 8,91 EUR/kg nadie le gana. Quitar ese "prote"
+        # se lleva por delante 43 productos de 286, y ninguno de los 43 era una whey.
+        filtro=r"whey|suero",
         excluye=(r"isolat|aislad|hidroliz|vegan|vegetal|guisante|soja|arroz|c[aá]seina|"
                  r"huevo|carne|colageno|col[aá]geno|" + NO_ES_UN_BOTE + "|" + CAPSULAS),
         activo="proteina_whey_concentrada",
@@ -260,7 +268,14 @@ CATEGORIAS = {
             "certificacion": "que certificacion tiene que tener una proteina vegana",
             "dosis": "cuanta proteina vegana hay que tomar al dia",
         },
-        filtro=r"vegan|vegetal|guisante|\bpea\b|soja|\bsoy\b|arroz|c[aá][nñ]amo|hemp",
+        # DOS condiciones, no una: que sea vegetal Y que sea proteina. Con solo la
+        # primera, "vegan|vegetal" casaba con el pasillo entero de comida ecologica y la
+        # tabla tenia mayonesa vegana, aceitunas de Aragon, kimchi, ajo negro, azucar de
+        # coco, lecitina de soja y un potito de bebe ("Yogur Vegetal ... +6m"): 40 de 181.
+        # "isolate|aislad" ademas de "prote" para no perder los que se llaman solo asi
+        # (Life Pro "ISOLATE VEGAN CREAMY"), que si son lo que busca esta categoria.
+        filtro=(r"(?=.*(?:prote|isolate|aislad))"
+                r"(?=.*(?:vegan|vegetal|guisante|\bpea\b|soja|\bsoy\b|arroz|c[aá][nñ]amo|hemp))"),
         # Ni una bebida vegetal ni una whey que menciona su version vegana de pasada.
         excluye=(r"whey|suero|c[aá]seina|colageno|col[aá]geno|huevo|carne|bebida vegetal|"
                  r"leche|" + NO_ES_UN_BOTE + "|" + CAPSULAS),

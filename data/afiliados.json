@@ -8,8 +8,12 @@
   ],
   "tiendas": {
     "hsn": {
-      "programa": null,
-      "parametros": {}
+      "programa": "HSN afiliados",
+      "parametros": {
+        "utm_source": "hsnaffiliate",
+        "utm_medium": "FJMUNOZ",
+        "utm_campaign": "comparador"
+      }
     },
     "myprotein": {
       "programa": null,

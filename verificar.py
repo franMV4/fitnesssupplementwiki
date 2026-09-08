@@ -91,12 +91,14 @@ def cruzar_listas(con):
     return subidos
 
 
-# Comillas simples ademas de dobles. El editor WYSIWYG de HSN emite href='...' y el
-# analisis de pureza DEL PRODUCTO sale justo asi, mientras que los certificados de
-# fabrica de la plantilla van con comillas dobles: aceptar solo dobles dejaba fuera
-# exactamente el unico PDF que aqui cuenta.
+# Cualquier .pdf de la pagina, no solo los de un <a href>. HSN publica los analisis DEL
+# PRODUCTO dentro de un bloque JSON, con las barras escapadas (https:\/\/...), mientras
+# que los que si van en un href son los certificados de FABRICA de la plantilla. Pedir
+# href dejaba fuera exactamente los tres PDF que cuentan (metales pesados, microbiologia
+# y perfil nutricional del lote) y se quedaba solo con los que hay que descartar.
+# Quien decide no es de donde cuelga el enlace, sino los tres filtros de abajo.
 PDF_ANALISIS = re.compile(
-    r"""href=("|')([^"']+\.pdf)\1""", re.I)
+    r"""(https?://[^\s"'<>]+?\.pdf|/[^\s"'<>]+?\.pdf)""", re.I)
 # Palabras completas: "lab" suelto casaba dentro de "labelling" y colaba la guia de
 # tolerancias de etiquetado de la UE como si fuera un analisis de laboratorio de la marca.
 PISTA_ANALISIS = re.compile(
@@ -130,7 +132,10 @@ def mismo_dominio(pdf, ficha):
 
 def candidatos_analisis(html, url_ficha):
     """PDFs de la ficha que pueden ser un analisis de laboratorio de ESTE producto."""
-    return [u for _comilla, u in PDF_ANALISIS.findall(html)
+    # Las barras escapadas del JSON incrustado (https:\/\/...) antes de mirar nada: es
+    # ahi donde HSN publica los analisis del producto.
+    html = html.replace("\\/", "/")
+    return [u for u in PDF_ANALISIS.findall(html)
             if PISTA_ANALISIS.search(u)
             and not CERTIFICADO_DE_FABRICA.search(u)
             and mismo_dominio(u, url_ficha)]

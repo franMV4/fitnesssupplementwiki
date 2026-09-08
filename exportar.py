@@ -20,6 +20,7 @@ from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 import categorias
 import ediciones
 from data.db import connect
+from scraper.core import es_valido
 from scoring import config as cfg
 from scoring.motor import precio_referencia, sellos_de
 
@@ -265,6 +266,12 @@ def exportar(con):
         # borrar la fila se llevaria por delante su serie de precios, que es el unico
         # dato del proyecto que nadie puede reconstruir despues.
         if "%s|%s" % (p["tienda"], p["url"]) in no_publicar:
+            continue
+        # El filtro de su categoria, otra vez y aqui. La fila guardada ayer no se entera
+        # de que categorias.py ha cambiado hoy: sin esto, afinar un filtro no limpia nada
+        # hasta el siguiente scrapeo completo, y lo que ya colo se sigue publicando. Se
+        # salta, no se borra, por lo mismo que arriba: la serie de precios no se rehace.
+        if not es_valido(p["nombre"], p["categoria"]):
             continue
         certs = [dict(r) for r in con.execute(
             "SELECT tipo, nivel_verificacion, codigo_qs, url_evidencia, verificado_fecha,"

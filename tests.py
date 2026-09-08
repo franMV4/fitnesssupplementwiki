@@ -110,6 +110,40 @@ def test_una_proteina_con_creatina_no_es_una_creatina():
     assert not core.es_valido("100% Whey Prime Isolate + Creatine 907g", "creatina")
 
 
+def test_la_comida_con_proteina_no_es_una_whey():
+    """Los dos primeros de la tabla de whey eran un wrap y un pure de atun: "prote" a
+    secas casaba con cualquier comida con proteina anadida, con una marca llamada "Best
+    Protein" que vendia carbohidratos y con "InSkin Protect", que es una crema."""
+    v = core.es_valido
+    assert v("Evowhey Protein 2Kg", "proteina_whey")
+    assert v("Proteina de suero de leche en polvo 1kg", "proteina_whey")
+    assert not v("Wraps Low Carb High Protein 320 Gr", "proteina_whey")
+    assert not v("Pure Marmitako de Atun O3+Prebioticos+Proteina 340 gr", "proteina_whey")
+    assert not v("Best Protein Best Carbohydrate Naranja 2000 g", "proteina_whey")
+    assert not v("InSkin Protect Antiarrugas Funcional 391 gr", "proteina_whey")
+    assert not v("Egg White Protein Powder 1Kg", "proteina_whey")
+
+
+def test_la_comida_vegana_no_es_una_proteina_vegana():
+    """"vegan|vegetal" casaba con el pasillo entero de comida eco: la tabla tenia
+    mayonesa, aceitunas, kimchi y un potito de bebe."""
+    v = core.es_valido
+    assert v("Proteina Vegana de Guisante 1kg", "proteina_vegana")
+    assert v("ISOLATE VEGAN CREAMY 1KG", "proteina_vegana")     # se llama solo asi
+    assert not v("Mayonesa Vegana Eco Veganesa 190 g", "proteina_vegana")
+    assert not v("Yogur Vegetal Coco, Mango y Manzana +6m 2x130 gr", "proteina_vegana")
+    assert not v("Aceitunas Negras Aragon Eco 220 220 g", "proteina_vegana")
+    assert not v("Soja Texturizada Fina 350g", "proteina_vegana")
+
+
+def test_pure_solo_descarta_con_acento():
+    """"pure" sin acento es media tabla: Creapure, Carnipure, Pureway-C, "100% Pure
+    Whey". Solo el "pure" acentuado es un plato de comida."""
+    assert core.es_valido("Creatina Excell (100% Creapure) en polvo 500g", "creatina")
+    assert core.es_valido("100% Pure Whey 2kg", "proteina_whey")
+    assert not core.es_valido("Pudding Proteico de Caseina 1Kg", "caseina")
+
+
 def test_objeto_json_cuenta_llaves():
     html = 'basura "attributes": {"216": {"code": "content_weight", "options": [{"label": "1Kg"}]}} mas basura'
     assert _objeto_json(html, "attributes")["216"]["options"][0]["label"] == "1Kg"
@@ -371,6 +405,20 @@ def test_el_analisis_del_producto_va_con_comillas_simples():
             'certificate-es-accp-hsn-2026-2027_1.pdf">HACCP de la fabrica</a>')
     assert candidatos_analisis(html, ficha) == [
         "https://www.hsnstore.com/media/wysiwyg/analysis/nutri-creatine-mono-creatine-hsn_1.pdf"]
+
+
+def test_el_analisis_puede_venir_en_un_json_con_las_barras_escapadas():
+    """La creatina 200 mesh de HSN salia sin certificacion teniendo tres analisis: los
+    del PRODUCTO viven en un bloque JSON (https:\\/\\/...) y los unicos que iban en un
+    <a href> eran los certificados de FABRICA, que no dicen nada de este bote."""
+    ficha = "https://www.hsnstore.com/marcas/raw-series/creatina-monohidrato-200-mesh"
+    html = ('{"contenido":"...https:\\/\\/www.hsnstore.com\\/media\\/wysiwyg\\/analysis'
+            '\\/contam-metals-mono-creatine-200mesh-hsn_1.pdf..."}'
+            '<a href="https://www.hsnstore.com/media/wysiwyg/analysis/'
+            'ifs-food-certificate-renewal-2026-hsn_1.pdf">IFS Food de la fabrica</a>')
+    assert candidatos_analisis(html, ficha) == [
+        "https://www.hsnstore.com/media/wysiwyg/analysis/"
+        "contam-metals-mono-creatine-200mesh-hsn_1.pdf"]
 
 
 def test_el_rescrape_retira_un_sello_que_ya_no_esta():
