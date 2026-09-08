@@ -448,6 +448,38 @@ categoria, un producto o una tienda.**
   entero es el activo, así que una mezcla entra como el producto más barato de la categoría
   sin serlo (es el mismo caso que el "Whey Prime + Creatine" de Prozis). Cada categoría
   excluye por nombre las mezclas que la invaden: está en su `excluye` de `categorias.py`.
+- **Lo que un nombre niega no es lo que el bote lleva** (arreglado el 2026-09-08): un potito
+  de bebé ("Nutribén Potitos **Sin Almidones**") salía el 18º de 113 en carbohidratos, porque
+  el filtro casaba con `almid[oó]n` dentro de la negación que presume de no llevarlo. El
+  agujero estaba abierto en las 50 categorías ("sin creatina", "0% azúcares"), solo que hoy
+  ninguna otra negación coincidía con un filtro. `core.NEGADO_NOMBRE` borra lo negado del
+  nombre antes de mirar la categoría, como `NEGADO` ya hacía con la lista de ingredientes en
+  `aditivos()`. **Se come UNA palabra y no los 60 caracteres de `NEGADO`**: en un nombre el
+  activo va pegado a la negación ("Sin Levaduras Selenio 200 Mcg", "sin edulcorantes (whey
+  isolate CFM)"), y con los 60 caracteres se caían 5 productos legítimos de 4.895 para quitar
+  1 malo. Medido: con una palabra se mueve exactamente ese producto (carbohidratos 113 → 112)
+  y ninguno más.
+- **Lo que hay dentro de un `<script>` no es texto de la ficha** (arreglado el 2026-09-08):
+  `texto_plano` quitaba las etiquetas pero no el CUERPO de `<script>`/`<style>`, así que el
+  bloque GDPR de PrestaShop (61 fichas de Life Pro, `var psgdpr_customer_token = "..."`) y el
+  JSON de traducciones de Myprotein (457 fichas) cumplían las dos condiciones de
+  `listas_ingredientes` (comas y 25 caracteres) y se guardaban como lista de ingredientes,
+  pintada tal cual en la ficha. Medido sobre las fichas con HTML en caché: cambiaba
+  `lista_ingredientes` en 449, `aditivos` en 149 (todos de `[]` a `None`) y **la pureza
+  declarada en 0**, así que ningún score se movió por ahí.
+- **Una declaración de ingredientes abre su bloque o lleva los dos puntos**
+  (arreglado el 2026-09-08): al aplanar la página, "elaborado con los mejores ingredientes"
+  se pegaba al bloque siguiente y parecía que la declaración continuaba; con comas y de sobra
+  de largo, colaba. **188 de 467** fichas que decían publicar la lista guardaban prosa de
+  marketing. Ahora `_BLOQUE` marca el corte de bloque con `|` y `_DECLARACION` exige que
+  "ingredientes" abra su bloque o los lleve detrás. **Exigir solo los dos puntos se probó y
+  se descartó**: costaba 291 fichas, y las de HSN y USA Fitness eran listas de verdad (esas
+  dos publican `INGREDIENTES` como título, sin dos puntos). La regla de bloques además
+  recupera 67 listas reales que la prosa tapaba.
+- **HSN y Zumub guardan una URL y descargan otra**: HSN añade `?formato=` y Zumub `?sku=` a
+  la URL que va a la BD, pero `fetch` pide la URL base. Cualquier cosa que busque en
+  `data/cache/` por la URL guardada (sha1 de la URL) no encuentra nada para esas dos tiendas
+  y parece que la ficha nunca se descargó. Hay que probar también con la URL sin query.
 - **Ingredientes que cuentan**: `categorias.CATEGORIAS[x]["ingredientes"]` acota qué activos
   puntúan en una fórmula. Un multivitamínico de HSN con 100 mg de cafeína se estaba
   puntuando (y ganando su categoría) como si fuera un suplemento de cafeína infradosificado.

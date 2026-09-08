@@ -43,6 +43,21 @@ def test_filtro_categoria():
     assert core.es_valido("Creatina Excell (100% Creapure) en polvo 500g")
 
 
+def test_lo_que_el_nombre_niega_no_es_lo_que_el_bote_lleva():
+    """"Potitos Sin Almidones" salia el 18 de 113 en carbohidratos por la palabra que niega."""
+    assert not core.es_valido(
+        "Nutriben Potitos Sin Almidones Menestra de verduras con jamon y ternera +6m 235g",
+        "carbohidratos")
+    assert core.es_valido("Maltodextrina en polvo 1kg", "carbohidratos")
+    # Lo negado casi siempre es un atributo y no el activo: esto sigue siendo creatina.
+    assert core.es_valido("Creatina Monohidrato en polvo 500g Sin Sabor")
+    assert core.es_valido("Impact Whey Protein sin lactosa 1kg", "proteina_whey")
+    # Y solo se come la palabra negada: el activo viene pegado detras mas de lo que parece.
+    assert core.es_valido("Sin Levaduras Selenio 200 Mcg 90 Capsulas", "selenio")
+    assert core.es_valido("Evolate 2.0 sin edulcorantes (whey isolate CFM) 2Kg",
+                          "proteina_aislada")
+
+
 def test_url_imagen_normaliza_las_tres_formas():
     """Cada tienda la publica distinta: absoluta (HSN), sin esquema (Prozis, //host) y
     sin esquema ni barras (Life Pro, www.host). Y unas dan cadena y otras lista."""
@@ -1233,13 +1248,55 @@ def test_la_pureza_sale_de_la_columna_por_cien_gramos():
 
 def test_una_etiqueta_limpia_no_se_confunde_con_una_sucia():
     """"Sin colorantes ni edulcorantes" es lo contrario de llevarlos."""
-    limpia = "Ingredientes de calidad, sin colorantes, sin edulcorantes ni aromas artificiales"
+    limpia = ("Ingredientes: proteina de suero, cacao, "
+              "sin colorantes, sin edulcorantes ni aromas artificiales")
     assert core.aditivos(limpia) == []
     sucia = ("Ingredientes: proteina de suero, cacao, colorante (caramelo amonico), "
              "edulcorante (sucralosa), lactasa.")
     assert core.aditivos(sucia) == ["edulcorante_artificial", "colorante"]
     # None y [] no son lo mismo: uno es "no lleva", el otro "no lo dice".
     assert core.aditivos("<p>ni una lista por aqui</p>") is None
+
+
+def test_la_prosa_de_marketing_no_es_una_lista_de_ingredientes():
+    """Una declaracion abre su bloque o lleva los dos puntos; lo demas es publicidad.
+
+    "Elaborado con los mejores ingredientes" acaba donde acaba su parrafo, pero al
+    aplanar la pagina se pegaba al bloque siguiente y pasaba las dos condiciones
+    (comas y 25 caracteres): 188 de 467 fichas guardaban prosa por aqui."""
+    prosa = ("<p>Elaborado con los mejores ingredientes</p>"
+             "<p>Maxima calidad, trazabilidad total, del origen al envasado</p>")
+    assert core.listas_ingredientes(prosa) == []
+    assert core.aditivos(prosa) is None          # no lo dice, que no es "no lleva"
+    # El titulo suelto SI abre una declaracion, aunque no lleve dos puntos: asi la
+    # publican HSN y USA Fitness, y exigirlos costaba 291 fichas con lista de verdad.
+    titulo = ("<h3>INGREDIENTES</h3><p>L-teanina, inositol, taurina, "
+              "edulcorantes (xilitol, sorbitol)</p>")
+    assert core.listas_ingredientes(titulo) == [
+        "L-teanina, inositol, taurina, edulcorantes (xilitol, sorbitol)"]
+    # Y una declaracion no salta de un bloque al siguiente para seguir leyendo prosa.
+    corta = "<p>Ingredientes: agua, sal</p><p>Este bote, ademas, es una maravilla</p>"
+    assert core.listas_ingredientes(corta) == []  # "agua, sal" no llega a 25 caracteres
+    # Myprotein pone el titulo y lo repite dentro del parrafo; la ficha no tiene que
+    # decir "Ingredientes segun la ficha: Ingredientes: ...".
+    repetido = "<h3>INGREDIENTES</h3><p>Ingredientes: agua, sal, aroma natural y mas</p>"
+    assert core.listas_ingredientes(repetido) == ["agua, sal, aroma natural y mas"]
+
+
+def test_el_javascript_de_la_ficha_no_es_una_lista_de_ingredientes():
+    """El cuerpo de un <script> no es texto de la etiqueta, aunque tenga comas.
+
+    Las fichas de PrestaShop (Life Pro) llevan un bloque GDPR inline con comas y de
+    sobra de largo, y con texto_plano quitando solo las etiquetas 61 productos
+    guardaron `var psgdpr_customer_token = "..."` como lista de ingredientes y la
+    ficha lo pintaba tal cual."""
+    ficha = ('<p>Ingredientes: agua, sal, aroma natural, un poco mas de texto.</p>'
+             '<script>var psgdpr_customer_token = "da39a3ee"; var a = 1, b = 2, c = 3;</script>'
+             '<style>.a,.b,.c{color:red}</style>')
+    assert "psgdpr" not in core.texto_plano(ficha)
+    assert core.listas_ingredientes(ficha) == ["agua, sal, aroma natural, un poco mas de texto"]
+    # Un <script> sin cerrar (pagina truncada a media descarga) tampoco vuelve como texto.
+    assert "psgdpr" not in core.texto_plano('<p>Hola</p><script>var psgdpr_a = 1, b = 2;')
 
 
 def test_el_relleno_ya_no_es_un_aditivo_sino_un_requisito():

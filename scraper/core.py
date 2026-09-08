@@ -432,9 +432,24 @@ def _patron(clave, texto):
     return _cache_patron[clave]
 
 
+# Las formas de negar que usa una etiqueta, en un solo sitio: las miran el nombre del
+# producto (NEGADO_NOMBRE) y la lista de ingredientes (NEGADO, mas abajo).
+_NEGACION = r"\b(?:sin|libre de|no contiene|0\s*%\s+de)\b"
+
+# Lo que un nombre NIEGA no dice lo que el bote lleva: "Nutriben Potitos Sin Almidones"
+# presume de no llevar almidon y entraba en carbohidratos justo por la palabra que niega
+# (puesto 18 de 113). Mismo razonamiento que NEGADO, distinto tope: un nombre no es una
+# lista de ingredientes y lleva el activo pegado a la negacion ("Sin Levaduras Selenio
+# 200 Mcg", "sin edulcorantes (whey isolate CFM)"), asi que comerse 60 caracteres tiraba
+# 5 productos legitimos de 4.895 para quitar 1 malo; con UNA palabra se cae solo el
+# potito. El separador admite guion porque prozis filtra sobre la URL cruda, donde no
+# hay espacios.
+NEGADO_NOMBRE = re.compile(_NEGACION + r"[\s-]+\w+", re.I)
+
+
 def es_valido(nombre, categoria="creatina"):
     """Si ese nombre (o ese slug) es un producto de esa categoria."""
-    n = nombre or ""
+    n = NEGADO_NOMBRE.sub(" ", nombre or "")
     cfg = config_categoria(categoria)
     filtro = _patron((categoria, "filtro"), cfg.get("filtro"))
     if filtro and not filtro.search(n):
@@ -635,9 +650,19 @@ FILA_PROTEINA = re.compile(
     r"(?:\s*(\d{1,3}(?:[.,]\d+)?)\s*g\b)?", re.I)
 
 
+# El cuerpo de <script> y <style> NO es texto de la ficha, y quitar solo las etiquetas lo
+# dejaba dentro. El bloque GDPR inline de PrestaShop cumple las dos condiciones que
+# listas_ingredientes exige a una declaracion (tiene comas y pasa de 25 caracteres), asi
+# que 61 fichas de Life Pro guardaban `var psgdpr_customer_token = "..."` como lista de
+# ingredientes y la ficha lo pintaba. Se acepta el <script> sin cerrar (|\Z) porque una
+# pagina truncada a media descarga no puede dejar el script entero como texto.
+_GUION = re.compile(r"<(script|style)\b[^>]*>.*?(?:</\1\s*>|\Z)", re.I | re.S)
+
+
 def texto_plano(html):
-    """El HTML sin etiquetas y con los espacios colapsados. Para leer tablas y listas."""
-    return re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", html or "")))
+    """El HTML sin etiquetas ni scripts y con los espacios colapsados. Para leer tablas y listas."""
+    sin_guion = _GUION.sub(" ", html or "")
+    return re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", sin_guion)))
 
 
 def pureza_declarada(html):
@@ -677,25 +702,41 @@ ADITIVOS = [
 # publica CINCO listas distintas: la de chocolate lleva cacao y la de vainilla no.
 # Se leen todas y se suman, porque en la tabla hay una fila por formato y no por sabor:
 # lo que se puede afirmar del producto es lo que declara en los sabores que vende.
-_DECLARACION = re.compile(r"ingredientes\s*:?\s*(.{20,700})", re.I | re.S)
-_FIN = re.compile(r"\.\s|al[eé]rgenos|modo de empleo|informaci[oó]n nutricional|"
-                  r"puede contener|conservar en", re.I)
+# Los bloques del HTML son la puntuacion que a la prosa comercial le falta: "elaborado
+# con los mejores ingredientes" termina donde termina su parrafo, pero al aplanar la
+# pagina se pegaba al bloque siguiente y parecia que la declaracion continuaba. Con
+# comas y de sobra de largo, colaba: 188 de las 467 fichas que decian publicar la lista
+# guardaban prosa. Se marca el corte de bloque con | y se exige que "ingredientes" abra
+# su bloque (el titulo "INGREDIENTES" de HSN o USA Fitness, que no lleva dos puntos) o
+# los lleve detras. Exigir solo los dos puntos costaba 291 fichas, y las de HSN eran
+# listas de verdad.
+_BLOQUE = re.compile(r"<\s*/?(?:br|p|div|li|tr|td|th|h[1-6]|ul|ol|table|section"
+                     r"|article|hr|dt|dd)\b[^>]*>", re.I)
+_DECLARACION = re.compile(r"(?:\|\s*(?:otros\s+)?ingredientes\s*:?|ingredientes\s*:)"
+                          r"\s*(?:\|\s*)*(.{20,700})", re.I | re.S)
+_ETIQUETA = re.compile(r"^ingredientes\s*:\s*", re.I)
+_FIN = re.compile(r"\.\s|\||al[eé]rgenos|modo de empleo|"
+                  r"informaci[oó]n nutricional|puede contener|conservar en", re.I)
 
 
 def listas_ingredientes(html):
     """Las declaraciones de ingredientes de la ficha. [] si no publica ninguna.
 
-    Se corta en el primer punto y aparte: una lista de ingredientes no lleva puntos por
-    dentro y un parrafo de marketing si, asi que lo que sobrevive con dos comas o mas es
-    una lista y no una frase que menciona la palabra "ingredientes".
+    Se corta en el primer punto y aparte Y en el final del bloque: una lista de
+    ingredientes no lleva puntos por dentro ni se reparte en dos parrafos, y un texto de
+    marketing si, asi que lo que sobrevive con una coma o mas es una lista y no una
+    frase que menciona la palabra "ingredientes".
 
     Distinguir "no lleva aditivos" de "no lo dice" importa: castigar a un producto por lo
     que su tienda no publica seria inventarse el dato.
     """
     fuera = []
-    for m in _DECLARACION.finditer(texto_plano(html)):
+    for m in _DECLARACION.finditer(texto_plano(_BLOQUE.sub(" | ", html or ""))):
         corte = _FIN.search(m.group(1))
-        trozo = (m.group(1)[:corte.start()] if corte else m.group(1)).strip(" .;")
+        trozo = (m.group(1)[:corte.start()] if corte else m.group(1)).strip(" .;|")
+        # Myprotein pone el titulo y lo repite dentro del parrafo, y la ficha
+        # quedaba con "Ingredientes segun la ficha: Ingredientes: ..." (117 fichas).
+        trozo = _ETIQUETA.sub("", trozo)
         if trozo.count(",") >= 1 and len(trozo) >= 25 and trozo not in fuera:
             fuera.append(trozo)
     return fuera
@@ -705,7 +746,7 @@ def listas_ingredientes(html):
 # las palabras sueltas la marcaria como la mas sucia de la tabla. Lo negado se borra antes
 # de mirar nada. Se corta a 60 caracteres para no tragarse media lista detras de un
 # inocente "sin gluten": equivocarse por aqui deja de penalizar, nunca penaliza de mas.
-NEGADO = re.compile(r"\b(?:sin|libre de|no contiene|0\s*%\s+de)\b[^.;|]{0,60}", re.I)
+NEGADO = re.compile(_NEGACION + r"[^.;|]{0,60}", re.I)
 
 
 # Tope de lo que se guarda de la etiqueta. Una ficha con cinco sabores publica cinco
