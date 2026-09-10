@@ -72,10 +72,32 @@
     "zumub": {
       "programa": null,
       "productos": 217,
-      "red": "Propio",
+      "red": "Propio, POR CUPON (no rastrea enlaces)",
       "alta": "https://www.zumub.com/es/affiliates",
-      "_verificado": "Admite comparadores de precios POR ESCRITO, el unico que lo dice. Hasta 6%. OJO: la comision se abona como saldo en tu cuenta de Zumub, no en dinero. Decide tu si eso te vale.",
-      "parametros": {}
+      "cupon": "10FRAN",
+      "enlace_de_cortesia": "https://zumu.be/10FRAN",
+      "_verificado": "Alta CONCEDIDA 10/09/2026, cupon 10FRAN. Hasta 15%. La comision se abona como saldo en tu cuenta de Zumub, no en dinero.",
+      "_no_uses_el_enlace_corto": [
+        "El zumu.be/10FRAN que te dan es un enlace de cortesia a la PORTADA y ademas hoy",
+        "ni resuelve (302 a http://zumu.be/). Puesto en las 217 filas mandaria a quien",
+        "pincha 'Zumub' a la home en vez de al bote cuyo precio le ensenamos. No lo metas.",
+        "",
+        "El parametro de abajo es lo que SI funciona, comprobado el 10/09/2026 contra una",
+        "ficha real: de diez nombres probados (a, aff, affiliate, ref, cupon, coupon,",
+        "coupon_code, discount_code, promo, voucher) solo 'coupon_code' hace que Zumub",
+        "responda con una cookie propia:",
+        "  Set-Cookie: coupon_code=10FRAN; expires=2041-09-06; path=/; domain=.zumub.com",
+        "La pagina sigue siendo la del producto (200), asi que el enlace de la tabla no",
+        "pierde el destino y el cupon viaja pegado. Los otros nueve solo se reflejaban en",
+        "el selector de idioma, que es lo que los hacia parecer que hacian algo.",
+        "",
+        "OJO: Zumub pone la cookie con CUALQUIER cadena, tambien con una inventada. Que la",
+        "ponga no prueba que el codigo sea valido, solo que el mecanismo es ese. Comprueba",
+        "una compra real antes de dar por hecho que se esta atribuyendo."
+      ],
+      "parametros": {
+        "coupon_code": "10FRAN"
+      }
     },
 
     "bulevip": {
