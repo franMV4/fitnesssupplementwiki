@@ -9,6 +9,7 @@
 
 import { eur, reparto, TIENDAS, UNIDAD } from './util.js';
 import { abs } from '../sitio.js';
+import CON_IMPRESIONES from './con-impresiones.json' with { type: 'json' };
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
                'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -386,19 +387,36 @@ export const descripcionProducto = (p, productos, cat) => {
 // sitemap. Si las categorias recuperan indexacion, se sube el tope.
 export const TOPE_INDEXADO = 10;
 
+// Y ademas, las que Google YA ensenaba a alguien.
+//
+// El top 10 de arriba es una apuesta: se suponia que la ficha mejor puntuada es la que
+// responde una busqueda. El informe de Search Console del 10/09/2026 dice que no. De
+// las fichas que tenian impresiones, las que el top 10 dejaba dentro sumaban 506
+// impresiones y 2 clics; las que dejaba fuera, 2.295 y 19. O sea que el criterio
+// sacaba del indice el 90 % de los clics de fichas que habia.
+//
+// Puntuar bien y traer gente no es lo mismo, asi que ahora se indexan las dos cosas:
+// el top 10 por nota (la apuesta, para lo que aun no tiene historial) y la lista
+// medida (lo que ya funciona). Ver el cabecero de con-impresiones.json.
+const MEDIDAS = new Set(CON_IMPRESIONES.slugs);
+
 // ponytail: memoizado por lista de productos (un build = un dataset = una entrada).
 const cacheIndexables = new WeakMap();
 
 const calcula = (productos) => {
   const porCategoria = new Map();
+  const ids = new Set();
   for (const p of productos) {
+    // Con impresiones medidas entra igual: que Google se la haya ensenado a alguien es
+    // mejor prueba de que sirve que cualquier regla que podamos escribir aqui. Tambien
+    // las de marca "Desconocida", que la regla de abajo descarta por principio.
+    if (MEDIDAS.has(p.slug)) ids.add(p.id);
     // Sin marca no responde ninguna busqueda ("Desconocida" son listados de Amazon a
     // los que el scraper no le saco la marca) y sin precio no hay dato que ensenar.
     if (p.marca === 'Desconocida' || p.precio_referencia == null) continue;
     if (!porCategoria.has(p.categoria)) porCategoria.set(p.categoria, []);
     porCategoria.get(p.categoria).push(p);
   }
-  const ids = new Set();
   for (const ps of porCategoria.values()) {
     for (const p of porScore(ps).slice(0, TOPE_INDEXADO)) ids.add(p.id);
   }
