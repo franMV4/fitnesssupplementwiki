@@ -25,6 +25,17 @@ const MIN_SELLO = 3;
 const MIN_TIENDA = 6;
 const MIN_BARATO = 10;
 
+// Cuantos productos hacen falta para que una faceta por tienda entre en el INDICE.
+// No es lo mismo que MIN_TIENDA: la pagina se sigue publicando y enlazando desde 6
+// productos (a un lector le sirve ver que vende esa tienda en esa categoria), pero
+// "/mejores/arginina-de-promofarma" con 6 filas es un filtro de la pagina de arginina,
+// no una pagina distinta, y Google lo trata como tal: Search Console (09/2026) las
+// metio en "rastreada: actualmente sin indexar" junto con las fichas y las 436
+// comparativas. A partir de 20 hay catalogo propio que contar. El corte esta ahi
+// porque el reparto se acaba justo ahi: 187 facetas con 6, 80 con 15, 34 con 20 y
+// ya solo 30 con 30. Si las categorias recuperan indexacion, se baja.
+const MIN_TIENDA_INDEXADO = 20;
+
 // Sellos que existen de verdad en el dataset y que son nivel 4 (un tercero detras).
 const SELLOS = {
   creapure: {
@@ -62,6 +73,7 @@ function porSello(cat, ps) {
     const r = resumen(cat, sel);
     return [{
       slug: `${cat.slug}-${tipo}`,
+      indexable: true,
       cat,
       productos: sel,
       // El matiz distingue esta descripcion de la de las otras landings de la misma
@@ -114,6 +126,7 @@ function porTienda(cat, ps) {
       : `, un ${Math.abs(dif)} % por debajo de la mediana de las ${rTodo.tiendas} tiendas comparadas (${rTodo.precio(rTodo.mediana)}).`;
     return {
       slug: `${cat.slug}-de-${t}`,
+      indexable: sel.length >= MIN_TIENDA_INDEXADO,
       cat,
       productos: sel,
       // Quien es la tienda, para que la pagina pueda compararla con el resto del mercado
@@ -143,6 +156,7 @@ function porPrecio(cat, ps) {
   const { adj } = concordancia(cat);
   return [{
     slug: `${cat.slug}-${adj}`,
+    indexable: true,
     cat,
     productos: sel,
     matiz: 'Solo la mitad mas barata de la categoria.',
@@ -169,10 +183,22 @@ export const MEJORES = datos.categorias.flatMap((cat) => {
 // "HSN o Myprotein" es una consulta con la compra medio decidida: quien la busca no
 // quiere 120 filas, quiere saber cual de las dos y por que. La pagina lo dice en la
 // primera linea y luego ensena los dos catalogos en la misma tabla.
+// Cuantas tiendas se cruzan entre si por categoria. Emparejar todas las que pasan el
+// minimo es cuadratico: con 22 tiendas y 50 categorias salian 436 paginas, todas con la
+// misma forma, y "HSN vs Zumub en vitamina K2" no lo busca nadie. Search Console (09/2026)
+// las metio en el mismo saco que las fichas: rastreadas y sin indexar. Se cruzan las tres
+// con mas catalogo en esa categoria, que son las que aparecen en la consulta de verdad.
+const MAX_TIENDAS_CRUZADAS = 3;
+
 export const COMPARATIVAS = datos.categorias.flatMap((cat) => {
   const ps = productosDe(cat.slug);
+  const cuantos = (t) => ps.filter((p) => p.tienda === t).length;
   const tiendas = [...new Set(ps.map((p) => p.tienda))]
-    .filter((t) => ps.filter((p) => p.tienda === t).length >= MIN_TIENDA)
+    .filter((t) => cuantos(t) >= MIN_TIENDA)
+    .sort((a, b) => cuantos(b) - cuantos(a))
+    .slice(0, MAX_TIENDAS_CRUZADAS)
+    // El slug es alfabetico (ver el comentario del cara a cara global): el orden por
+    // catalogo solo sirve para elegir cuales, no para nombrarlas.
     .sort();
   const pares = [];
   for (let i = 0; i < tiendas.length; i++) {
@@ -350,6 +376,6 @@ export const comparativasDe = (slug) => COMPARATIVAS.filter((l) => l.cat.slug ==
 
 // Para el sitemap y el llms.txt: todas las rutas nuevas en una lista.
 export const RUTAS_LANDING = [
-  ...MEJORES.map((l) => `/mejores/${l.slug}`),
+  ...MEJORES.filter((l) => l.indexable).map((l) => `/mejores/${l.slug}`),
   ...COMPARATIVAS.map((l) => `/comparativa/${l.slug}`),
 ];

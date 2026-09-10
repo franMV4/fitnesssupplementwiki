@@ -12,12 +12,14 @@ tarjeta o tu criterio personal.
 Esta en orden y conviene respetarlo. El 1 es el unico que puede hacer dano a una
 persona de verdad. El 3 sin el 2 es tomar decisiones a ciegas.
 
-ESTADO DE HOY, medido y no recordado:
-  4.340 productos  ·  50 categorias  ·  19 tiendas  ·  5.336 paginas
+ESTADO DE HOY, medido y no recordado (09/09/2026):
+  4.113 productos  ·  50 categorias  ·  19 tiendas  ·  5.015 paginas
   50 categorias con guia de evidencia escrita (las 50, ya no falta ninguna)
-  0 enlaces de afiliado activos
+  234 enlaces de afiliado activos (los de HSN), 3.879 sin comision
   analitica activa desde el 24/08/2026 (Cloudflare, sin cookies)
-  48 productos en nivel de verificacion 4, sobre 4.340
+
+  Y lo que sigue sin existir, que es lo que manda: buscar tu propia marca en
+  Google no devuelve nada. No te falta producto, te falta estar en el indice.
 
 --------------------------------------------------------------------------------
 1. VERIFICAR LAS FUENTES NUEVAS  -  2-3 horas  -  ANTES QUE NADA
@@ -44,18 +46,33 @@ Es la tabla de la que sale el coste por dosis efectiva de todo el ranking.
 --------------------------------------------------------------------------------
 2. DARTE DE ALTA EN LA AFILIACION  -  3-4 horas + esperas de aprobacion
 --------------------------------------------------------------------------------
-Las 9 tiendas de data/afiliados.json tienen "programa": null. Traducido: la web no
-puede ingresar un euro aunque manana entren 10.000 visitas. Es el paso con mas
-retorno de la lista y el que lleva mas tiempo parado.
+data/afiliados.json ya NO esta vacio: lleva las 19 tiendas del catalogo, en orden
+de cuantos productos desbloquea cada alta, con la red de cada una, el enlace de
+alta y lo que pude confirmar de cada programa. Lo unico que falta es tu ID.
 
-  a) Awin o Tradedoubler primero: cubren HSN, Prozis, Myprotein y Nutritienda.
-     Comision del 5-12 % y sin la clausula de (b).
+BUSCA "PEGA_AQUI" Y SUSTITUYELO. Nada mas. Mientras quede un PEGA_AQUI en una
+tienda, esa tienda no tiene programa para el codigo y se enlaza normal: un
+fichero a medio rellenar no puede publicar enlaces rotos ni encender el aviso de
+comision de /legal afirmando algo falso.
 
-  b) Amazon Afiliados despues. Son 1.695 de los 4.340 productos, el 39 % del
-     catalogo, pero CANCELA la cuenta si no haces 3 ventas en 180 dias. No entres
-     hasta tener trafico que lo sostenga.
+  a) Awin primero, en https://ui.awin.com/. De una tacada cubre Promofarma (618
+     productos), DosFarma (428), Myprotein (189) y Holland & Barrett (121):
+     1.356 productos, un tercio del catalogo. Los awinmid de Promofarma (11046) y
+     Myprotein ES (10603) ya estan puestos; los otros dos los apuntas tu al
+     buscarlos en el directorio.
 
-  c) Rellena data/afiliados.json y ejecuta:
+  b) Zumub (217) y Prozis (98) tienen programa propio, no estan en Awin. Zumub es
+     el UNICO que admite comparadores de precios por escrito; ojo a que paga en
+     saldo de su tienda, no en dinero.
+
+  c) Amazon (1.600 productos, el 39 %) NO todavia: cancela la cuenta si no haces
+     3 ventas en 180 dias. Se entra cuando haya trafico que lo sostenga.
+
+  d) Aviso: muchos programas excluyen a los "comparadores de precios" en sus
+     condiciones. Describe la web como es y enlaza /metodologia. Si te rechazan
+     por eso, no lo disimules: anotalo y pasa a la siguiente.
+
+  e) Cuando pegues los IDs:
          python exportar.py
          python tests.py
      test_los_afiliados_no_mueven_el_ranking tiene que seguir pasando. Si pasa, el
@@ -67,6 +84,23 @@ retorno de la lista y el que lleva mas tiempo parado.
      no estan en afiliados.json. Se enlazan con enlace normal y compiten en
      igualdad, asi que no urge, pero promofarma y dosfarma juntas son 1.087
      productos: mirar si tienen programa sale a cuenta.
+
+--------------------------------------------------------------------------------
+2b. CREAR LA TABLA DE CLICS  -  1 minuto, un solo comando
+--------------------------------------------------------------------------------
+La web ya cuenta los clics que salen hacia una tienda (sin cookies: solo dia,
+tienda, categoria y si el enlace llevaba afiliacion). Faltaba saber cuanta gente
+SALE, no solo cuanta entra, y es lo que dice en que tienda merece la pena darse
+de alta: las redes de afiliacion solo informan de las tiendas en las que ya
+estas, nunca de las 18 en las que aun no.
+
+La tabla esta en web/schema.sql pero la base de datos publicada no la tiene. Un
+comando, desde la carpeta web, y se puede repetir sin romper nada:
+
+    npx wrangler d1 execute suplementos --remote --file=./schema.sql
+
+Mientras no lo hagas no se rompe nada: el contador falla en silencio y el clic
+sale igual hacia la tienda. Simplemente no se cuenta.
 
 --------------------------------------------------------------------------------
 3. LA ANALITICA  -  HECHO 04/09/2026, no hay nada que hacer

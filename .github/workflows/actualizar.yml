@@ -112,7 +112,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/src/datos/dataset.json data/suplementos.sqlite
+          # retirados.json es la memoria de las URLs que ya no existen: si no se
+          # confirma, cada pasada empieza de cero y el _redirects solo cubre el ultimo
+          # dia, que es justo el que Google todavia no ha rastreado.
+          git add web/src/datos/dataset.json web/src/datos/retirados.json web/public/_redirects data/suplementos.sqlite
           # Si ninguna tienda ha movido un precio, no hay nada que confirmar: un commit
           # vacio al dia solo sirve para ensuciar el historial y disparar un despliegue
           # que publica exactamente lo mismo.

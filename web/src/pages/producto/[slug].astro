@@ -174,7 +174,7 @@ const schema = [
 ---
 <Base titulo={tituloProducto(p, datos.productos)}
       descripcion={descripcionProducto(p, datos.productos, cat)}
-      noindex={!indexable(p)}
+      noindex={!indexable(p, datos.productos)}
       schema={schema}>
 
   <p class="migas">
@@ -209,7 +209,9 @@ const schema = [
           quedaba fuera de pantalla en movil. */}
       <p class="accion-lateral">
         <a class="boton primario" href={p.url_afiliado ?? p.url}
-           rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'} target="_blank">
+           rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+           data-salida={p.tienda} data-cat={p.categoria} data-afiliado={p.url_afiliado ? '1' : null}
+           target="_blank">
           Ver en {TIENDAS[p.tienda] ?? p.tienda} <span class="flecha">→</span>
         </a>
       </p>
@@ -477,6 +479,8 @@ const schema = [
           formato en otra tienda, no una version parecida.
           {' '}<a class="enlace-accion" href={mejorOferta.url_afiliado ?? mejorOferta.url}
                   rel={mejorOferta.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+                  data-salida={mejorOferta.tienda} data-cat={mejorOferta.categoria}
+                  data-afiliado={mejorOferta.url_afiliado ? '1' : null}
                   target="_blank">ver en {TIENDAS[mejorOferta.tienda] ?? mejorOferta.tienda} →</a>
         </p>
       )}

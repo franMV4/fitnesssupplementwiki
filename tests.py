@@ -312,6 +312,61 @@ def test_enlace_afiliado_conserva_la_url_de_la_tienda():
     assert enlace_afiliado("hsn", "https://hsn.es/p", {}) is None      # sin programa, sin enlace
 
 
+def test_una_red_de_afiliacion_envuelve_la_url_en_vez_de_anadirle_parametros():
+    """Awin y Tradedoubler no anaden parametros: meten la URL codificada dentro de la suya.
+
+    Sin esto, darse de alta en la red mas grande de Espana produce enlaces que no
+    rastrean ni una venta. La URL de destino tiene que viajar escapada: si no, su
+    propia query se come la de la red y el clic se atribuye a nadie.
+    """
+    mapa = {"myprotein": {"plantilla":
+            "https://www.awin1.com/cread.php?awinmid=10603&awinaffid=999&ued={url}"}}
+    url = enlace_afiliado("myprotein", "https://mp.es/p?talla=1kg&x=2", mapa)
+    assert url.startswith("https://www.awin1.com/cread.php?awinmid=10603&awinaffid=999&ued=")
+    assert "https%3A%2F%2Fmp.es%2Fp%3Ftalla%3D1kg%26x%3D2" in url   # escapada entera
+    assert "&talla=" not in url                                     # no se cuela en la query de la red
+
+
+def test_un_hueco_sin_rellenar_no_es_un_programa():
+    """data/afiliados.json llega precargado con huecos. Medio rellenar no puede publicar.
+
+    Publicaria miles de enlaces rotos Y encenderia el aviso de comision de /legal
+    afirmando algo falso, que es peor que no cobrar.
+    """
+    assert enlace_afiliado("hsn", "https://hsn.es/p",
+                           {"hsn": {"parametros": {"aff": "PEGA_AQUI_TU_ID"}}}) is None
+    assert enlace_afiliado("myprotein", "https://mp.es/p",
+                           {"myprotein": {"plantilla": "https://awin1.com/?id=PEGA_AQUI&ued={url}"}}) is None
+
+
+def test_el_lastmod_es_el_dia_que_cambio_el_precio_y_no_el_de_la_pasada():
+    """Sin esto el sitemap decia que sus 4.293 URLs cambiaban todos los dias.
+
+    De verdad cambia el 6-11 %. Un lastmod que siempre dice hoy Google lo descarta
+    entero, y con el se va la unica pista que tiene un dominio sin autoridad para que
+    le rastreen lo que importa.
+    """
+    import sqlite3
+    from exportar import fechas_de_cambio
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE precio_historico (producto_id INT, fecha TEXT, precio_eur REAL)")
+    con.executemany("INSERT INTO precio_historico VALUES (?, ?, ?)", [
+        # 1: subio el dia 3 y desde entonces quieto. Su ultima novedad es el dia 3.
+        (1, "2026-09-01", 10.0), (1, "2026-09-03", 12.0), (1, "2026-09-05", 12.0),
+        (1, "2026-09-07", 12.0),
+        # 2: no se ha movido nunca. Su fecha es la primera vez que se vio, no la de hoy.
+        (2, "2026-09-01", 20.0), (2, "2026-09-05", 20.0), (2, "2026-09-07", 20.0),
+        # 3: bajo y volvio al mismo precio. Volver no es quedarse quieto: es un cambio.
+        (3, "2026-09-01", 30.0), (3, "2026-09-05", 25.0), (3, "2026-09-07", 30.0),
+    ])
+    f = fechas_de_cambio(con)
+    assert f[1] == "2026-09-03", f[1]
+    assert f[2] == "2026-09-01", f[2]
+    assert f[3] == "2026-09-07", f[3]
+    # Un producto que no esta en el historial no inventa fecha: quien pregunta pone la suya.
+    assert 99 not in f
+
+
 def test_el_sello_se_gana_por_umbral_publico():
     mejor = 92.5
     primero = dict(score_final=92.5, nivel_verificacion=3, categoria="creatina")
@@ -1613,6 +1668,26 @@ def test_ninguna_dosis_de_referencia_sin_fuente():
         for f in d["fuentes"]:
             assert f.get("cita"), d["ingrediente"]
             assert f.get("url", "").startswith("http"), d["ingrediente"]
+
+
+def test_las_redirecciones_no_llevan_a_otro_404():
+    """Cada ficha retirada apunta a una categoria que existe y que sigue publicada.
+
+    Redirigir un 404 a otro 404 es peor que el 404: Google lo cuenta como error igual y
+    ademas se cree que la pagina se movio. Y si el slug vuelve a estar vivo, manda la
+    ficha, no la redireccion."""
+    import json
+    datos = json.loads(pathlib.Path("web/src/datos/dataset.json").read_text(encoding="utf-8"))
+    retirados = json.loads(pathlib.Path("web/src/datos/retirados.json").read_text(encoding="utf-8"))
+    categorias_web = {c["slug"] for c in datos["categorias"]}
+    vivos = {p["slug"] for p in datos["productos"]}
+    for slug_, (categoria, fecha) in retirados.items():
+        assert categoria in categorias_web, slug_
+        assert slug_ not in vivos, slug_
+        assert len(fecha) == 10, slug_
+    reglas = pathlib.Path("web/public/_redirects").read_text(encoding="utf-8").splitlines()
+    destinos = {l.split()[1] for l in reglas if l.startswith("/producto/")}
+    assert destinos <= {"/%s/" % c for c in categorias_web}
 
 
 def main():

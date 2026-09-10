@@ -30,6 +30,14 @@ export function GET() {
     // El panel no tiene nada que indexar (sin sesion de admin no ensena un dato) y sale
     // aqui para que no gaste presupuesto de rastreo ni aparezca en una busqueda.
     'Disallow: /admin',
+    // Los formularios de sesion. Ya llevan noindex, pero un React de la ficha escribe
+    // `/entrar/?volver=<ruta>` en cada una de las 4.113: Googlebot renderiza el JS, las
+    // descubre y se gasta el presupuesto en 4.113 copias de la MISMA pantalla de acceso.
+    // La pagina pelada se deja rastreable para que su noindex se siga leyendo; lo que se
+    // corta es la multiplicacion por parametro.
+    'Disallow: /*?volver=',
+    // La API devuelve JSON para el navegador, no paginas. Nada que indexar.
+    'Disallow: /api/',
     '',
     ...BOTS_IA.flatMap((bot) => [`User-agent: ${bot}`, 'Allow: /', '']),
     `Sitemap: ${abs('/sitemap.xml')}`,

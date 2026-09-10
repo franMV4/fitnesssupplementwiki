@@ -4,57 +4,209 @@
     "se aplica al exportar, cuando el ranking ya esta cerrado. Hay una prueba que lo",
     "comprueba (tests.py: test_los_afiliados_no_mueven_el_ranking).",
     "Una tienda sin programa se enlaza igual, con enlace normal, y compite en igualdad.",
-    "'parametros' se anaden a la URL del producto. 'programa' es solo para tu control."
+    "",
+    "COMO SE RELLENA: busca PEGA_AQUI y sustituyelo por tu identificador. Nada mas.",
+    "Mientras quede un PEGA_AQUI en una tienda, esa tienda NO tiene programa para el",
+    "codigo: se enlaza normal. Asi un fichero a medio rellenar no publica 4.000 enlaces",
+    "rotos ni enciende el aviso de comision de /legal afirmando algo que no existe.",
+    "(tests.py: test_un_hueco_sin_rellenar_no_es_un_programa)",
+    "",
+    "DOS FORMAS, porque las redes no funcionan igual:",
+    "  'parametros' -> se anaden a la URL de la tienda. Programas propios (HSN, Amazon).",
+    "  'plantilla'  -> la URL viaja CODIFICADA dentro de la de la red. Awin, Tradedoubler.",
+    "                  {url} es el hueco. Sin esto, darse de alta en Awin no rastrea nada.",
+    "",
+    "AVISO QUE CONVIENE LEER ANTES DE GASTAR LA TARDE: muchos programas excluyen en sus",
+    "condiciones a los 'comparadores de precios'. Zumub los admite por escrito; del resto",
+    "no lo he podido confirmar. Al darte de alta describe la web como es (comparador con",
+    "metodologia publica y guias de evidencia) y enlaza /metodologia. Si te rechazan por",
+    "eso, no insistas ni lo disimules: anotalo en 'programa' y pasa a la siguiente.",
+    "",
+    "Cada tienda lleva 'productos' (catalogo del 09/09/2026) para que veas que desbloquea",
+    "cada alta, y '_verificado' con lo que he podido comprobar y lo que no. Van en orden",
+    "de catalogo, que es el orden en que conviene darse de alta."
   ],
+
   "tiendas": {
+    "amazon": {
+      "programa": null,
+      "productos": 1600,
+      "red": "Amazon Afiliados ES (propio)",
+      "alta": "https://afiliados.amazon.es/",
+      "_verificado": "Formato del parametro confirmado: 'tag', con sufijo -21 para Espana.",
+      "_espera": "NO TE DES DE ALTA TODAVIA. Cancelan la cuenta si no haces 3 ventas en 180 dias, y son el 39% del catalogo: quemar esta cuenta ahora sale caro. Se entra cuando haya trafico que lo sostenga.",
+      "parametros": {}
+    },
+
+    "promofarma": {
+      "programa": null,
+      "productos": 618,
+      "red": "Awin, merchant 11046",
+      "alta": "https://ui.awin.com/merchant-profile/11046",
+      "_verificado": "Merchant ID confirmado en el perfil publico de Awin.",
+      "plantilla": "https://www.awin1.com/cread.php?awinmid=11046&awinaffid=PEGA_AQUI&ued={url}"
+    },
+
+    "dosfarma": {
+      "programa": null,
+      "productos": 428,
+      "red": "Awin (probable), merchant por confirmar",
+      "alta": "https://ui.awin.com/ -> buscar 'DosFarma' en el directorio de anunciantes",
+      "_verificado": "NO confirmado. Ya dentro de Awin, busca DosFarma, apunta su awinmid y rellena los DOS huecos de abajo. Con Promofarma suman 1.046 productos: es la mitad del valor de esta lista.",
+      "plantilla": "https://www.awin1.com/cread.php?awinmid=PEGA_AQUI_MID&awinaffid=PEGA_AQUI&ued={url}"
+    },
+
     "hsn": {
       "programa": "HSN afiliados",
+      "productos": 234,
+      "red": "Propio",
+      "alta": "https://www.hsnstore.com/programa-afiliacion",
+      "_verificado": "ACTIVO. Es el unico que ya puede cobrar. No tocar.",
       "parametros": {
         "utm_source": "hsnaffiliate",
         "utm_medium": "FJMUNOZ",
         "utm_campaign": "comparador"
       }
     },
-    "myprotein": {
-      "programa": null,
-      "parametros": {}
-    },
-    "nutritienda": {
-      "programa": null,
-      "parametros": {}
-    },
-    "prozis": {
-      "programa": null,
-      "parametros": {}
-    },
-    "masmusculo": {
-      "programa": null,
-      "parametros": {}
-    },
-    "lifepro": {
-      "programa": null,
-      "parametros": {}
-    },
-    "amazon": {
-      "programa": null,
-      "parametros": {}
-    },
+
     "zumub": {
       "programa": null,
+      "productos": 217,
+      "red": "Propio",
+      "alta": "https://www.zumub.com/es/affiliates",
+      "_verificado": "Admite comparadores de precios POR ESCRITO, el unico que lo dice. Hasta 6%. OJO: la comision se abona como saldo en tu cuenta de Zumub, no en dinero. Decide tu si eso te vale.",
       "parametros": {}
     },
+
+    "bulevip": {
+      "programa": null,
+      "productos": 189,
+      "red": "Por confirmar",
+      "alta": "https://www.bulevip.com/ -> pie de pagina, 'Afiliados', o escribir a atencion al cliente",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
+    "myprotein": {
+      "programa": null,
+      "productos": 189,
+      "red": "Awin, merchant 10603 (Myprotein ES)",
+      "alta": "https://ui.awin.com/merchant-profile/10603",
+      "_verificado": "Merchant ID de la tienda ESPANOLA confirmado. Comision 6-12%. No uses el de Myprotein UK (3196) ni el de PT (10622): la venta se atribuiria al pais equivocado y no la cobras.",
+      "plantilla": "https://www.awin1.com/cread.php?awinmid=10603&awinaffid=PEGA_AQUI&ued={url}"
+    },
+
+    "hollandbarrett": {
+      "programa": null,
+      "productos": 121,
+      "red": "Awin (probable), merchant por confirmar",
+      "alta": "https://ui.awin.com/ -> buscar 'Holland & Barrett' y quedarse con el programa ES",
+      "_verificado": "NO confirmado. Misma trampa que Myprotein: elige el programa espanol.",
+      "plantilla": "https://www.awin1.com/cread.php?awinmid=PEGA_AQUI_MID&awinaffid=PEGA_AQUI&ued={url}"
+    },
+
+    "prozis": {
+      "programa": null,
+      "productos": 98,
+      "red": "Propio",
+      "alta": "https://beapartner.prozis.com/",
+      "_verificado": "Programa propio confirmado. No esta en Awin: no lo busques alli.",
+      "parametros": {}
+    },
+
+    "nutritienda": {
+      "programa": null,
+      "productos": 71,
+      "red": "Por confirmar",
+      "alta": "https://www.nutritienda.com/ -> pie de pagina, 'Afiliados'",
+      "_verificado": "NO confirmado. No encontre su programa espanol publicado.",
+      "parametros": {}
+    },
+
+    "vitobest": {
+      "programa": null,
+      "productos": 65,
+      "red": "Por confirmar",
+      "alta": "https://www.vitobest.com/",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
+    "lifepro": {
+      "programa": null,
+      "productos": 62,
+      "red": "Por confirmar",
+      "alta": "https://lifepronutrition.com/",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
+    "tiendaculturista": {
+      "programa": null,
+      "productos": 57,
+      "red": "Por confirmar",
+      "alta": "https://www.tiendaculturista.com/",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
     "iogenix": {
       "programa": null,
+      "productos": 49,
+      "red": "Por confirmar",
+      "alta": "https://iogenix.es/",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
+    "usafitness": {
+      "programa": null,
+      "productos": 48,
+      "red": "Por confirmar",
+      "alta": "https://www.usafitness.es/",
+      "_verificado": "NO confirmado.",
+      "parametros": {}
+    },
+
+    "quamtrax": {
+      "programa": null,
+      "productos": 35,
+      "red": "Tienda de marca",
+      "_no_merece_tu_tiempo": "35 productos. Un alta cuesta lo mismo que la de Promofarma, que tiene 618.",
+      "parametros": {}
+    },
+
+    "sotya": {
+      "programa": null,
+      "productos": 18,
+      "red": "Tienda de marca",
+      "_no_merece_tu_tiempo": "18 productos.",
+      "parametros": {}
+    },
+
+    "226ers": {
+      "programa": null,
+      "productos": 7,
+      "red": "Tienda de marca",
+      "_no_merece_tu_tiempo": "7 productos.",
+      "parametros": {}
+    },
+
+    "crown": {
+      "programa": null,
+      "productos": 7,
+      "red": "Tienda de marca",
+      "_no_merece_tu_tiempo": "7 productos.",
       "parametros": {}
     }
   },
-  "_ejemplo": {
-    "hsn": {
-      "programa": "Awin 1234",
-      "parametros": {
-        "utm_source": "comparador",
-        "awc": "TU_ID"
-      }
+
+  "_masmusculo": "Estaba en este fichero y ya no: bloquea al scraper con un 307 en bucle y tiene 0 productos en el catalogo. Si algun dia vuelve a entrar, vuelve aqui.",
+
+  "_ejemplo_relleno": {
+    "myprotein": {
+      "programa": "Awin 10603",
+      "plantilla": "https://www.awin1.com/cread.php?awinmid=10603&awinaffid=123456&ued={url}"
     }
   }
 }

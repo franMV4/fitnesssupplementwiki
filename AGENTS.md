@@ -74,7 +74,8 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `data/db.py` | `connect/init/guardar_producto` (upsert por `tienda+url`), `limpiar_marcas` y `guardar_historico`. Autocomprobación en `__main__`. |
 | `categorias.py` | **Registro único de categorías**: filtro de nombre, exclusiones, activo y modo (simple/fórmula). Lo leen scraper, motor y exportador. |
 | `data/dosis_referencia.json` | Dosis efectivas, purezas típicas y fuentes citadas. **Lo edita una persona, nunca el código.** |
-| `data/afiliados.json` | Enlaces de afiliado. El scoring NO lo importa. |
+| `data/afiliados.json` | Enlaces de afiliado, **las 19 tiendas precargadas** con su red, su enlace de alta y huecos `PEGA_AQUI`. El scoring NO lo importa. |
+| `PARA-PEGAR.md` | Textos listos para que el dueño publique en foros y correos. Los datos que citan salen del dataset, no de la memoria: al regenerarlos hay que recomprobarlos. |
 | `scraper/core.py` | fetch educado (robots/delay/caché), `ld_json`, normalizadores, clase `Scraper`. |
 | `scraper/tiendas/*.py` | Una tienda por módulo, autodescubiertos. Añadir tienda = fichero nuevo. |
 | `scraper/tiendas/shopify.py`, `listado.py`, `catalogo_sitemap.py` | Las 11 tiendas del 2026-08-31, **agrupadas por cómo publican, no una por fichero**: la clase de cada tienda se fabrica con `type()` al final del módulo (una clase base a medias la instanciaría `run_scraper.descubre` como si fuera una tienda). Añadir tienda de esas familias = una entrada en su tabla `TIENDAS`. |
@@ -675,10 +676,46 @@ pestaña**: en vivo (D1) y en cola (tabla `ediciones` → pipeline). Un panel qu
 - **`/admin` va con `noindex` y `Disallow` en robots.txt**, y sin sesión de admin no pinta
   un solo dato.
 
+## Monetización e indexación (2026-09-09)
+
+- **`enlace_afiliado` tiene dos modos**, porque las redes no funcionan igual: `parametros`
+  (se añaden a la URL de la tienda: HSN, Amazon) y `plantilla` (la URL viaja **codificada**
+  dentro de la de la red, con `{url}` de hueco: Awin, Tradedoubler). Sin el segundo, darse
+  de alta en Awin produce enlaces que no rastrean **ni una** venta.
+  `test_una_red_de_afiliacion_envuelve_la_url_en_vez_de_anadirle_parametros` lo fija.
+- **Un hueco `PEGA_AQUI` NO es un programa.** `SIN_RELLENAR` en `exportar.py` hace que una
+  tienda a medio rellenar devuelva `None`. Sin eso, un fichero a medias publicaría miles de
+  enlaces rotos **y** encendería el aviso de comisión de `/legal` afirmando algo falso, que
+  es peor que no cobrar. Cubierto por `test_un_hueco_sin_rellenar_no_es_un_programa`.
+- **Clics de salida**: tabla `salidas` (D1) y `POST /api/salida`, que llama un `sendBeacon`
+  desde el listener delegado de `Base.astro`. Es un **contador** de día/tienda/categoría y
+  si el enlace llevaba afiliación: ni IP, ni usuario, ni producto, ni cookie — por eso la
+  web sigue sin banner. Falla abierto: un contador roto no puede estropear la única cosa de
+  esta web que da dinero. Los enlaces los marca `data-salida` y la categoría sale del
+  `data-cat` que la fila ya tenía.
+- **El `lastmod` del sitemap es el día que cambió el precio, no el de la pasada**
+  (`fechas_de_cambio` en `exportar.py`, campo `cambiado` en el dataset). Antes las 4.293
+  URLs heredaban `datos.generado` y el sitemap decía que todo cambiaba a diario cuando de
+  verdad cambia el 6-11 %; un `lastmod` que siempre dice hoy Google lo descarta entero, y
+  con él la única pista que tiene un dominio sin autoridad.
+- **`/datos` existe** (`web/src/pages/datos/index.astro`). Los JSON estaban desde el
+  principio pero la carpeta daba 404: es la página que enlaza quien cita el dato y la que
+  lee un modelo, con JSON-LD `schema.org/Dataset` (licencia, autor, 51 descargas).
+  Si se añade una categoría, entra sola; si se añade una **página**, hay que meterla en
+  `sitemap.xml.js` o `seo_check.py` falla, que es justo lo que pasó al crearla.
+- **Diagnóstico del 09/09/2026**: el enlazado interno está bien (nada huérfano, todo a ≤3
+  clics, guías a 1) y las fichas no son duplicados (31 % de solape de mediana). Lo que falta
+  es índice y enlaces externos, no código. **No partir el sitemap**: 4.293 URLs está muy por
+  debajo del límite de Google y hacerlo sería folclore.
+
 ## Pendiente (decisiones del dueño, no del agente)
 
 - Verificar los DOI de `data/dosis_referencia.json` antes de publicar.
-- Alta en programas de afiliado → rellenar `data/afiliados.json`.
+- Alta en programas de afiliado → sustituir los `PEGA_AQUI` de `data/afiliados.json`.
+  Solo HSN está activo (234 productos). Awin cubre de una vez Promofarma, DosFarma,
+  Myprotein y Holland & Barrett: 1.356 productos.
+- Aplicar `web/schema.sql` a la D1 publicada para que exista la tabla `salidas`:
+  `npx wrangler d1 execute suplementos --remote --file=./schema.sql`.
 - ~~Dominio real y contacto real en el UA de `scraper/core.py`~~: hechos. El dominio sale de
   `web/src/sitio.js` (el `astro.config.mjs` lo lee de ahí) y el UA lleva ya el correo real.
 - Ads: deliberadamente no implementados hasta que haya tráfico.

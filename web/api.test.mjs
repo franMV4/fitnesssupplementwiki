@@ -217,3 +217,52 @@ test('los tramos viejos se barren de vez en cuando', async () => {
   // Barre lo de hace mas de un dia, no el tramo en curso.
   assert.ok(db.borrados[0].args[0] < api.tramo(1, 0));
 });
+
+// --- clics hacia la tienda -----------------------------------------------------------
+// /api/salida es la unica ruta que escribe sin sesion ni clave: la llama un sendBeacon de
+// cualquier visitante. Lo que hay que fijar es que no se pueda meter cualquier cosa en el
+// contador y que un fallo de D1 no se lleve por delante la salida a la tienda, que es lo
+// unico de esta web que da dinero.
+const pedirSalida = (cuerpo, db = d1Falsa()) => api.onRequest({
+  request: new Request('https://x/api/salida', {
+    method: 'POST', body: JSON.stringify(cuerpo), headers: { 'content-type': 'application/json' },
+  }),
+  env: { DB: db, SECRETO: 'x' },
+  params: { ruta: ['salida'] },
+});
+
+test('un clic hacia la tienda se cuenta', async () => {
+  const db = d1Falsa();
+  const r = await pedirSalida({ tienda: 'hsn', categoria: 'creatina', afiliado: true }, db);
+  assert.equal(r.status, 204);
+  const escrito = db.borrados.at(-1);
+  assert.match(escrito.sql, /INSERT INTO salidas/);
+  assert.deepEqual(escrito.args.slice(1), ['hsn', 'creatina', 1]);   // args[0] es el dia
+});
+
+test('el contador no guarda quien ni que producto', async () => {
+  const db = d1Falsa();
+  await pedirSalida({ tienda: 'hsn', categoria: 'creatina', producto: 'x', ip: '1.2.3.4' }, db);
+  // Cuatro campos y ni uno mas: dia, tienda, categoria y si llevaba afiliacion. Con el
+  // producto esto seria un historial de lo que mira cada visitante y haria falta banner.
+  assert.equal(db.borrados.at(-1).args.length, 4);
+});
+
+test('lo que no es una tienda no entra en el contador', async () => {
+  // Rechazar y no recortar: un valor raro es un robot o un cliente mal escrito, y
+  // guardarlo a medias ensucia el contador para siempre.
+  for (const malo of [{ tienda: 'HSN', categoria: 'creatina' },          // mayusculas
+                      { tienda: 'hs n', categoria: 'creatina' },         // espacio
+                      { tienda: 'hsn', categoria: "x'; DROP TABLE" },    // inyeccion
+                      { tienda: 'h'.repeat(41), categoria: 'creatina' }, // largo
+                      { tienda: 'hsn' },                                 // sin categoria
+                      {}]) {
+    assert.equal((await pedirSalida(malo)).status, 400, JSON.stringify(malo));
+  }
+});
+
+test('si la base de datos falla, el clic sale igual hacia la tienda', async () => {
+  const rota = { prepare() { throw new Error('D1 caida'); } };
+  // Fallar cerrado aqui seria perder la venta por no poder anotar el clic.
+  assert.equal((await pedirSalida({ tienda: 'hsn', categoria: 'creatina' }, rota)).status, 204);
+});

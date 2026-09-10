@@ -142,6 +142,7 @@ export async function onRequest({ request, env, params }) {
     if (ruta === 'pregunta' && metodo === 'POST') return await borrarPregunta(request, env);
     if (ruta === 'alertas' && metodo === 'GET') return await misAlertas(request, env);
     if (ruta === 'alerta' && metodo === 'POST') return await alerta(request, env);
+    if (ruta === 'salida' && metodo === 'POST') return await salida(request, env);
     // El repaso de precios no lo llama un navegador: lo llama el robot de GitHub Actions
     // despues de cada pasada del scraper, con su clave en la cabecera.
     if (ruta === 'alertas/revisar' && metodo === 'POST') return await revisar(request, env);
@@ -915,6 +916,37 @@ async function admEdicion(request, env, quien) {
 // una persona de verdad es peor que dejar pasar unos cuantos intentos de mas.
 //
 //   [cuantos, minutos de la ventana]
+// --- clics hacia la tienda ---------------------------------------------------------
+// Lo llama un sendBeacon al pulsar un enlace de salida. Contesta 204 y no bloquea la
+// navegacion: el lector ya se ha ido a la tienda cuando esto se guarda.
+//
+// No se guarda la URL ni el producto, solo tienda y categoria. Con el producto esto seria
+// un historial de lo que mira cada visitante, y entonces si haria falta banner.
+const SALIDA_OK = /^[a-z0-9-]{1,40}$/;
+
+async function salida(request, env) {
+  const d = await request.json().catch(() => null);
+  const tienda = String(d?.tienda ?? '');
+  const categoria = String(d?.categoria ?? '');
+  // Rechazar en vez de recortar: un valor que no cumple es un cliente mal escrito o un
+  // robot, y meterlo recortado ensucia el contador para siempre.
+  if (!SALIDA_OK.test(tienda) || !SALIDA_OK.test(categoria)) {
+    return error('Tienda o categoria no validas.', 400);
+  }
+  const afiliado = d?.afiliado ? 1 : 0;
+  const dia = new Date().toISOString().slice(0, 10);
+  // Fallar abierto, como el limitador: un contador roto no puede romper una salida a la
+  // tienda, que es justo lo unico de esta web que da dinero.
+  try {
+    await env.DB.prepare(
+      `INSERT INTO salidas (dia, tienda, categoria, afiliado) VALUES (?, ?, ?, ?)
+       ON CONFLICT (dia, tienda, categoria, afiliado) DO UPDATE SET n = n + 1`,
+    ).bind(dia, tienda, categoria, afiliado).run();
+  } catch { /* se pierde el clic, no la venta */ }
+  return new Response(null, { status: 204 });
+}
+
+
 const LIMITES = {
   entrar: [20, 15],       // probar claves: lo que mas importa frenar
   registro: [5, 60],      // darse de alta es algo que se hace una vez
@@ -927,6 +959,9 @@ const LIMITES = {
   preguntas: [10, 60],    // escribir una pregunta o una respuesta
   pregunta: [20, 60],     // borrar la propia
   alerta: [30, 60],
+  // Salir a una tienda es un clic normal leyendo un ranking, y se hacen varios seguidos
+  // comparando. El tope frena a quien quiera inflar el contador, no a quien compra.
+  salida: [120, 10],
 };
 
 // Una de cada cincuenta peticiones limitadas barre los tramos viejos. Un cron para esto

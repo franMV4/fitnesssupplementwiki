@@ -15,7 +15,7 @@ from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 
-from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl, quote
 
 import categorias
 import ediciones
@@ -27,6 +27,16 @@ from scoring.motor import precio_referencia, sellos_de
 AFILIADOS_PATH = Path(__file__).with_name("data") / "afiliados.json"
 
 SALIDA = Path(__file__).with_name("web") / "src" / "datos" / "dataset.json"
+
+# Cada pasada del scraper renombra o pierde fichas: la tienda cambia el titulo del
+# producto o lo agota, el slug cambia con el, y la URL que Google indexo ayer devuelve
+# 404 hoy. RETIRADOS es la memoria de esas URLs; _redirects las manda a su categoria,
+# que es la pagina que buscaba quien llego por ahi.
+RETIRADOS = Path(__file__).with_name("web") / "src" / "datos" / "retirados.json"
+REDIRECTS = Path(__file__).with_name("web") / "public" / "_redirects"
+# Cloudflare Pages corta en 2100 reglas y aqui van dos por slug (con barra y sin ella:
+# el _redirects se mira antes de servir el fichero y no normaliza la barra final).
+MAX_SLUGS_RETIRADOS = 950
 
 NIVELES = {
     4: {"nombre": "Certificacion de un tercero",
@@ -107,19 +117,38 @@ def seo(categoria):
             "dosis_key": dosis_key}
 
 
+# Marca de hueco sin rellenar en data/afiliados.json. Una tienda que la lleve todavia
+# NO tiene programa: se enlaza normal. Sin esto, un fichero a medio rellenar publicaria
+# 4.000 enlaces con "PEGA_AQUI" dentro (que no rastrean nada, o peor: rompen la ficha)
+# y encenderia el aviso de afiliacion de /legal afirmando una comision que no existe.
+SIN_RELLENAR = "PEGA_AQUI"
+
+
 def enlace_afiliado(tienda, url, mapa):
-    """URL de la tienda con los parametros de afiliado, o None si no hay programa.
+    """URL de la tienda con la afiliacion aplicada, o None si no hay programa.
 
     Se aplica AQUI, al exportar, cuando el ranking ya esta calculado y cerrado. El
     motor de scoring no conoce este fichero: no puede leerlo aunque quisiera.
+
+    Dos formas, porque las redes no funcionan igual:
+      - "parametros": se anaden a la URL de la tienda (HSN, Amazon, Zumub, Prozis...).
+      - "plantilla": la URL de la tienda viaja CODIFICADA dentro de la de la red. Es lo
+        que hacen Awin y Tradedoubler, y sin esto darse de alta en ellas no rastrea nada.
+        `{url}` es el hueco. Si hay ambas, los parametros se aplican primero.
     """
-    params = (mapa.get(tienda) or {}).get("parametros") or {}
-    if not params:
+    conf = mapa.get(tienda) or {}
+    params = conf.get("parametros") or {}
+    plantilla = conf.get("plantilla") or ""
+    if not params and not plantilla:
         return None
-    partes = urlparse(url)
-    query = dict(parse_qsl(partes.query))
-    query.update(params)
-    return urlunparse(partes._replace(query=urlencode(query)))
+    if SIN_RELLENAR in plantilla or any(SIN_RELLENAR in str(v) for v in params.values()):
+        return None
+    if params:
+        partes = urlparse(url)
+        query = dict(parse_qsl(partes.query))
+        query.update(params)
+        url = urlunparse(partes._replace(query=urlencode(query)))
+    return plantilla.replace("{url}", quote(url, safe="")) if plantilla else url
 
 
 def aplicar_afiliados(productos, mapa):
@@ -240,6 +269,66 @@ def historicos(con, dias=180):
     return {pid: h for pid, h in fuera.items() if h["n"] >= 2}
 
 
+def retirar(productos):
+    """Apunta las fichas que han dejado de existir y escribe el _redirects.
+
+    Se llama con las categorias ya en slug de web y ANTES de escribir el dataset nuevo:
+    la comparacion es contra el dataset de la pasada anterior, que sigue en disco.
+    """
+    vivos = {p["slug"]: p["categoria"] for p in productos}
+    previos = {}
+    if SALIDA.exists():
+        previos = {p["slug"]: p["categoria"]
+                   for p in json.loads(SALIDA.read_text(encoding="utf-8"))["productos"]}
+    ledger = (json.loads(RETIRADOS.read_text(encoding="utf-8"))
+              if RETIRADOS.exists() else {})
+    hoy = date.today().isoformat()
+    for s, cat in previos.items():
+        if s not in vivos:
+            ledger[s] = [cat, hoy]
+    for s in list(ledger):
+        # Ha vuelto (la tienda lo repuso): manda la ficha, no la redireccion.
+        if s in vivos:
+            del ledger[s]
+    RETIRADOS.parent.mkdir(parents=True, exist_ok=True)
+    RETIRADOS.write_text(json.dumps(ledger, ensure_ascii=False, indent=1, sort_keys=True),
+                         encoding="utf-8")
+    # ponytail: se publican los mas recientes y los viejos caen del fichero. Si algun dia
+    # el corte estorba, el mapa entero cabe en una Function de /producto/*.
+    recientes = sorted(ledger.items(), key=lambda kv: kv[1][1], reverse=True)
+    lineas = ["# Generado por exportar.py. No editar a mano.",
+              "# Fichas que ya no existen -> su categoria, para no dejar 404 en URLs",
+              "# que Google ya tenia indexadas."]
+    for s, (cat, _) in sorted(recientes[:MAX_SLUGS_RETIRADOS]):
+        lineas.append("/producto/%s/ /%s/ 301" % (s, cat))
+        lineas.append("/producto/%s /%s/ 301" % (s, cat))
+    REDIRECTS.parent.mkdir(parents=True, exist_ok=True)
+    REDIRECTS.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    return len(ledger)
+
+
+def fechas_de_cambio(con):
+    """Ultimo dia en que el precio de cada producto cambio DE VERDAD.
+
+    Es el lastmod del sitemap. Sin esto todas las paginas heredaban la fecha de la
+    pasada, o sea "hoy", todos los dias: el sitemap le decia a Google que sus 4.293
+    URLs habian cambiado, cuando de verdad cambia el 6-11 %. Un lastmod que siempre
+    dice hoy Google lo descarta entero (lo dice su documentacion), y con el se va la
+    unica pista que tiene un dominio sin autoridad para que le rastreen lo que importa.
+
+    Un producto sin historial suficiente no sale en el diccionario: quien pregunta usa
+    la fecha de la pasada, que para algo recien visto es la verdad.
+    """
+    filas = con.execute("""
+        SELECT producto_id, MAX(fecha) FROM (
+          SELECT producto_id, fecha, precio_eur,
+                 LAG(precio_eur) OVER (PARTITION BY producto_id ORDER BY fecha) AS antes
+          FROM precio_historico)
+        WHERE antes IS NULL OR precio_eur <> antes
+        GROUP BY producto_id""")
+    return {pid: fecha for pid, fecha in filas}
+
+
 def exportar(con):
     # Las correcciones de /admin. Las de producto y dosis ya estan en la BD (las mete
     # ediciones.py antes del scoring, para que la nota se recalcule con ellas); aqui
@@ -251,6 +340,7 @@ def exportar(con):
     # fabrica junto a un ranking calculado con los corregidos.
     ediciones.aplicar_config(correcciones, cfg)
     no_publicar = ediciones.ocultos(correcciones)
+    cambiados = fechas_de_cambio(con)
     textos_categoria = ediciones.textos_categoria(correcciones)
 
     dosis = {r["ingrediente"]: dict(r, fuentes=json.loads(r["fuentes"]))
@@ -323,6 +413,8 @@ def exportar(con):
             "score_requisitos": p["score_requisitos"],
             "requisitos": json.loads(p["requisitos"]) if p["requisitos"] else [],
             "fecha_scrape": p["fecha_scrape"],
+            # Para el lastmod del sitemap: cuando cambio el precio, no cuando se miro.
+            "cambiado": cambiados.get(p["id"], p["fecha_scrape"]),
             "score_final": p["score_final"], "score_calidad": p["score_calidad"],
             "coste_por_dosis_efectiva": p["coste_por_dosis_efectiva"],
             "flag_infradosaje": bool(p["flag_infradosaje"]),
@@ -387,6 +479,7 @@ def exportar(con):
     # Ultimo paso: los productos apuntan al slug de la web, no a la clave interna.
     for prod in productos:
         prod["categoria"] = web_slug(prod["categoria"])
+    retirar(productos)
     SALIDA.parent.mkdir(parents=True, exist_ok=True)
     SALIDA.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
     return len(productos), categorias_slug

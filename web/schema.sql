@@ -133,3 +133,26 @@ CREATE TABLE IF NOT EXISTS intentos (
   n       INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (ip, ruta, ventana)
 );
+
+-- Clics hacia la tienda. Sin esto se sabe cuanta gente ENTRA en la web (Cloudflare) pero
+-- no cuanta SALE hacia una tienda, que es lo unico que puede convertirse en dinero. Y es
+-- lo que decide en que tienda merece la pena darse de alta de afiliado: las redes solo
+-- informan de las tiendas en las que ya estas, no de las 18 en las que aun no.
+--
+-- Es un CONTADOR, no un registro: ni IP, ni usuario, ni cookie, ni hora exacta. Una fila
+-- por dia/tienda/categoria y no una por clic. Por eso la web sigue sin banner de cookies,
+-- que es una decision del proyecto y no un descuido.
+--
+-- 'afiliado' distingue el clic que puede pagar del que no: comparar los dos es lo que
+-- dice cuanto vale un alta pendiente antes de gastar la tarde en hacerla.
+--
+-- ponytail: sin indice. Son ~19 tiendas x 50 categorias x dia; el panel lee la tabla
+-- entera y agrupa. El escalon, si algun dia son millones de filas, es borrar por dia.
+CREATE TABLE IF NOT EXISTS salidas (
+  dia       TEXT NOT NULL,
+  tienda    TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  afiliado  INTEGER NOT NULL,
+  n         INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (dia, tienda, categoria, afiliado)
+);

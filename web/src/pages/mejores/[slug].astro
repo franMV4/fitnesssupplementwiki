@@ -64,7 +64,8 @@ const schema = [
   listaLd(l.titulo, productos),
 ];
 ---
-<Base ancho="completo" titulo={l.titulo} descripcion={descripcionMejores(l)} schema={schema}>
+<Base ancho="completo" titulo={l.titulo} descripcion={descripcionMejores(l)} schema={schema}
+      noindex={!l.indexable}>
 
   <p class="migas">
     <a href="/">Inicio</a> / <a href={`/${cat.slug}/`}>{cat.nombre}</a> / seleccion

@@ -224,6 +224,7 @@ const fila = (p) => ({
               <td data-et="Tienda">
                 <a href={p.url_afiliado ?? p.url}
                    rel={p.url_afiliado ? 'sponsored nofollow noopener' : 'nofollow noopener'}
+                   data-salida={p.tienda} data-afiliado={p.url_afiliado ? '1' : null}
                    target="_blank">{TIENDAS[p.tienda] ?? p.tienda}</a>
               </td>
               <td class="num" data-et="Envase">{eur(p.precio_eur)}</td>

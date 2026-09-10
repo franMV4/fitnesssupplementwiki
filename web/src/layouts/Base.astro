@@ -404,6 +404,26 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
       } catch { /* Sin API (o sin red) el icono se queda como enlace a /entrar. */ }
     })();
 
+    // Cuenta el clic que sale hacia una tienda. Es lo unico que puede convertirse en
+    // dinero, y sin medirlo no se sabe en que tienda merece la pena darse de alta.
+    //
+    // sendBeacon y no fetch: el navegador ya esta abriendo la tienda cuando esto sale, y
+    // un fetch normal se cancela al irse la pagina. No espera respuesta y no retrasa el
+    // clic ni un milisegundo. Si el navegador no lo trae, no se cuenta y ya: contar un
+    // clic no vale entorpecer una compra.
+    //
+    // Solo viaja tienda y categoria. Ni producto, ni URL, ni identificador: por eso esto
+    // no es seguimiento y la web sigue sin banner de cookies.
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest?.('a[data-salida]');
+      if (!a || !navigator.sendBeacon) return;
+      const categoria = a.dataset.cat ?? a.closest('[data-cat]')?.dataset.cat;
+      if (!categoria) return;
+      navigator.sendBeacon('/api/salida', new Blob([JSON.stringify({
+        tienda: a.dataset.salida, categoria, afiliado: a.dataset.afiliado === '1',
+      })], { type: 'application/json' }));
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       if (cabecera.dataset.menu !== undefined) { cerrarMenu(); hamburguesa.focus(); }

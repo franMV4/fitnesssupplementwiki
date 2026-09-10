@@ -370,12 +370,43 @@ export const descripcionProducto = (p, productos, cat) => {
     `el desglose de su nota linea a linea.`, 200);
 };
 
-// Que ficha se le ofrece a Google. Las 746 de marca "Desconocida" son listados de
-// Amazon a los que el scraper no le saco la marca: su titulo empieza por "Desconocida",
-// no responden ninguna busqueda y son el 17 % del sitio. Se publican igual (la tabla de
-// categoria las compara y el precio es real), pero con noindex y fuera del sitemap:
-// pedir que se indexen 746 paginas que nadie va a buscar es gastar el presupuesto de
-// rastreo que necesitan las 50 categorias y las guias.
-// Cuando el scraper aprenda a sacar la marca de esos listados, esta regla las devuelve
-// al indice sola.
-export const indexable = (p) => p.marca !== 'Desconocida';
+// Que fichas se le ofrecen a Google.
+//
+// Antes se ofrecian todas menos las 746 de marca "Desconocida": 3.370 fichas en el
+// sitemap. Search Console (09/2026) devolvio el veredicto de Google sobre esa oferta:
+// 2.899 "descubierta: actualmente sin indexar" y 2.409 "rastreada: actualmente sin
+// indexar". No es un fallo tecnico, es una decision: una ficha generada por plantilla,
+// multiplicada por miles, no le parece que merezca indice. Y mientras las rastreaba se
+// gastaba el presupuesto que necesitan las 50 categorias y las guias, que son las
+// paginas que responden una busqueda de verdad.
+//
+// Ahora se ofrecen las diez primeras de cada categoria: las que un lector ve en la tabla
+// sin desplegar nada. Son ~500 en vez de 3.370. Las demas se siguen publicando y
+// enlazando (el precio es real y la tabla las compara), pero con noindex y fuera del
+// sitemap. Si las categorias recuperan indexacion, se sube el tope.
+export const TOPE_INDEXADO = 10;
+
+// ponytail: memoizado por lista de productos (un build = un dataset = una entrada).
+const cacheIndexables = new WeakMap();
+
+const calcula = (productos) => {
+  const porCategoria = new Map();
+  for (const p of productos) {
+    // Sin marca no responde ninguna busqueda ("Desconocida" son listados de Amazon a
+    // los que el scraper no le saco la marca) y sin precio no hay dato que ensenar.
+    if (p.marca === 'Desconocida' || p.precio_referencia == null) continue;
+    if (!porCategoria.has(p.categoria)) porCategoria.set(p.categoria, []);
+    porCategoria.get(p.categoria).push(p);
+  }
+  const ids = new Set();
+  for (const ps of porCategoria.values()) {
+    for (const p of porScore(ps).slice(0, TOPE_INDEXADO)) ids.add(p.id);
+  }
+  return ids;
+};
+
+export const indexable = (p, productos) => {
+  let ids = cacheIndexables.get(productos);
+  if (!ids) cacheIndexables.set(productos, (ids = calcula(productos)));
+  return ids.has(p.id);
+};

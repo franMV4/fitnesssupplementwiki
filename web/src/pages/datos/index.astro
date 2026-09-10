@@ -1,0 +1,134 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { porFamilia } from '../../datos/familias.js';
+import { abs, SITIO } from '../../sitio.js';
+
+// La portada del dataset abierto. Los ficheros existian desde el principio y se enlazan
+// desde cada categoria, pero /datos daba 404: no habia ninguna pagina que dijera que
+// existen, que llevan dentro y con que licencia se pueden usar.
+//
+// Es la pagina que enlaza quien cita el dato (un blog, un periodista) y la que lee un
+// modelo cuando le preguntan de donde salen los precios de suplementos en Espana. Sin
+// ella, para citarnos habia que adivinar la URL de un JSON.
+//
+// El JSON-LD es schema.org/Dataset a proposito: es el tipo que reconocen el buscador de
+// datasets de Google y los modelos, y el que convierte "unos ficheros sueltos" en algo
+// citable con autor, licencia y fecha.
+const familias = porFamilia(datos.categorias);
+const total = datos.productos.length;
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+
+const schema = [{
+  '@type': 'Dataset',
+  '@id': `${abs('/datos')}#dataset`,
+  name: 'Precios de suplementos deportivos en Espana',
+  description: `Precios diarios de ${total} suplementos deportivos de ${tiendas} tiendas ` +
+    `espanolas, con el precio por kilo o por capsula ya calculado, el nivel de verificacion ` +
+    `de sus certificaciones y la puntuacion de cada uno con su desglose.`,
+  url: abs('/datos'),
+  license: 'https://creativecommons.org/licenses/by/4.0/',
+  isAccessibleForFree: true,
+  inLanguage: SITIO.idioma,
+  spatialCoverage: 'Espana',
+  dateModified: datos.generado,
+  creator: { '@id': abs('/#autor') },
+  keywords: ['suplementos deportivos', 'precios', 'precio por kilo', 'certificaciones', 'Espana'],
+  distribution: [
+    {
+      '@type': 'DataDownload',
+      name: 'Catalogo completo',
+      encodingFormat: 'application/json',
+      contentUrl: abs('/datos/catalogo.json'),
+    },
+    ...datos.categorias.map((c) => ({
+      '@type': 'DataDownload',
+      name: c.nombre,
+      encodingFormat: 'application/json',
+      contentUrl: abs(`/datos/${c.slug}.json`),
+    })),
+  ],
+}];
+---
+<Base ancho="completo" schema={schema}
+      titulo="Datos abiertos: precios de suplementos en Espana"
+      descripcion={`Los precios de ${total} suplementos de ${tiendas} tiendas espanolas en JSON, actualizados a diario y con licencia CC BY 4.0. Un fichero por categoria y uno con el catalogo entero.`}>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">Datos abiertos</p>
+    <h1 class="aparece d1">Los datos, en bruto</h1>
+    <p class="entradilla aparece d2">
+      Todo lo que hay detras de las tablas de esta web esta publicado en JSON, se actualiza
+      a diario y se puede usar: <strong>{total} productos</strong> de{' '}
+      <strong>{tiendas} tiendas</strong> espanolas, con el precio por kilo o por capsula ya
+      calculado. Ultima recogida: <strong>{datos.generado}</strong>.
+    </p>
+  </section>
+
+  <section class="seccion-doc">
+    <h2>Como usarlo</h2>
+    <p>
+      Licencia <a href="https://creativecommons.org/licenses/by/4.0/deed.es"
+      rel="noopener" target="_blank">Creative Commons Reconocimiento 4.0</a>: puedes
+      copiarlo, transformarlo y usarlo con fines comerciales, citando la fuente. La
+      licencia cubre los datos (precios, formatos, sellos, niveles y puntuaciones), no las
+      imagenes de producto, que son de las tiendas. El detalle esta en{' '}
+      <a href="/legal#licencia-datos">el aviso legal</a>.
+    </p>
+    <p>
+      No hace falta clave ni registro y no hay limite de peticiones: son ficheros estaticos.
+      Se regeneran una vez al dia, asi que pedirlos mas a menudo no trae nada nuevo.
+    </p>
+    <p>
+      Si citas el dato, con enlazar a <a href="/">{SITIO.nombre}</a> basta. Y si lo usas
+      para algo, <a href={`mailto:${SITIO.contacto}`}>cuentamelo</a>: me interesa mas saber
+      para que sirve que el enlace.
+    </p>
+
+    <h2>Que hay en cada fichero</h2>
+    <p>
+      Cada categoria es un fichero con su ranking cerrado y ordenado. Cada producto trae,
+      entre otros campos: <code>puesto</code>, <code>nombre</code>, <code>marca</code>,{' '}
+      <code>tienda</code>, <code>precio_envase_eur</code>,{' '}
+      <code>precio_por_unidad_eur</code> con su <code>unidad</code>,{' '}
+      <code>formato_gramos</code> o <code>unidades</code>, <code>score</code>,{' '}
+      <code>nivel_verificacion</code> (1 a 4) y el <code>desglose</code> de como se calculo
+      esa nota. La cabecera del fichero lleva la fecha de recogida, la licencia y el metodo.
+    </p>
+    <p>
+      Lo que <strong>no</strong> hay es ningun dato de personas: ni cuentas, ni resenas, ni
+      medidas de visitas. Solo producto y precio.
+    </p>
+
+    <h2>Los ficheros</h2>
+    <p class="sutil">
+      El catalogo entero en uno solo, o una categoria suelta si solo te interesa esa.
+    </p>
+    <ul>
+      <li><a href="/datos/catalogo.json"><strong>catalogo.json</strong></a>
+          <span class="sutil"> — los {total} productos, todas las categorias</span></li>
+    </ul>
+    {familias.map((f) => (
+      <>
+        <h3>{f.nombre}</h3>
+        <ul>
+          {f.cats.map((c) => (
+            <li>
+              <a href={`/datos/${c.slug}.json`}>{c.slug}.json</a>
+              <span class="sutil"> — {c.productos} productos</span>
+            </li>
+          ))}
+        </ul>
+      </>
+    ))}
+
+    <h2>De donde sale</h2>
+    <p>
+      Se recoge de lo que cada tienda ya publica (JSON-LD, microdatos, el{' '}
+      <code>products.json</code> de Shopify o su sitemap), con espera entre peticiones y
+      una pasada al dia. El criterio con el que se ordena y se puntua esta entero en{' '}
+      <a href="/metodologia">la metodologia</a>, incluido por que los enlaces de afiliado
+      no pueden mover el ranking.
+    </p>
+  </section>
+</Base>
