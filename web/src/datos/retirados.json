@@ -7,6 +7,10 @@
   "cafeina",
   "2026-09-02"
  ],
+ "4pro-nutrition-beta-alanine-nutritienda": [
+  "beta-alanina",
+  "2026-09-13"
+ ],
  "500-cosmetics-xs-natural-fat-burner-90-capsulas-dosfarma": [
   "quemagrasas",
   "2026-09-03"
@@ -239,10 +243,6 @@
   "proteina-vegana",
   "2026-09-02"
  ],
- "bavarian-elite-proteina-vegana-aislada-nutritienda": [
-  "proteina-vegana",
-  "2026-09-11"
- ],
  "be-life-belife-l-carnitina-650-aminoacidos-90-caps-90-caps-promofarma": [
   "carnitina",
   "2026-09-08"
@@ -307,9 +307,21 @@
   "carbohidratos",
   "2026-08-28"
  ],
+ "biotechusa-eaa-zero-350-g-promofarma": [
+  "eaa",
+  "2026-09-13"
+ ],
  "biotechusa-eaa-zero-350-g-zumub": [
   "eaa",
   "2026-08-28"
+ ],
+ "biotechusa-hydro-whey-zero-1816-g-zumub": [
+  "proteina-whey",
+  "2026-09-13"
+ ],
+ "biotechusa-hydro-whey-zero-454-g-zumub": [
+  "proteina-whey",
+  "2026-09-13"
  ],
  "biotechusa-hyper-carbohidratos-y-proteinas-con-creatina-para-apoyar-la-fase-de-aumento--amazon": [
   "ganador-peso",
@@ -354,6 +366,10 @@
  "boiron-magnesium-duo-noche-conciliacion-del-sueno-y-sueno-reparador-30-capsulas-amazon": [
   "magnesio",
   "2026-09-07"
+ ],
+ "bonusan-curcuma-longa-extracto-60-caps-promofarma": [
+  "curcuma",
+  "2026-09-13"
  ],
  "bonusan-omega-3-msc-aceite-de-krill-60-comprimidos-dosfarma": [
   "omega3",
@@ -406,6 +422,18 @@
  "celnat-copos-de-arroz-integral-500-g-bulevip": [
   "proteina-vegana",
   "2026-09-02"
+ ],
+ "cfn-l-triptofano-60-caps-promofarma": [
+  "triptofano",
+  "2026-09-13"
+ ],
+ "ciaocarb-espirales-bajas-en-carbohidratos-200-g-promofarma": [
+  "carbohidratos",
+  "2026-09-13"
+ ],
+ "ciaocarb-macarrones-bajos-en-carbohidratos-250g-promofarma": [
+  "carbohidratos",
+  "2026-09-13"
  ],
  "citrulline-malate-300g-naranja-amazon": [
   "citrulina",
@@ -707,6 +735,10 @@
   "glutamina",
   "2026-09-11"
  ],
+ "eafit-bcaa-8-1-1-275-g-promofarma": [
+  "bcaa",
+  "2026-09-13"
+ ],
  "eafit-gainer-max-doble-chocolate-2-9-kg-promofarma": [
   "ganador-peso",
   "2026-09-05"
@@ -771,13 +803,21 @@
   "triptofano",
   "2026-09-03"
  ],
+ "equisalud-holofit-espirulina-180-caps-promofarma": [
+  "espirulina",
+  "2026-09-13"
+ ],
+ "erba-vita-te-verde-60-caps-promofarma": [
+  "te-verde",
+  "2026-09-13"
+ ],
  "ergonat-galenic-potasio-50-caps-promofarma": [
   "potasio",
   "2026-09-11"
  ],
- "esi-no-dol-glucosamina-500-90-caps-promofarma": [
-  "glucosamina",
-  "2026-09-11"
+ "esi-melatonin-pura-activ-con-valeriana-30-tabletas-promofarma": [
+  "melatonina",
+  "2026-09-13"
  ],
  "esn-zinc-standard-120-capsulas-amazon": [
   "zinc",
@@ -806,6 +846,14 @@
  "fenioux-selenio-30-caps-promofarma": [
   "selenio",
   "2026-09-11"
+ ],
+ "finisher-collagen-limon-300g-promofarma": [
+  "colageno",
+  "2026-09-13"
+ ],
+ "finisher-whey-protein-sabor-chocolate-500gr-dosfarma": [
+  "proteina-whey",
+  "2026-09-13"
  ],
  "forte-pharma-forte-pharma-articolageno-sabor-limon-349-5gr-dosfarma": [
   "colageno",
@@ -875,6 +923,18 @@
   "ashwagandha",
   "2026-09-05"
  ],
+ "hivital-bcaa-2-1-1-6000mg-720-gr-dosfarma": [
+  "bcaa",
+  "2026-09-13"
+ ],
+ "hivital-cla-acido-linoleico-conjugado-3000mg-180-perlas-dosfarma": [
+  "cla",
+  "2026-09-13"
+ ],
+ "hivital-foods-tribulus-terrestris-2250mg-180caps-veganas-promofarma": [
+  "tribulus",
+  "2026-09-13"
+ ],
  "holland-barrett-guisantes-carlin-500g-hollandbarrett": [
   "proteina-vegana",
   "2026-09-07"
@@ -882,6 +942,14 @@
  "hsn-1000mg-120-capsulas-vegetales-amazon": [
   "carnitina",
   "2026-09-07"
+ ],
+ "hsn-bitartrato-de-colina-500mg-120vcaps-promofarma": [
+  "colina",
+  "2026-09-13"
+ ],
+ "hsn-citicolina-cdp-colina-250mg-120vcaps-promofarma": [
+  "colina",
+  "2026-09-13"
  ],
  "hsn-citrato-de-potasio-200mg-120vcaps-promofarma": [
   "potasio",
@@ -963,10 +1031,6 @@
   "proteina-whey",
   "2026-09-03"
  ],
- "hypertrophy-nutrition-vitagen-multivitamin-complex-100-capsulas-dosfarma": [
-  "multivitaminico",
-  "2026-09-11"
- ],
  "i3-1-probiotico-30-capsulas-dosfarma": [
   "probioticos",
   "2026-09-11"
@@ -979,16 +1043,16 @@
   "multivitaminico",
   "2026-09-07"
  ],
+ "infisport-infinagen-creatine-300-g-po-promofarma": [
+  "creatina",
+  "2026-09-13"
+ ],
  "innovage-duo-piel-colageno-plus-2x345g-promofarma": [
   "colageno",
   "2026-09-03"
  ],
  "integralia-colageno-soluble-plus-vainilla-300-gr-dosfarma": [
   "colageno",
-  "2026-09-11"
- ],
- "integralia-curcuma-plus-30-capsulas-dosfarma": [
-  "curcuma",
   "2026-09-11"
  ],
  "integralia-lecitina-de-soja-ip-500g-dosfarma": [
@@ -1018,6 +1082,14 @@
  "kabi-proteina-sabor-neutro-300g-promofarma": [
   "proteina-whey",
   "2026-09-07"
+ ],
+ "kinoko-life-curcuma-95-jengibre-pimienta-negra-y-boswellia-120-capsulas-dosfarma": [
+  "curcuma",
+  "2026-09-13"
+ ],
+ "kobho-labs-kobho-proteina-whey-aislada-vainilla-525-gr-dosfarma": [
+  "proteina-aislada",
+  "2026-09-13"
  ],
  "l-carnitina-3000-mg-alta-absorcion-180-capsulas-veganas-amazon": [
   "carnitina",
@@ -1115,17 +1187,21 @@
   "bcaa",
   "2026-09-11"
  ],
+ "mega-plus-tribulus-terrestris-48-caps-promofarma": [
+  "tribulus",
+  "2026-09-13"
+ ],
  "mega-plus-vitamina-c-competition-60-caps-promofarma": [
   "vitamina-c",
   "2026-09-11"
  ],
+ "menufitness-the-only-whey-sabor-banana-1000-g-promofarma": [
+  "proteina-whey",
+  "2026-09-13"
+ ],
  "miac-proteina-en-polvo-proteina-vegana-350-gr-sabor-neutro-proteinas-con-vi-amazon": [
   "proteina-vegana",
   "2026-09-07"
- ],
- "multicentrum-hombre-multivitaminico-multimineral-90-comprimidos-dosfarma": [
-  "multivitaminico",
-  "2026-09-11"
  ],
  "multicentrum-hombre-multivitaminico-multimineral-sin-gluten-100-comprimidos-amazon": [
   "multivitaminico",
@@ -1315,6 +1391,10 @@
   "proteina-whey",
   "2026-09-11"
  ],
+ "myvegan-aislado-de-proteina-de-guisante-2-5kg-myprotein": [
+  "proteina-vegana",
+  "2026-09-13"
+ ],
  "myvegan-aislado-de-proteina-de-guisante-960g-30raciones-caramelo-salado-myprotein": [
   "proteina-vegana",
   "2026-09-11"
@@ -1339,9 +1419,17 @@
   "proteina-vegana",
   "2026-08-28"
  ],
+ "myvegan-aislado-de-proteina-de-soja-2-5kg-vainilla-myprotein": [
+  "proteina-vegana",
+  "2026-09-13"
+ ],
  "myvegan-aislado-de-proteina-de-soja-5kg-banoffee-myprotein": [
   "proteina-vegana",
   "2026-09-05"
+ ],
+ "myvegan-aislado-de-proteina-de-soja-5kg-vainilla-myprotein": [
+  "proteina-vegana",
+  "2026-09-13"
  ],
  "myvegan-mezcla-de-proteina-vegana-1kg-sin-sabor-myprotein": [
   "proteina-vegana",
@@ -1363,15 +1451,7 @@
   "multivitaminico",
   "2026-09-02"
  ],
- "myvitamins-zinc-y-magnesio-capsulas-270capsulas-myprotein": [
-  "zinc",
-  "2026-08-28"
- ],
  "myvitamins-zinc-y-magnesio-capsulas-30capsulas-myprotein": [
-  "zinc",
-  "2026-09-03"
- ],
- "myvitamins-zinc-y-magnesio-capsulas-90capsulas-myprotein": [
   "zinc",
   "2026-09-03"
  ],
@@ -1382,6 +1462,14 @@
  "natural-elements-zinc-bisglicinato-15mg-365-comprimidos-1-ano-para-el-pelo-piel-unas-y--amazon": [
   "zinc",
   "2026-08-28"
+ ],
+ "natural-force-potasio-99-mg-100-caps-promofarma": [
+  "potasio",
+  "2026-09-13"
+ ],
+ "nature-essential-omega-3-35-25-500-mg-50-perlas-promofarma": [
+  "omega3",
+  "2026-09-13"
  ],
  "nature-s-bounty-zinc-25-mg-gluconato-de-zinc-100-comprimidos-refuerzo-inmunologico-dia-amazon": [
   "zinc",
@@ -1402,10 +1490,6 @@
  "naturgreen-semillas-de-canamo-bio-200-gr-dosfarma": [
   "proteina-vegana",
   "2026-09-03"
- ],
- "naturlider-naturlider-coral-calcio-plus-90-vegcaps-dosfarma": [
-  "calcio",
-  "2026-09-11"
  ],
  "naturmil-dha-500-mg-60-perlas-usafitness": [
   "omega3",
@@ -1431,9 +1515,9 @@
   "magnesio",
   "2026-09-03"
  ],
- "nhco-nh-co-l-triptofano-56-caps-promofarma": [
-  "triptofano",
-  "2026-09-05"
+ "neo-zinc-niquel-cobalto-50caps-promofarma": [
+  "zinc",
+  "2026-09-13"
  ],
  "nhco-vege-protein-chocolate-750-g-promofarma": [
   "proteina-whey",
@@ -1455,9 +1539,17 @@
   "vitamina-d",
   "2026-09-07"
  ],
+ "now-foods-vitamina-d3-2000ui-120-perlas-hsn": [
+  "vitamina-d",
+  "2026-09-13"
+ ],
  "now-foods-zinc-picolinate-50-mg-apoya-el-sistema-inmunologico-y-la-salud-de-la-p-amazon": [
   "zinc",
   "2026-08-28"
+ ],
+ "now-glucosamina-condroitina-msm-90caps-promofarma": [
+  "glucosamina",
+  "2026-09-13"
  ],
  "nutralie-ashwagandha-con-vitamina-b6-b12-y-rodiola-ansiedad-60-capsulas-dosfarma": [
   "ashwagandha",
@@ -1489,10 +1581,6 @@
  ],
  "nutralie-hierro-liposomado-30mg-b6-b12-cansancio-y-fatiga-60-capsulas-dosfarma": [
   "hierro",
-  "2026-09-03"
- ],
- "nutralie-levadura-de-arroz-monacolina-k-q10-vitaminas-c-y-e-30-caps-promofarma": [
-  "colina",
   "2026-09-03"
  ],
  "nutralie-levadura-de-arroz-rojo-monacolina-k-q10-30-capsulas-dosfarma": [
@@ -1587,6 +1675,14 @@
   "proteina-whey",
   "2026-09-11"
  ],
+ "nutrisport-mega-protein-whey-5-chocolate-1-8kg-promofarma": [
+  "proteina-whey",
+  "2026-09-13"
+ ],
+ "nutrisport-premium-iso-whey-cero-cero-sabor-neutro-900g-promofarma": [
+  "proteina-whey",
+  "2026-09-13"
+ ],
  "nutrisport-pudding-protein-zero-12-tarrinas-x-135-gr-bulevip": [
   "proteina-whey",
   "2026-09-07"
@@ -1610,10 +1706,6 @@
  "oleander-oleanders-macarrones-arroz-quinoa-sin-gluten-500-g-promofarma": [
   "proteina-vegana",
   "2026-09-02"
- ],
- "olimp-beta-alanina-xplode-powder-nutritienda": [
-  "beta-alanina",
-  "2026-09-11"
  ],
  "olimp-sojavit-85-nutritienda": [
   "proteina-vegana",
@@ -1715,6 +1807,10 @@
   "acido-hialuronico",
   "2026-09-03"
  ],
+ "plantapol-triptofano-525-mg-60-caps-promofarma": [
+  "triptofano",
+  "2026-09-13"
+ ],
  "pridaho-h4u-vitamina-b12-30-capsulas-dosfarma": [
   "vitamina-b12",
   "2026-09-11"
@@ -1774,6 +1870,14 @@
  "qnt-creatine-monohydrate-800-gr-usafitness": [
   "creatina",
   "2026-09-07"
+ ],
+ "qnt-metapure-whey-cero-carbohidratos-908-g-zumub": [
+  "proteina-whey",
+  "2026-09-13"
+ ],
+ "qnt-metapure-zero-carb-whey-2000g-zumub": [
+  "proteina-whey",
+  "2026-09-13"
  ],
  "qnt-sport-casein-protein-nutritienda": [
   "caseina",
@@ -1891,13 +1995,13 @@
   "zinc",
   "2026-08-28"
  ],
- "sakai-probioticg-complex-30-caps-promofarma": [
-  "probioticos",
-  "2026-09-11"
- ],
  "salud-viva-proteina-de-chia-200g-promofarma": [
   "proteina-whey",
   "2026-09-07"
+ ],
+ "salud-viva-proteina-gruesa-haba-y-guisante-texturizada-eco-150-g-promofarma": [
+  "proteina-vegana",
+  "2026-09-13"
  ],
  "sanon-antiaging-hyaluronic-365caps-promofarma": [
   "acido-hialuronico",
@@ -1922,6 +2026,10 @@
  "santiveri-tostadas-proteicas-115-gr-dosfarma": [
   "proteina-whey",
   "2026-09-03"
+ ],
+ "santiveri-triptofano-40-caps-promofarma": [
+  "triptofano",
+  "2026-09-13"
  ],
  "scitec-nutrition-amino-charge-nutritienda": [
   "preentreno",
@@ -1958,6 +2066,10 @@
  "smileat-tarrito-de-pollo-con-arroz-eco-6m-230-gr-dosfarma": [
   "proteina-vegana",
   "2026-09-02"
+ ],
+ "solaray-calcio-y-magnesio-90-capsulas-vegetales-dosfarma": [
+  "calcio",
+  "2026-09-13"
  ],
  "solaray-liposomal-multivitamin-men-s-60-capsulas-vegetales-dosfarma": [
   "multivitaminico",
@@ -2031,6 +2143,10 @@
   "colina",
   "2026-09-03"
  ],
+ "solgar-shoden-ashwagandha-30-capsulas-dosfarma": [
+  "ashwagandha",
+  "2026-09-13"
+ ],
  "solgar-thermogenic-complex-60-capsulas-dosfarma": [
   "quemagrasas",
   "2026-09-03"
@@ -2095,10 +2211,6 @@
   "vitamina-d",
   "2026-09-11"
  ],
- "sotya-antioxidante-c-e-selenio-500mg-100-comprimidos-dosfarma": [
-  "selenio",
-  "2026-09-11"
- ],
  "sotya-chitosan-te-verde-500mg-100-capsulas-dosfarma": [
   "te-verde",
   "2026-09-02"
@@ -2106,6 +2218,10 @@
  "sotya-lecitina-de-soja-ip-granulada-600-gr-dosfarma": [
   "proteina-vegana",
   "2026-09-07"
+ ],
+ "sotya-multivitaminico-y-mineral-con-luteina-licopeno-y-q10-820mg-60-capsulas-dosfarma": [
+  "multivitaminico",
+  "2026-09-13"
  ],
  "sotya-proteina-90-fresa-1kg-dosfarma": [
   "proteina-whey",
@@ -2131,6 +2247,10 @@
   "zinc",
   "2026-09-11"
  ],
+ "swanson-l-triptofano-500mg-60-capsulas-hsn": [
+  "triptofano",
+  "2026-09-13"
+ ],
  "swanson-picolinato-de-cromo-200mcg-200-capsulas-dosfarma": [
   "colina",
   "2026-09-05"
@@ -2151,9 +2271,21 @@
   "creatina",
   "2026-09-03"
  ],
+ "tongil-coenzima-q10-100mg-30-perlas-dosfarma": [
+  "coenzima-q10",
+  "2026-09-13"
+ ],
+ "tongil-estado-puro-ferro-vegetal-complex-30-caps-promofarma": [
+  "hierro",
+  "2026-09-13"
+ ],
  "tongil-estado-puro-vitamina-d3-1000-ui-100-comprimidos-dosfarma": [
   "vitamina-d",
   "2026-09-05"
+ ],
+ "tongil-spirulina-300-comprimidos-dosfarma": [
+  "espirulina",
+  "2026-09-13"
  ],
  "universal-nutrition-calcio-zinc-magnesio-100-comprimidos-zumub": [
   "zinc",
@@ -2230,6 +2362,10 @@
  "viridian-te-verde-eco-500-mg-30-caps-promofarma": [
   "te-verde",
   "2026-09-11"
+ ],
+ "viridian-viridikid-multivitaminas-y-minerales-90-capsulas-dosfarma": [
+  "multivitaminico",
+  "2026-09-13"
  ],
  "vit-all-aceite-de-salvado-de-arroz-1000-mg-q10-60-caps-promofarma": [
   "coenzima-q10",
