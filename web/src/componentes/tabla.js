@@ -34,6 +34,10 @@ const producto = (tr) => ({
 });
 
 export function montarTabla(raiz) {
+  // En movil los filtros arrancan plegados: sin JS o en escritorio se quedan abiertos
+  // (el <details> lleva `open`), aqui se cierran solo si la pantalla es estrecha.
+  const filtros = raiz.querySelector('.filtros');
+  if (filtros && matchMedia('(max-width: 46rem)').matches) filtros.open = false;
   const tabla = raiz.querySelector('table');
   const cuerpo = tabla.querySelector('tbody');
   const productos = [...cuerpo.rows].map(producto);

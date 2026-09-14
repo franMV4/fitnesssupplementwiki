@@ -33,6 +33,15 @@ RE_LD = re.compile(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', r
 RE_HREF = re.compile(r'href="(/[^"]*)"')
 RE_FILA = re.compile(r"<tbody[^>]*>\s*<tr")
 
+# Palabras que en el texto visible NO pueden quedar sin tilde (mirror de SIN_TILDE_PROHIBIDAS
+# en web/src/tildes.js). Si aparecen, el paso de restaurar tildes del build no se aplico.
+SIN_TILDE = ["categoria", "categorias", "certificacion", "verificacion", "proteina",
+             "proteinas", "capsula", "capsulas", "analisis", "metodologia", "pagina",
+             "informacion", "espanol", "espanola", "espanolas"]
+RE_SIN_TILDE = re.compile(r"\b(" + "|".join(SIN_TILDE) + r")\b", re.I)
+RE_SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.S | re.I)
+RE_TAG = re.compile(r"<[^>]+>")
+
 
 def desescapar(s):
     return (s.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
@@ -184,6 +193,18 @@ def main():
 
         if "ejemplo.es" in texto:
             fallos.append(f"{url}: queda un dominio de ejemplo")
+
+        # Tildes: el texto visible no puede llevar una palabra que en espanol SIEMPRE lleva
+        # tilde sin ponersela (categoria, certificacion, proteina...). Si aparece, el paso
+        # de restaurar tildes del build no toco esta pagina. Ver web/src/tildes.js.
+        # Se mira solo el texto: fuera <script> (JSON-LD con URLs) y <style>, y luego se
+        # quitan las etiquetas para no leer slugs de los atributos (proteina-vegana).
+        visible = RE_SCRIPT_STYLE.sub(" ", texto)
+        visible = RE_TAG.sub(" ", visible)
+        for palabra in RE_SIN_TILDE.findall(visible):
+            fallos.append(f"{url}: texto sin tilde '{palabra.lower()}' "
+                          f"(el paso de tildes no se aplico)")
+            break  # con una por pagina basta para localizar el problema
 
         # Las landings de intencion (/mejores, /comparativa) existen para responder una
         # consulta de compra. Una con la tabla vacia no responde nada y ademas se lleva

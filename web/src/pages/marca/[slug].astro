@@ -125,12 +125,12 @@ const schema = [
                   <th class="num">€/{unidad}</th><th>Nivel</th><th class="num">Score</th><th>Tienda</th></tr>
               </thead>
               <tbody>
-                {b.productos.map((p) => (
+                {b.productos.map((p, i) => (
                   <tr>
                     <td class="principal marca"><a href={`/producto/${p.slug}/`}>{p.nombre}</a></td>
                     <td data-et="Formato">{formatoDe(p)}</td>
                     <td class="num" data-et="Precio">{eur(p.precio_eur)}</td>
-                    <td class="num" data-et={`€/${unidad}`}>{b.r.precio(p.precio_referencia)}</td>
+                    <td class:list={['num', { barato: i === 0 }]} data-et={`€/${unidad}`}>{b.r.precio(p.precio_referencia)}</td>
                     <td data-et="Nivel">
                       <span class={`nivel ${NIVEL[p.nivel_verificacion].clase}`}>
                         <span class="puntos">{puntos(p.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>

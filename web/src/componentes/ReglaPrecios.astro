@@ -1,0 +1,35 @@
+---
+import { eur } from '../datos/util.js';
+
+// La regla de precios de una categoria dibujada: del mas barato al mas caro por unidad,
+// con la mediana marcada y, si esta despegado del suelo, el lider (PLAN-ESTETICA F4.1).
+// Es el dato por el que existe esta web hecho imagen; hasta ahora solo salia en la portada.
+// Va en la unidad de la categoria (kg o capsula), asi que nunca mezcla dos escalas.
+//
+// Escala logaritmica, igual que en la portada: en lineal los productos se apelotonan en el
+// primer 5 % de la regla porque el techo suele ser 20 veces el suelo.
+const { min, max, mediana, lider = null, unidad = 'kg', dec = 2 } = Astro.props;
+const pos = (v) => (min != null && max != null && max > min && v != null
+  ? Math.min(99, Math.max(1,
+      ((Math.log(v) - Math.log(min)) / (Math.log(max) - Math.log(min))) * 100))
+  : 0);
+const posMediana = pos(mediana);
+const posLiderRaw = pos(lider);
+// El lider solo se marca si esta despegado del suelo: cuando el barato y el bueno son el
+// mismo, una marca pegada al 0 % no dice nada (misma regla que la portada).
+const posLider = posLiderRaw > 5 ? posLiderRaw : null;
+---
+{min != null && max != null && max > min && (
+  <div class="horquilla horquilla-cabecera aparece d2">
+    <div class="regla" aria-hidden="true">
+      <span class="tramo" />
+      <span class="marca-mediana" style={`left:${posMediana}%`} />
+      {posLider != null && <span class="marca-lider" style={`left:${posLider}%`} />}
+    </div>
+    <p class="pies">
+      <span>desde <b>{eur(min, dec)}</b>/{unidad}</span>
+      <span class="sutil">mediana {eur(mediana, dec)}</span>
+      <span>hasta <b>{eur(max, dec)}</b>/{unidad}</span>
+    </p>
+  </div>
+)}

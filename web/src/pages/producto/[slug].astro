@@ -13,7 +13,8 @@ import { marcaDe } from '../../datos/marcas.js';
 import { NIVEL, TIENDAS, costeMes, duracionDias, eur, nombreIngrediente, precioReferencia,
          puntos } from '../../datos/util.js';
 import {
-  descripcionProducto, indexable, nom, ofertaLd, tituloProducto, veredictoProducto,
+  descripcionProducto, formateaDesglose, indexable, nom, ofertaLd, tituloProducto,
+  veredictoProducto,
 } from '../../datos/seo.js';
 
 export function getStaticPaths() {
@@ -207,7 +208,8 @@ const schema = [
               la carga. Ahora se queda el marco, con la trama de una plancha en blanco, y
               un pie que dice lo que ha pasado. Las dos leyendas van escritas en el HTML y
               las cambia el CSS: asi el `onerror` sigue siendo una linea. */}
-          <img src={p.imagen} alt={`${p.marca} ${p.nombre}`} loading="lazy" decoding="async"
+          <img src={p.imagen} alt={`${p.marca} ${p.nombre}`} loading="eager" fetchpriority="high"
+               width="340" height="340"
                referrerpolicy="no-referrer"
                onerror="this.closest('figure').classList.add('sin-foto'); this.remove();" />
           <figcaption>
@@ -348,7 +350,7 @@ const schema = [
         Calidad {p.score_calidad?.toFixed(0) ?? '—'}/100 · <a href="/metodologia/">como se calcula</a>.
       </p>
       <ul class="desglose">
-        {p.desglose.map((d) => <li>{d}</li>)}
+        {p.desglose.map((d) => <li>{formateaDesglose(d)}</li>)}
       </ul>
 
       {p.requisitos.length > 0 && <h2>Requisitos de {cat.nombre.toLowerCase()}</h2>}
@@ -496,14 +498,14 @@ const schema = [
                     <th class="num">Por {precioReferencia(p).unidad || 'unidad'}</th><th class="num">Score</th><th>Tienda</th></tr>
                 </thead>
                 <tbody>
-                  {verHermanos.map((o) => (
+                  {verHermanos.map((o, i) => (
                     <tr class={o.id === p.id ? 'destacado' : undefined}>
                       <td class="principal marca">{o.id === p.id
                         ? <strong>{o.nombre} (este)</strong>
                         : <a href={`/producto/${o.slug}/`}>{o.nombre}</a>}</td>
                       <td data-et="Formato">{o.formato_gramos ? `${o.formato_gramos} g` : o.unidades ? `${o.unidades} capsulas` : '—'}</td>
                       <td class="num" data-et="Precio">{eur(o.precio_eur)}</td>
-                      <td class="num" data-et="Por unidad">{precioReferencia(o).valor}</td>
+                      <td class:list={['num', { barato: i === 0 }]} data-et="Por unidad">{precioReferencia(o).valor}</td>
                       <td class="num" data-et="Score">{o.score_final?.toFixed(0) ?? '—'}</td>
                       <td data-et="Tienda">{TIENDAS[o.tienda] ?? o.tienda}</td>
                     </tr>

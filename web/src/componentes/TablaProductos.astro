@@ -82,6 +82,12 @@ const fila = (p) => ({
       costaban 318 px de mandos en escritorio y 448 en movil por encima de la primera
       fila de datos, que es a lo que se viene. El texto no se pierde: sigue en el
       <label>, que es de donde lo lee un lector de pantalla. */}
+  {/* En movil los filtros van plegados tras un boton (PLAN-ESTETICA F3): apilados
+      empujaban la primera fila fuera de la pantalla. Va `open` en el HTML para que sin
+      JS (y en escritorio) se vean; tabla.js lo cierra al cargar solo si la pantalla es
+      de movil. El resumen solo se pinta en movil (seccion 19). */}
+  <details class="filtros" open>
+    <summary>Filtrar y ordenar</summary>
   <div class="barra-filtros">
     <label class="campo ancho">
       <span class="solo-lector">Buscar</span>
@@ -136,6 +142,7 @@ const fila = (p) => ({
       </div>
     )}
   </div>
+  </details>
 
   <div class="tabla-marco">
     <div class="tabla-scroll">

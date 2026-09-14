@@ -190,6 +190,22 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   reusar ese nombre en la rejilla de `/entrar` sacaba la columna del grid. La columna del
   titular se llama `.acceso-titular`.
 
+## Tildes: el codigo va sin tilde, el HTML servido con ella (2026-09-14)
+
+El codigo sigue sin tildes (regla de la seccion de estilo): claves, variables, comentarios
+y el copy de `categorias.py`, `seo.js`, `landings.js`, etc. se escriben "categoria",
+"certificacion". La tilde se pone en UN solo sitio, al final del build:
+`web/src/tildes.js` (`restaurarTildesHTML`) lo llama una integracion de Astro
+(`astro:build:done` en `astro.config.mjs`) sobre cada `.html` de `dist`. Cubre tambien los
+nombres de producto que vienen del dataset. Reglas: solo palabras que en espanol llevan
+tilde SIEMPRE (diccionario cerrado, sin demostrativos ni verbos ambiguos); toca nodos de
+texto y `content` de `<meta>`, nunca atributos (slugs/URLs) ni `<script>` (JSON-LD).
+**Ojo dev vs build**: `astro dev` NO ejecuta esa integracion, asi que en local el texto
+sale sin tildes; hay que mirar `dist` o la web publicada. `seo_check.py` falla si queda una
+palabra de `SIN_TILDE` sin acentuar en el texto visible: es la red que avisa si el paso no
+corre. Para anadir una palabra, se anade al MAPA de `tildes.js` (y a `SIN_TILDE` si debe
+vigilarse), no se escribe con tilde en el copy.
+
 ## SEO y SEO para IA (2026-08-21)
 
 El copy que responde a una consulta **se genera desde el dataset**, nunca se escribe a

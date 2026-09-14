@@ -984,20 +984,35 @@ tr:hover .enlace-producto, .enlace-producto:hover { background-size: 100% 1px; }
 td.alarma { box-shadow: inset 3px 0 0 var(--alarma); }
 
 /* Fotos: las sirve la CDN de cada tienda; aqui no se aloja ninguna. Casi todas
-   vienen recortadas sobre blanco, asi que sobre el papel crudo necesitan su
-   propia superficie clara o parecen manchas. */
+   vienen recortadas sobre blanco. Antes llevaban su propia caja blanca y la tabla era
+   una columna de recuadros blancos sobre papel crudo. Ahora se imprimen EN el papel:
+   `multiply` hace que el blanco del packshot tome el color de lo que hay debajo y el
+   bote queda como una foto impresa en la hoja (PLAN-ESTETICA F2.1).
+   Ojo: multiply mezcla con el fondo de su contexto de apilado. Si un antecesor abre
+   uno sin fondo propio (transform, opacity < 1), el blanco vuelve a verse: ese
+   antecesor necesita `background: var(--papel)`, como la figura de la ficha. */
 .miniatura {
   width: 42px; height: 42px; flex: 0 0 42px; object-fit: contain;
-  background: #fff; border: 1px solid var(--regla); padding: 2px;
+  background: transparent; padding: 2px; mix-blend-mode: multiply;
 }
 .con-miniatura { display: flex; align-items: center; gap: .65rem; }
 .celda-producto { min-width: 0; }
 
 .foto-producto { margin: 0 0 var(--e4); }
+.foto-producto { background: var(--papel); }
 .foto-producto img {
-  width: 100%; aspect-ratio: 1; object-fit: contain;
-  background: #fff; border: 2px solid var(--tinta); padding: var(--e3);
+  display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain;
+  background: transparent; border: 2px solid var(--tinta); padding: var(--e3);
+  mix-blend-mode: multiply;
 }
+/* Con la luz apagada, multiply ennegrece el bote entero. Ahi la foto va como un recorte
+   de papel pegado en la pagina oscura: el blanco se baja al tono del papel claro
+   (brightness + un punto de sepia) en vez de quedar como un rectangulo que deslumbra. */
+:root[data-tema="oscuro"] .miniatura,
+:root[data-tema="oscuro"] .foto-producto img {
+  mix-blend-mode: normal; background: #fff; filter: brightness(.9) sepia(.12);
+}
+:root[data-tema="oscuro"] .miniatura { border: 1px solid var(--regla); }
 .foto-producto figcaption {
   margin-top: var(--e2); font-family: var(--mono);
   font-size: .66rem; letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-3);
@@ -1009,8 +1024,13 @@ td.alarma { box-shadow: inset 3px 0 0 var(--alarma); }
 .foto-producto.sin-foto::before {
   content: ""; display: block; aspect-ratio: 1;
   border: 2px solid var(--tinta); background-color: var(--papel-2);
-  background-image: repeating-linear-gradient(
-    45deg, transparent 0 9px, var(--regla) 9px 10px);
+  /* La figura de la marca en el centro de la plancha: se ve que falta la foto, pero la
+     hoja sigue siendo de esta web y no un hueco. */
+  background-image: url("/favicon.svg"),
+    repeating-linear-gradient(45deg, transparent 0 9px, var(--regla) 9px 10px);
+  background-repeat: no-repeat, repeat;
+  background-position: center, 0 0;
+  background-size: 18%, auto;
 }
 .pie-sin-foto { display: none; }
 .sin-foto .pie-con-foto { display: none; }
@@ -1065,6 +1085,23 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
    (666 px de 1.178) y los otros tres se quedaban en lo que ocupaba su contenido, uno
    de 92 px al lado de otro de 188. En fracciones, el reparto se declara y no depende
    de lo largo que sea el texto de cada desplegable. */
+/* Los filtros van dentro de un <details class="filtros">. En escritorio el resumen no se
+   ve y el <details> esta abierto (lleva `open`): se comporta como la barra de siempre. En
+   movil (seccion 19) el resumen se vuelve un boton y tabla.js lo cierra al cargar. */
+.filtros > summary { display: none; }
+
+/* Aviso de afiliacion plegado (F3.1): el resumen es una linea discreta con la marca de
+   nota (†), y al abrir sale el parrafo completo. Sin flecha de lista del navegador. */
+.aviso-afiliado { margin: var(--e4) 0; }
+.aviso-afiliado > summary {
+  cursor: pointer; list-style: none; color: var(--tinta-2);
+  font-size: .9rem; padding: .2rem 0;
+}
+.aviso-afiliado > summary::-webkit-details-marker { display: none; }
+.aviso-afiliado > summary strong { color: var(--senal-txt); }
+.aviso-afiliado > summary::after { content: " ▾"; color: var(--tinta-3); }
+.aviso-afiliado[open] > summary::after { content: " ▴"; }
+.aviso-afiliado .nota { margin: var(--e2) 0 0; }
 .barra-filtros {
   display: grid; grid-template-columns: 4.8fr 1.6fr 1.6fr 2.2fr;
   gap: var(--e3) var(--e4); align-items: center;
@@ -1751,6 +1788,26 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
     flex: none; scroll-snap-align: start;
     border: 1px solid var(--regla-2); margin-right: -1px;
   }
+  /* Pista de que la fila de chips sigue de lado: el ultimo se difuminaba en el borde sin
+     avisar de que habia scroll (D9). Un velo de papel en el margen derecho lo dice. */
+  .campo.linea .grupo-chips {
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+  }
+
+  /* El boton que despliega los filtros (F3): en movil ocupa el hueco de la barra de
+     filtros hasta que se pulsa. tabla.js arranca con el <details> cerrado. */
+  .filtros > summary {
+    display: flex; align-items: center; gap: .5rem; min-height: 44px;
+    padding: 0 .8rem; margin-bottom: var(--e3); cursor: pointer;
+    list-style: none;
+    border: 1px solid var(--regla-2); background: var(--papel-2);
+    font-family: var(--mono); font-size: var(--rotulo-tam);
+    letter-spacing: var(--rotulo-esp); text-transform: uppercase; color: var(--tinta-2);
+  }
+  .filtros > summary::-webkit-details-marker { display: none; }
+  .filtros > summary::after { content: "▾"; margin-left: auto; color: var(--tinta-3); }
+  .filtros[open] > summary::after { content: "▴"; }
 
 }
 
@@ -2107,6 +2164,35 @@ body > * { position: relative; z-index: 1; }
 }
 .horquilla .pies b { color: var(--tinta); font-weight: 700; }
 .horquilla .pies .sutil { font-size: .74rem; }
+
+/* La regla de precios cuando encabeza una categoria (F4.1): un poco mas alta y con aire
+   arriba, para que sea la primera imagen de la pagina y no un pie de tabla. */
+.horquilla-cabecera { max-width: 42rem; margin: var(--e4) 0 var(--e3); }
+.horquilla-cabecera .regla { height: 14px; }
+.horquilla-cabecera .marca-mediana { height: 22px; }
+.horquilla-cabecera .marca-lider { height: 26px; }
+
+/* --- Oficio y tipografia (PLAN-ESTETICA F5/F6) --------------------------------
+   Detalles que un diseno hecho a mano tiene y uno generado no: titulares que no dejan
+   una palabra sola en la ultima linea, enlaces con aire bajo el subrayado, botones que
+   responden al pulsarlos y la fila de tabla que reacciona al raton. */
+h1, h2, h3 { text-wrap: balance; }
+p, li, .respuesta, .entradilla, figcaption, .apunte { text-wrap: pretty; }
+.respuesta, blockquote, .prosa p { hanging-punctuation: first; }
+a { text-underline-offset: .16em; }
+a:hover { text-decoration-thickness: 2px; }
+.hamburguesa { font: inherit; }
+
+/* El boton y el chip se hunden un pixel hacia su sombra al pulsar. Sin rebote. */
+.boton:active, .chip:active { transform: translate(1px, 1px); }
+
+/* Filete de la tinta del dinero cuando el raton pasa por una fila: la fila responde. */
+.tabla-marco tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 var(--senal); }
+
+/* La celda mas barata de una tabla de formatos o de marca, resaltada: la diferencia se
+   marca, no se hace buscar (NN/g). Va en la piel de la tinta del dinero. */
+.num.barato { background: var(--senal-piel); color: var(--senal-txt); font-weight: 700; }
+:root[data-tema="oscuro"] .num.barato { color: var(--senal-neg); }
 
 /* --- 18f. Portada en movil ----------------------------------------------- */
 @media (max-width: 46rem) {

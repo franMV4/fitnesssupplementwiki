@@ -215,6 +215,19 @@ export function veredictoProducto(p, productos, cat, generado) {
   return frases.join(' ');
 }
 
+/* --- Desglose del score, en castellano -----------------------------------------
+   El motor escribe el desglose como un log de programa ("0.443 EUR por dosis"). El dato es
+   el mismo; solo cambia como se pinta: coma decimal, simbolo del euro y mayuscula inicial.
+   Se hace al renderizar (no en el motor) para no regenerar el dataset ni tocar el scoring.
+   Las tildes las pone el paso de build (web/src/tildes.js). Ver PLAN-ESTETICA F1.2. */
+export const formateaDesglose = (linea) => {
+  const s = String(linea)
+    .replace(/(\d)\.(\d)/g, '$1,$2')            // punto decimal -> coma
+    .replace(/\bEUR\b/g, '€')                    // EUR -> el simbolo
+    .replace(/son (\d[\d.,]*)\)/g, 'son $1 €)'); // precio suelto del parentesis
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
 /* --- JSON-LD de producto --------------------------------------------------------
    Un producto se marca igual lo mire quien lo mire: la ficha, la tabla de categoria y
    las landings de intencion. Estaba copiado en tres sitios y el dia que se anadio
@@ -309,9 +322,13 @@ export const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 // delante la palabra clave del producto y detras las dos por las que se busca esta web
 // (precio por unidad y certificacion). La consulta original no se pierde: sigue siendo la
 // primera pregunta del FAQ de la misma pagina.
+// H1 corto y humano (PLAN-ESTETICA F1.3): "La mejor creatina de 2026". Lleva delante la
+// consulta con la que se busca (cat.mejor) y no repite el <title>, que ya carga el detalle
+// ("precio por kg y certificacion"). El mordisco largo de antes ocupaba 3-4 lineas en movil
+// y decia lo mismo que el titulo. El criterio sigue a la vista en la respuesta corta, en la
+// nota "Que estas mirando" y en el FAQ.
 export const h1Categoria = (cat, generado) =>
-  `${cap(cat.mejor ?? `mejor ${cat.termino}`)} de ${anio(generado)}: comparativa por ` +
-  `precio por ${UNIDAD[cat.unidad_precio] ?? 'kg'} y certificacion`;
+  `${cap(cat.mejor ?? `mejor ${cat.termino}`)} de ${anio(generado)}`;
 
 // La descripcion nombra al ganador y al mas barato: es la respuesta entera antes de
 // pinchar, y un nombre propio con precio llama mas que "comparamos X productos".
