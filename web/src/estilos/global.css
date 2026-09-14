@@ -97,9 +97,9 @@
 
   /* Fondo fotografico de la pagina y el velo de papel que lleva encima. El velo no
      es decoracion: la foto tiene bultos de contraste medio y el texto del diario se
-     lee sobre ella tapada al 62 % (antes 73 %; el dueno pidio ver la foto un 15 % mas). Son tokens porque cambian con el tema. */
+     lee sobre ella tapada al 47 % (el dueno pidio ver la foto bastante mas: 73 -> 62 -> 47). Son tokens porque cambian con el tema. */
   --fondo: url("/fondo-claro.png");
-  --velo:  rgba(239, 237, 230, .62);
+  --velo:  rgba(239, 237, 230, .47);
 }
 
 /* El mismo diario con la luz apagada: no hay un segundo diseno, solo otros valores
@@ -141,7 +141,7 @@
     --alarma: #ff6a3d;
 
     --fondo: url("/fondo-oscuro.png");
-    --velo:  rgba(20, 18, 16, .62);
+    --velo:  rgba(20, 18, 16, .47);
 }
 /* El grano es ruido negro: sobre papel oscuro hay que invertirlo o solo ensucia. */
 :root[data-tema="oscuro"] body::before { filter: invert(1); opacity: .05; }
