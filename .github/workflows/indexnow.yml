@@ -1,0 +1,24 @@
+# Avisa a Bing por IndexNow de las URLs del sitemap que han cambiado.
+#
+# Mismo reloj que alertas.yml y por lo mismo: a esta hora el scraper de las 05:15 UTC ya
+# confirmo y Pages ya publico. indexnow.py lee el sitemap del DOMINIO, asi que avisa de lo
+# que ya esta en linea. La ventana es de 2 dias y el cron corre en dias alternos: tambien
+# entran los push hechos a mano entre una pasada y otra. Sin secretos: la clave es publica.
+
+name: IndexNow
+
+on:
+  schedule:
+    - cron: '30 9 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python indexnow.py

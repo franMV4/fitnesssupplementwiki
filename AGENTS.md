@@ -604,8 +604,9 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
   cuando lo que falla es donde se subio. Si hace falta subir sin push, la rama es
   `--branch master`, desde `web/` (desde la carpeta de arriba se sube el sitio sin la API).
   Comprobar siempre en el dominio, no en la URL que imprime el comando.
-  Cuando el dominio ya sirve lo nuevo: `python indexnow.py` (avisa a Bing de las URLs del
-  sitemap con lastmod de los ultimos 2 dias; `--todo` para todo el sitemap).
+  IndexNow va solo: `.github/workflows/indexnow.yml` corre `python indexnow.py` a las 09:30
+  UTC de los dias impares (URLs del sitemap con lastmod de los ultimos 2 dias). A mano solo
+  para no esperar: `python indexnow.py` cuando el dominio ya sirve lo nuevo, `--todo` para todo.
   Ver `PUBLICAR.md` paso 9 para crear D1, R2 y el secreto.
 - **Entrar con Google**: flujo de código de autorización escrito a mano (dos redirecciones
   y una llamada). El `id_token` llega de Google por TLS en la misma petición, no a través
