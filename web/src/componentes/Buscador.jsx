@@ -51,8 +51,11 @@ const mejor = (...encajes) => {
 
 // `etiqueta` es el texto del campo vacio. Por defecto, el de la portada, que tiene el
 // ancho de la pagina; el de la cabecera lo pasa mas corto porque su campo mide un tercio.
+// `lista` es el id de la lamina: el panel movil pinta un segundo buscador y dos ids
+// iguales dejan el aria-controls apuntando al que no es.
 export default function Buscador({ categorias = [], total = 0,
-                                   etiqueta = 'Busca una marca, un producto o un suplemento' }) {
+                                   etiqueta = 'Busca una marca, un producto o un suplemento',
+                                   lista = 'resultados-buscador' }) {
   const [q, setQ] = useState('');
   const [indice, setIndice] = useState(null);
   const [abierto, setAbierto] = useState(false);
@@ -159,7 +162,7 @@ export default function Buscador({ categorias = [], total = 0,
           value={q}
           role="combobox"
           aria-expanded={abierto && buscando}
-          aria-controls="resultados-buscador"
+          aria-controls={lista}
           aria-autocomplete="list"
           aria-label={`Buscar entre ${total} productos y sus comparativas`}
           placeholder={etiqueta}
@@ -174,7 +177,7 @@ export default function Buscador({ categorias = [], total = 0,
       </div>
 
       {abierto && (
-        <div className="buscador-lamina" id="resultados-buscador" role="listbox">
+        <div className="buscador-lamina" id={lista} role="listbox">
           {!buscando && (
             <div className="buscador-pista">
               <p className="rotulo">Empieza por aqui</p>

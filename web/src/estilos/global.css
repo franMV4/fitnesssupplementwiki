@@ -391,6 +391,16 @@ header.sitio .envoltorio {
    En movil no cabe entre la hamburguesa y los iconos, y el panel ya lleva las
    secciones: aparece a partir de 62rem y crece hasta 78, donde ya hay barra entera. */
 .buscador-cabecera { display: none; }
+/* Su pareja del panel lateral: solo donde el de la cabecera no se ve. Se oculta al
+   entrar en un submenu, igual que el titulo del panel. */
+.buscador-panel { display: none; }
+@media (max-width: 61.99rem) {
+  .buscador-panel { display: block; padding: var(--e3) var(--e4); border-bottom: 1px solid var(--regla); }
+  .buscador-panel .buscador { margin: 0; max-width: none; }
+  .buscador-panel .buscador-campo { padding-inline: .7rem; }
+  .buscador-panel .atajo { display: none; }
+  nav.principal:has(.menu-cat[open]) > .buscador-panel { display: none; }
+}
 @media (min-width: 62rem) {
   .buscador-cabecera {
     display: flex; align-items: center;

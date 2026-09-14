@@ -171,6 +171,11 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             empieza directamente en "Categorias" y no se sabe que es lo que se ha
             abierto. Al entrar en un submenu lo sustituye la fila de vuelta. */}
         <p class="cabeza-panel" aria-hidden="true">Menu</p>
+        {/* Por debajo de 62rem el buscador de la cabecera no cabe: vive aqui. */}
+        <div class="buscador-panel">
+          <Buscador client:idle categorias={datos.categorias} total={total}
+                    etiqueta="Buscar un producto o una categoria" lista="resultados-panel" />
+        </div>
         <details class="menu-cat" name="menu">
           <summary aria-current={enCategoria ? 'page' : undefined}>Categorias</summary>
           <div class="lamina laminas-grupos">
