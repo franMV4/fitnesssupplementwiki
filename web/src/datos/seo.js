@@ -35,7 +35,7 @@ export const nom = (p) => {
 
 // Corta por la ultima palabra entera que cabe. Un titulo cortado a mitad de palabra
 // en el resultado de busqueda parece un error del sitio, no del buscador.
-const corta = (s, max) => {
+export const corta = (s, max) => {
   if (s.length <= max) return s;
   const trozo = s.slice(0, max - 1);
   const i = trozo.lastIndexOf(' ');
@@ -288,12 +288,18 @@ export const agregadoLd = (nombre, productos, url) => {
 
 /* --- Titulos y descripciones ---------------------------------------------------
    El ano sale de la fecha de recogida, no esta escrito a mano: no se queda viejo. */
-export const tituloCategoria = (cat, generado) =>
-  titula(`Mejor ${cat.termino} ${anio(generado)}`,
-         ': cual comprar por precio y certificacion',
-         ': precio por unidad y certificacion',
-         ': precio y certificacion',
+// CTR (09/2026): la pagina ya sale en resultados y no se pincha. Lo que separa un
+// resultado de los de la competencia es el dato que ellos no ponen: el precio de salida
+// y cuantos productos se comparan. Sin productos (llamada antigua) vuelve al de siempre.
+export const tituloCategoria = (cat, generado, productos = []) => {
+  const r = productos.length ? resumen(cat, productos) : null;
+  const desde = r?.barato ? r.precio(r.barato.precio_referencia) : null;
+  return titula(`Mejor ${cat.termino} ${anio(generado)}`,
+         ...(desde ? [`: desde ${desde}, ${r.n} comparados`, `: desde ${desde}`] : []),
+         ': cuál comprar por precio y certificación',
+         ': precio y certificación',
          ': comparativa de precios');
+};
 
 // Primera letra en mayuscula sin tocar el resto ("la mejor creatina" -> "La mejor creatina").
 export const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -307,11 +313,16 @@ export const h1Categoria = (cat, generado) =>
   `${cap(cat.mejor ?? `mejor ${cat.termino}`)} de ${anio(generado)}: comparativa por ` +
   `precio por ${UNIDAD[cat.unidad_precio] ?? 'kg'} y certificacion`;
 
+// La descripcion nombra al ganador y al mas barato: es la respuesta entera antes de
+// pinchar, y un nombre propio con precio llama mas que "comparamos X productos".
 export const descripcionCategoria = (cat, productos, generado) => {
   const r = resumen(cat, productos);
-  return `${r.n} productos de ${cat.termino} de ${r.tiendas} tiendas comparados por precio ` +
-    `por ${r.unidad} (desde ${r.precio(r.barato?.precio_referencia)}) y por el nivel de ` +
-    `verificacion de sus certificaciones. Datos del ${fechaLarga(generado)}.`;
+  const lider = r.lider ? ` Mejor valorado: ${corta(nom(r.lider), 45)} (${r.lider.score_final?.toFixed(0)}/100).` : '';
+  const base = `${cap(cat.termino)} desde ${r.precio(r.barato?.precio_referencia)}: ${r.n} productos de ` +
+    `${r.tiendas} tiendas comparados por precio real y certificación.${lider}`;
+  // La fecha es lo primero que sobra: sin ella la descripcion se sigue leyendo entera.
+  const conFecha = `${base} Precios del ${fechaLarga(generado)}.`;
+  return conFecha.length <= 200 ? conFecha : corta(base, 200);
 };
 
 // El titulo se arma con el sufijo mas largo que quepa en TOPE_TITULO caracteres. Los nombres
@@ -323,18 +334,24 @@ export function tituloProducto(p, productos = []) {
   // Se comparan los nombres RECORTADOS a lo que cabe en el titulo: dos productos de
   // Amazon cuyo nombre solo se diferencia en el gramaje que va en el caracter 90 tienen
   // nombres distintos y el MISMO titulo, que es justo lo que hay que evitar.
-  const visible = (o) => corta(nom(o), TOPE_TITULO);
+  // Con el precio detras (" a 123,45 €", 11 caracteres) el nombre tiene menos sitio.
+  const visible = (o) => corta(nom(o), TOPE_TITULO - 11);
   const iguales = productos.filter((o) => visible(o) === visible(p));
   const repetido = iguales.length > 1;
   const otraTienda = repetido && new Set(iguales.map(tiendaDe)).size > 1;
   const enTienda = otraTienda ? ` en ${tiendaDe(p)}` : '';
   const base = nom(p) + enTienda;
-  const unidad = p.unidad_precio === 'kg' ? 'kilo' : 'capsula';
-  const sufijos = [`: precio por ${unidad}, dosis y certificacion`,
-                   `: precio por ${unidad} y certificacion`,
-                   ': precio y certificacion',
-                   `: precio por ${unidad}`,
-                   ''];
+  // CTR (09/2026): el precio va en el titulo. Quien busca "hsn raw series creatina" quiere
+  // saber cuanto cuesta, y un resultado que lo dice antes de pinchar es el que se pincha.
+  const precio = p.precio_eur != null ? ` a ${eur(p.precio_eur)}` : '';
+  const ref = p.precio_referencia != null
+    ? ` (${eur(p.precio_referencia, p.unidad_precio === 'kg' ? 2 : 3)}/${p.unidad_precio === 'kg' ? 'kg' : 'cáps.'})`
+    : '';
+  const sufijos = [`${precio}${ref}: opinión y certificación`,
+                   `${precio}${ref}: opinión`,
+                   `${precio}${ref}`,
+                   `${precio}: opinión`,
+                   precio];
   for (const sufijo of sufijos) {
     if ((base + sufijo).length <= TOPE_TITULO) return base + sufijo;
   }
@@ -349,14 +366,15 @@ export function tituloProducto(p, productos = []) {
   // separa (dos sabores del mismo bote de Amazon, con el sabor en el caracter 90), lo
   // ultimo que queda y que ademas le sirve a quien lee es el precio.
   const delMismoSitio = iguales.filter((o) => tiendaDe(o) === tiendaDe(p));
-  const mismoFormato = delMismoSitio.filter((o) => formatoDe(o) === formatoDe(p)).length > 1;
+  // El precio va siempre en el titulo, asi que ya no hace falta como ultimo desempate.
   const cola = !repetido ? '' : enTienda
-    + (delMismoSitio.length > 1 ? ` · ${formatoDe(p)}` : '')
-    + (mismoFormato ? `, ${eur(p.precio_eur)}` : '');
+    + (delMismoSitio.length > 1 ? ` · ${formatoDe(p)}` : '');
   // El nombre se recorta contra el TOPE DURO, no contra los 65: un titulo de 70 se lee
   // igual en Google (solo se corta al pintarlo) y dos titulos iguales, no. Antes de
   // perder la cola que desempata, se gastan los caracteres que Google permite.
-  return corta(nom(p), TOPE_TITULO_DURO - cola.length) + cola;
+  // Sin cola que desempate, el nombre se corta a 65 para que el precio se vea en Google.
+  const tope = cola ? TOPE_TITULO_DURO : TOPE_TITULO;
+  return corta(nom(p), tope - cola.length - precio.length) + precio + cola;
 }
 
 export const descripcionProducto = (p, productos, cat) => {
@@ -365,10 +383,20 @@ export const descripcionProducto = (p, productos, cat) => {
   // Google corta la descripcion alrededor de los 160-200 caracteres, y los nombres de
   // Myprotein se comen 90 ellos solos: se corta por palabra entera en vez de dejar que
   // el buscador la parta por donde quiera.
+  // CTR: precio de hoy y comparacion con el mas barato primero (lo que decide el clic),
+  // luego la opinion con su nota. El nombre ya esta en el titulo: aqui no se repite.
+  const comparado = r.barato && p.precio_referencia != null && r.barato.precio_referencia
+    ? (() => {
+        const pct = Math.round((p.precio_referencia / r.barato.precio_referencia - 1) * 100);
+        return pct <= 0 ? ' El más barato de su categoría.' : ` Un ${pct} % más caro que el más barato.`;
+      })()
+    : '';
   return corta(
-    `${nom(p)} a ${r.precio(p.precio_referencia)} en ${tiendaDe(p)}. Puesto ${puesto} de ` +
-    `${total} en ${cat.nombre.toLowerCase()}, nivel ${p.nivel_verificacion} de verificacion y ` +
-    `el desglose de su nota linea a linea.`, 200);
+    `Precio hoy: ${eur(p.precio_eur)} (${r.precio(p.precio_referencia)}) en ${tiendaDe(p)}.` +
+    `${comparado} Opinión honesta: ` +
+    (p.score_final != null ? `${p.score_final.toFixed(0)}/100, ` : '') +
+    `puesto ${puesto} de ${total} en ${cat.nombre.toLowerCase()}, con certificación y ` +
+    `formatos comparados.`, 200);
 };
 
 // Que fichas se le ofrecen a Google.

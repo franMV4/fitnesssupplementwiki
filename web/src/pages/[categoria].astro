@@ -60,7 +60,7 @@ const schema = [
     '@type': 'CollectionPage',
     '@id': canonica,
     url: canonica,
-    name: tituloCategoria(cat, datos.generado),
+    name: tituloCategoria(cat, datos.generado, productos),
     description: descripcionCategoria(cat, productos, datos.generado),
     inLanguage: 'es-ES',
     dateModified: datos.generado,
@@ -84,7 +84,7 @@ const schema = [
 ];
 ---
 <Base ancho="completo"
-      titulo={tituloCategoria(cat, datos.generado)}
+      titulo={tituloCategoria(cat, datos.generado, productos)}
       descripcion={descripcionCategoria(cat, productos, datos.generado)}
       schema={schema}>
 

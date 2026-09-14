@@ -9,6 +9,7 @@ import Alerta from '../../componentes/Alerta.jsx';
 import Preguntas from '../../componentes/Preguntas.jsx';
 import Historico from '../../componentes/Historico.astro';
 import { abs } from '../../sitio.js';
+import { marcaDe } from '../../datos/marcas.js';
 import { NIVEL, TIENDAS, costeMes, duracionDias, eur, nombreIngrediente, precioReferencia,
          puntos } from '../../datos/util.js';
 import {
@@ -93,6 +94,18 @@ const formato = p.formato_gramos ? `${p.formato_gramos} g` : p.unidades ? `${p.u
 // pudiendo servir aunque falte la categoria, y el SEO no se cae con ella.
 const cat = categoria ?? { slug: p.categoria, nombre: p.categoria, termino: p.categoria,
                            unidad_precio: p.unidad_precio };
+// La misma marca en la misma categoria: los otros formatos y sabores de la linea. Quien
+// llega buscando "myprotein impact whey isolate" cae en UNA ficha de las veinte que hay;
+// esta tabla le ensena las otras diecinueve con su precio por unidad, que es la compra
+// que viene a hacer. La unidad es la de la categoria, asi que no se mezcla.
+const marca = marcaDe(p);
+const hermanos = p.marca === 'Desconocida' ? [] : datos.productos
+  .filter((o) => o.categoria === p.categoria && o.marca.toLowerCase() === p.marca.toLowerCase())
+  .sort((a, b) => (a.precio_referencia ?? Infinity) - (b.precio_referencia ?? Infinity));
+const TOPE_HERMANOS = 12;
+const verHermanos = hermanos.length > 1
+  ? [...hermanos.slice(0, TOPE_HERMANOS), ...(hermanos.slice(0, TOPE_HERMANOS).some((o) => o.id === p.id) ? [] : [p])]
+  : [];
 const veredicto = veredictoProducto(p, datos.productos, cat, datos.generado);
 const canonica = abs(`/producto/${p.slug}`);
 const tienda = TIENDAS[p.tienda] ?? p.tienda;
@@ -178,7 +191,8 @@ const schema = [
       schema={schema}>
 
   <p class="migas">
-    <a href="/">Inicio</a> / <a href={`/${p.categoria}/`}>{categoria?.nombre ?? p.categoria}</a> / {p.marca}
+    <a href="/">Inicio</a> / <a href={`/${p.categoria}/`}>{categoria?.nombre ?? p.categoria}</a> / {marca
+      ? <a href={`/marca/${marca.slug}/`}>{p.marca}</a> : p.marca}
   </p>
 
   <div class="disposicion-ficha">
@@ -465,6 +479,46 @@ const schema = [
       <p class="sutil">{nivelInfo.detalle}</p>
 
       <Historico p={p} />
+
+      {verHermanos.length > 0 && (
+        <>
+          <h2 id="formatos">Precio de {p.marca} en {cat.nombre.toLowerCase()}: todos los formatos</h2>
+          <p class="sutil">
+            {hermanos.length} productos de {p.marca} en esta categoria, del mas barato por
+            {' '}{precioReferencia(p).unidad || 'unidad'} al mas caro. El que estas viendo va en negrita.
+          </p>
+          <div class="tabla-marco">
+            <div class="tabla-scroll">
+              <table class="apilable">
+                <caption>{p.marca} en {cat.nombre.toLowerCase()}, precios del {p.fecha_scrape}</caption>
+                <thead>
+                  <tr><th>Producto</th><th>Formato</th><th class="num">Precio</th>
+                    <th class="num">Por {precioReferencia(p).unidad || 'unidad'}</th><th class="num">Score</th><th>Tienda</th></tr>
+                </thead>
+                <tbody>
+                  {verHermanos.map((o) => (
+                    <tr class={o.id === p.id ? 'destacado' : undefined}>
+                      <td class="principal marca">{o.id === p.id
+                        ? <strong>{o.nombre} (este)</strong>
+                        : <a href={`/producto/${o.slug}/`}>{o.nombre}</a>}</td>
+                      <td data-et="Formato">{o.formato_gramos ? `${o.formato_gramos} g` : o.unidades ? `${o.unidades} capsulas` : '—'}</td>
+                      <td class="num" data-et="Precio">{eur(o.precio_eur)}</td>
+                      <td class="num" data-et="Por unidad">{precioReferencia(o).valor}</td>
+                      <td class="num" data-et="Score">{o.score_final?.toFixed(0) ?? '—'}</td>
+                      <td data-et="Tienda">{TIENDAS[o.tienda] ?? o.tienda}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {marca && (
+            <p class="sutil">
+              <a href={`/marca/${marca.slug}/`}>Todos los productos de {marca.nombre} ({marca.productos.length}) →</a>
+            </p>
+          )}
+        </>
+      )}
 
       {/* Aqui iba "Donde comprarlo": una tabla con este bote y el mismo bote en otras
           tiendas. En 2.595 de las 2.664 fichas (el 97,4 %) esa tabla era UNA fila, la

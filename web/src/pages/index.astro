@@ -7,7 +7,9 @@ import ControlPeso from '../componentes/ControlPeso.jsx';
 import Ponderador from '../componentes/Ponderador.jsx';
 import { abs } from '../sitio.js';
 import { NIVEL, puntos } from '../datos/util.js';
-import { fechaLarga, resumen } from '../datos/seo.js';
+import { anio, fechaLarga, resumen } from '../datos/seo.js';
+import { COMPARATIVAS, MEJORES } from '../datos/landings.js';
+import { MARCAS } from '../datos/marcas.js';
 
 const porCategoria = (slug) => datos.productos.filter((p) => p.categoria === slug);
 const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
@@ -82,6 +84,22 @@ const filasPeso = portada.filter((c) => c.r.lider).map((c) => ({
 // enlace menos, y una decima parte de pagina.
 // Como efecto de propina, al navegador viajan diez frentes de Pareto en vez de cincuenta.
 const EN_PORTADA = 10;
+
+// Enlazado interno (09/2026): la portada es la pagina con mas autoridad del dominio y solo
+// enlazaba categorias. Las landings de compra (sello, barato, tienda contra tienda) y las
+// marcas solo se alcanzaban desde dentro de un <details> de cada categoria, a dos saltos.
+// Aqui van las de las categorias mas surtidas, que son las que se buscan.
+const TOP_CATS = new Set(filasPeso.slice().sort((a, b) => b.productos - a.productos)
+  .slice(0, 8).map((f) => f.slug));
+const estrella = [
+  ...MEJORES.filter((l) => l.indexable && TOP_CATS.has(l.cat.slug) && !l.tienda)
+    .map((l) => ({ href: `/mejores/${l.slug}/`, texto: l.h1.split(':')[0], n: l.productos.length })),
+  ...datos.categorias.filter((c) => TOP_CATS.has(c.slug))
+    .map((c) => COMPARATIVAS.find((l) => l.cat.slug === c.slug)).filter(Boolean)
+    .map((l) => ({ href: `/comparativa/${l.slug}/`, texto: `${l.na} o ${l.nb} en ${l.cat.termino}`,
+                   n: l.productos.length })),
+];
+const marcasPortada = MARCAS.filter((m) => m.indexable).slice(0, 24);
 const porTamano = (a, b) => b.productos - a.productos;
 const destacadas = filasPeso.slice().sort(porTamano).slice(0, EN_PORTADA);
 const enDestacadas = new Set(destacadas.map((f) => f.slug));
@@ -200,8 +218,8 @@ const schema = [
 ];
 ---
 <Base ancho="completo"
-      titulo="Comparador de suplementos: precio por kilo y certificacion"
-      descripcion="Comparamos suplementos por precio por kilo (o por capsula) y por el nivel de verificacion de sus certificaciones, con el desglose de cada nota."
+      titulo={`Comparador de precios de suplementos ${anio(datos.generado)}: ${datos.productos.length.toLocaleString('es-ES')} productos`}
+      descripcion={`Compara el precio real por kilo de ${datos.productos.length.toLocaleString('es-ES')} suplementos en ${tiendas} tiendas españolas (HSN, Myprotein, Prozis...): proteína, creatina y ${datos.categorias.length - 2} categorías más, con certificación. Precios del ${fechaLarga(datos.generado)}.`}
       schema={schema}>
 
   <section class="portada">
@@ -277,6 +295,38 @@ const schema = [
               170 px y la linea entera son dos renglones: alli se esconde. */}
           <span class="pie-caja">{c.productos} productos<span class="tiendas-caja">
             {' '}· {c.r.tiendas} {c.r.tiendas === 1 ? 'tienda' : 'tiendas'}</span></span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="seccion" id="comparativas">
+    <div class="cabecera-seccion">
+      <h2>Comparativas mas buscadas</h2>
+      <p class="apunte">La tabla ya filtrada para una compra concreta</p>
+    </div>
+    <div class="lista-categorias compacta">
+      {estrella.map((e) => (
+        <a class="fila-categoria" href={e.href}>
+          <span class="nombre">{e.texto}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{e.n} prod.</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="seccion" id="marcas">
+    <div class="cabecera-seccion">
+      <h2>Precios por marca</h2>
+      <p class="apunte"><a href="/marcas/">Las {MARCAS.length} marcas →</a></p>
+    </div>
+    <div class="lista-categorias compacta">
+      {marcasPortada.map((m) => (
+        <a class="fila-categoria" href={`/marca/${m.slug}/`}>
+          <span class="nombre">{m.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{m.productos.length} prod.</span>
         </a>
       ))}
     </div>

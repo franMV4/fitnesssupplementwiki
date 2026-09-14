@@ -230,6 +230,17 @@ categoria, un producto o una tienda.**
   de la mediana, minimo 10). Ninguna se escribe a mano y ninguna filtra por un campo que
   el dataset no tenga: **no** existe `proteina-aislada-sin-lactosa` porque no hay dato de
   lactosa. Al anadir o quitar una tienda, sus landings aparecen y desaparecen solas.
+- **Consultas de marca y CTR (2026-09-14)**: Search Console trae impresiones de marca y
+  linea ("hsn raw series", "myprotein impact whey isolate"). Respuesta: `/marca/<slug>`
+  (`datos/marcas.js`, 98 paginas desde 6 productos, indexables desde 10) con una tabla por
+  categoria ordenada por precio por unidad, `/marcas` como indice, y en cada ficha la tabla
+  "todos los formatos" (misma marca + categoria). Los titulos de ficha llevan el precio y
+  "opinion"; los de categoria, "desde X €/kg, N comparados". Los titulos y descripciones
+  nuevos llevan tildes a proposito: se leen en el resultado de Google, no en el codigo.
+  La portada enlaza las landings estrella y las marcas. **`/sitemap.xml` es ahora un
+  indice** de cinco hijos (`sitemap-<grupo>.xml`: paginas, categorias, landings, marcas,
+  productos) para ver la cobertura por grupo en Search Console; `seo_check.py` sigue el
+  indice.
 - **`/quienes-somos` (E-E-A-T)**: la suplementacion es YMYL para Google. El `Person`
   (`#autor`, en el grafo de `Base.astro`) sale de `SITIO.autor` y dice lo que se puede
   afirmar **y lo que no**: no hay ningun titulo sanitario porque no lo hay, y esa pagina

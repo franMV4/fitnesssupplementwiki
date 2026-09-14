@@ -212,6 +212,15 @@ def main():
     else:
         norm = lambda u: (urllib.parse.urlparse(u).path.rstrip("/") or "/")
         crudas = re.findall(r"<loc>(.*?)</loc>", sitemap.read_text(encoding="utf-8"))
+        # /sitemap.xml es un indice: las URLs de verdad estan en los hijos.
+        hijos = [u for u in crudas if u.endswith(".xml")]
+        for hijo in hijos:
+            fichero = DIST / urllib.parse.urlparse(hijo).path.lstrip("/")
+            if not fichero.is_file():
+                fallos.append(f"el indice de sitemaps apunta a {hijo}, que no existe")
+                continue
+            crudas += re.findall(r"<loc>(.*?)</loc>", fichero.read_text(encoding="utf-8"))
+        crudas = [u for u in crudas if u not in hijos]
         sin_barra = [u for u in crudas if not con_barra(u)]
         if sin_barra:
             fallos.append(f"{len(sin_barra)} URLs del sitemap sin barra final "
