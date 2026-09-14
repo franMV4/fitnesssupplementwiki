@@ -58,11 +58,27 @@ const MAPA = {
   cientifico: 'científico', cientifica: 'científica', cientificos: 'científicos',
   cientificas: 'científicas', dietetico: 'dietético', dietetica: 'dietética',
   dieteticos: 'dietéticos', dieteticas: 'dietéticas', parrafo: 'párrafo',
+  // Vocabulario de las guias y de la cabecera de categoria (datos/breve.js), 2026-09-14.
+  musculo: 'músculo', musculos: 'músculos', celula: 'célula', celulas: 'células',
+  molecula: 'molécula', moleculas: 'moléculas', oxido: 'óxido', oxigeno: 'oxígeno',
+  higado: 'hígado', corazon: 'corazón', tendon: 'tendón', tendones: 'tendones',
+  cartilago: 'cartílago', colageno: 'colágeno', farmaco: 'fármaco', farmacos: 'fármacos',
+  deficit: 'déficit', superavit: 'superávit', estres: 'estrés', raiz: 'raíz',
+  azucar: 'azúcar', comodo: 'cómodo', comoda: 'cómoda', clasico: 'clásico',
+  clasica: 'clásica', solido: 'sólido', solida: 'sólida', util: 'útil', utiles: 'útiles',
+  osea: 'ósea', oseo: 'óseo', neurologico: 'neurológico', analitica: 'analítica',
+  mayoria: 'mayoría', senal: 'señal', sensacion: 'sensación', produccion: 'producción',
+  duracion: 'duración', digestion: 'digestión', coagulacion: 'coagulación',
+  tension: 'tensión', hipertension: 'hipertensión', depresion: 'depresión',
+  nitrico: 'nítrico', nitrica: 'nítrica',
+  encontro: 'encontró', interactua: 'interactúa', tomandola: 'tomándola',
 };
 
 // Interrogativos: solo llevan tilde cuando preguntan, y en esta web eso se marca con "¿".
 // Asi que se acentuan pegados a la apertura de pregunta y no en su uso relativo.
 const PREGUNTAS = [
+  // "te" sin tilde es el pronombre; con "verde" detras siempre es la planta.
+  [/\b([Tt])e verde\b/g, '$1é verde'],
   [/¿Por que\b/g, '¿Por qué'], [/¿por que\b/g, '¿por qué'],
   [/¿Que\b/g, '¿Qué'], [/¿que\b/g, '¿qué'],
   [/¿Como\b/g, '¿Cómo'], [/¿como\b/g, '¿cómo'],
@@ -138,6 +154,7 @@ if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('tildes.js')
   assert(restaurarTildesHTML('<meta name="description" content="proteina espanola">') === '<meta name="description" content="proteína española">', 'meta');
   assert(restaurarTildesHTML('<script>var proteina=1</script><p>proteina</p>') === '<script>var proteina=1</script><p>proteína</p>', 'script intacto');
   assert(restaurarTildesHTML('<p>certificaciones</p>') === '<p>certificaciones</p>', 'plural llano no cambia');
+  assert(restaurarTildesHTML('<p>Te ayuda al musculo y el te verde</p>') === '<p>Te ayuda al músculo y el té verde</p>', 'te verde');
   assert(restaurarTildesHTML('<p>¿Que creatina?</p>') === '<p>¿Qué creatina?</p>', 'pregunta');
   assert(restaurarTildesHTML('<p>esta web</p>') === '<p>esta web</p>', 'demostrativo intacto');
   assert(restaurarTildesHTML('<td>de 5 tiendas</td>') === '<td>de 5 tiendas</td>', 'numero suelto intacto');
