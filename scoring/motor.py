@@ -407,7 +407,7 @@ def sellos_de(producto, mejor_score_categoria):
             and mejor_score_categoria is not None and score >= mejor_score_categoria):
         sellos.append({
             "id": "calidad_precio",
-            "texto": "Mejor calidad-precio verificada",
+            "texto": "Mejor precio",
             "criterio": "Score mas alto de su categoria y por encima de %d sobre 100."
                         % cfg.UMBRAL_SELLO_CALIDAD_PRECIO,
         })

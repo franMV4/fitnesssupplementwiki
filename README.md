@@ -210,7 +210,7 @@ pie, y los enlaces llevan `rel="sponsored"`.
 Dos sellos, ambos por umbral publico definido en `scoring/config.py`:
 
 - **Verificado nivel 4**: su certificacion esta comprobada contra la fuente.
-- **Mejor calidad-precio verificada**: nº 1 de su categoria y score ≥ 70. Si nadie llega
+- **Mejor precio**: nº 1 de su categoria y score ≥ 70. Si nadie llega
   al umbral, la categoria se queda sin sello.
 
 Certifican criterio editorial, nunca un efecto fisiologico.
