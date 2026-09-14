@@ -29,13 +29,14 @@
 
   "tiendas": {
     "amazon": {
-      "programa": null,
+      "programa": "Amazon Afiliados ES",
       "productos": 1600,
       "red": "Amazon Afiliados ES (propio)",
       "alta": "https://afiliados.amazon.es/",
-      "_verificado": "Formato del parametro confirmado: 'tag', con sufijo -21 para Espana.",
-      "_espera": "NO TE DES DE ALTA TODAVIA. Cancelan la cuenta si no haces 3 ventas en 180 dias, y son el 39% del catalogo: quemar esta cuenta ahora sale caro. Se entra cuando haya trafico que lo sostenga.",
-      "parametros": {}
+      "_verificado": "Alta SOLICITADA 14/09/2026, ID fitnesssupp0f-21. Pendiente de revision: la hacen tras 3 ventas, y si no llegan en 180 dias (13/03/2027) cancelan la cuenta.",
+      "parametros": {
+        "tag": "fitnesssupp0f-21"
+      }
     },
 
     "promofarma": {
