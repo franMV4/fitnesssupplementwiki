@@ -51,9 +51,9 @@
     "dosfarma": {
       "programa": null,
       "productos": 428,
-      "red": "Awin (probable), merchant por confirmar",
-      "alta": "https://ui.awin.com/ -> buscar 'DosFarma' en el directorio de anunciantes",
-      "_verificado": "NO confirmado. Ya dentro de Awin, busca DosFarma, apunta su awinmid y rellena los DOS huecos de abajo. Con Promofarma suman 1.046 productos: es la mitad del valor de esta lista.",
+      "red": "NO esta en Awin (comprobado por el dueno 14/09/2026). Aparece listado en FlexOffers, que es un agregador: la red real sigue sin saberse",
+      "alta": "Escribir a DosFarma (contacto de la web) preguntando por su programa de afiliados y en que red esta",
+      "_verificado": "NO confirmado. Cuando se sepa la red, cambiar la plantilla de abajo por la de esa red.",
       "plantilla": "https://www.awin1.com/cread.php?awinmid=PEGA_AQUI_MID&awinaffid=PEGA_AQUI&ued={url}"
     },
 
@@ -122,9 +122,9 @@
     "hollandbarrett": {
       "programa": null,
       "productos": 121,
-      "red": "Awin (probable), merchant por confirmar",
-      "alta": "https://ui.awin.com/ -> buscar 'Holland & Barrett' y quedarse con el programa ES",
-      "_verificado": "NO confirmado. Misma trampa que Myprotein: elige el programa espanol.",
+      "red": "Sin programa ES encontrado. En Awin solo estan Irlanda (6501) y Belgica (13650), comprobado 14/09/2026",
+      "alta": "Escribir a Holland & Barrett Espana preguntando si tienen programa. NO usar el de IE ni BE: la venta en .es no se atribuye",
+      "_verificado": "NO confirmado.",
       "plantilla": "https://www.awin1.com/cread.php?awinmid=PEGA_AQUI_MID&awinaffid=PEGA_AQUI&ued={url}"
     },
 
