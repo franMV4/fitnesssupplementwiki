@@ -13,6 +13,7 @@ comprobarla. La clave vive en web/public/<clave>.txt; no es secreta, es publica 
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 from datetime import date, timedelta
 
@@ -66,9 +67,16 @@ def main(args):
                              "urlList": urls[i:i + LOTE]}).encode()
         pet = urllib.request.Request("https://api.indexnow.org/indexnow", data=cuerpo,
                                      headers={"Content-Type": "application/json; charset=utf-8"})
-        with urllib.request.urlopen(pet, timeout=60) as r:
-            # 200 recibido, 202 recibido y clave pendiente de comprobar. Lo demas lanza.
-            print(f"{len(urls[i:i + LOTE])} URLs enviadas -> HTTP {r.status}")
+        try:
+            with urllib.request.urlopen(pet, timeout=60) as r:
+                # 200 recibido, 202 recibido y clave pendiente de comprobar.
+                print(f"{len(urls[i:i + LOTE])} URLs enviadas -> HTTP {r.status}")
+        except urllib.error.HTTPError as e:
+            # Visto el 14/09/2026: nada mas publicarse la clave, la API da 403 y minutos
+            # despues 200 con lo mismo. No es un fallo del script: se reintenta.
+            if e.code == 403:
+                sys.exit("403: IndexNow aun no ha validado la clave. Reintenta en unos minutos.")
+            raise
 
 
 if __name__ == "__main__":
