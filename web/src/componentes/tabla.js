@@ -131,12 +131,12 @@ export function montarTabla(raiz) {
       const dentro = elegidos.some((e) => e.s === p.slug);
       const boton = p.tr.querySelector('.marcar:not(.mi-lista)');
       boton.setAttribute('aria-pressed', String(dentro));
-      boton.textContent = dentro ? 'en tu comparativa' : '+ comparar';
+      boton.textContent = dentro ? 'en tu comparativa' : 'comparar';
 
       const guardado = enLista(mios, p.slug);
       const suyo = p.tr.querySelector('.mi-lista');
       suyo.setAttribute('aria-pressed', String(guardado));
-      suyo.textContent = guardado ? 'en tu lista' : '+ mi lista';
+      suyo.textContent = guardado ? 'en tu lista' : 'mi lista';
     }
     barra.hidden = elegidos.length === 0;
     barra.querySelector('[data-cuenta]').textContent = elegidos.length;

@@ -7,11 +7,12 @@ import ReglaPrecios from '../componentes/ReglaPrecios.astro';
 import Faq from '../componentes/Faq.astro';
 import datos from '../datos/dataset.json';
 import { EVIDENCIA } from '../datos/evidencia.js';
+import { BREVE } from '../datos/breve.js';
 import { abs } from '../sitio.js';
 import { eur, paraTabla, UNIDAD } from '../datos/util.js';
 import {
   agregadoLd, descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
-  respuestaCategoria, resumen, tituloCategoria,
+  resumen, tituloCategoria,
 } from '../datos/seo.js';
 import { comparativasDe, mejoresDe } from '../datos/landings.js';
 
@@ -43,7 +44,6 @@ const h1 = h1Categoria(cat, datos.generado);
 // Landings de intencion de esta categoria (datos/landings.js).
 const selecciones = mejoresDe(cat.slug);
 const versus = comparativasDe(cat.slug);
-const respuesta = respuestaCategoria(cat, productos, datos.generado);
 const r = resumen(cat, productos); // para la regla de precios de la cabecera
 const faqs = faqsCategoria(cat, productos, datos.dosis_referencia, datos.generado);
 const otras = datos.categorias.filter((c) => c.slug !== cat.slug);
@@ -98,11 +98,10 @@ const schema = [
       <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
     </p>
     <h1 class="aparece d1">{h1}</h1>
-    {respuesta && (
-      <p class="respuesta aparece d2">
-        <b>La respuesta corta.</b> {respuesta}
-      </p>
-    )}
+    {/* Aqui iba "La respuesta corta" (quien gana, horquilla y mediana): repetia la regla
+        de precios de debajo y la tabla. Decision del dueno (2026-09-14): la cabecera dice
+        que hace el suplemento, en corto, y manda a la guia con un boton que se vea. */}
+    {BREVE[cat.slug] && <p class="que-hace aparece d2">{BREVE[cat.slug]}</p>}
     {r.barato && r.caro && (
       <ReglaPrecios min={r.barato.precio_referencia} max={r.caro.precio_referencia}
                     mediana={r.mediana} lider={r.lider?.precio_referencia}
@@ -117,8 +116,8 @@ const schema = [
         viene. El enlace se queda, en una linea. */}
     {guia && (
       <p class="pase-guia aparece d2">
-        <a href={`/guia/${cat.slug}/`}>Que hace {cat.termino}, en que dosis y con que
-        evidencia</a> — aqui solo estan los precios.
+        <a class="boton primario" href={`/guia/${cat.slug}/`}>Que hace {cat.termino}, en que
+        dosis y con que evidencia <span class="flecha" aria-hidden="true">&rarr;</span></a>
       </p>
     )}
   </section>

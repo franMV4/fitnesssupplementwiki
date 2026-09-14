@@ -295,8 +295,13 @@ main { display: block; padding-bottom: var(--e8); }
    la primera fila de datos caia fuera de la pantalla. A 3,1vw entra en dos. */
 .cabecera-pagina h1 { font-size: clamp(1.9rem, 3.1vw, 2.8rem); }
 /* Un enlace, no un parrafo: es un pase a la guia, no una entradilla. */
-.pase-guia { font-size: .92rem; color: var(--tinta-3); margin: var(--e3) 0 0; }
-.pase-guia a { color: var(--tinta); font-weight: 600; }
+/* Lo que hace el suplemento, en corto, y el boton a su guia (cabecera de categoria). */
+.que-hace {
+  font-size: 1.15rem; line-height: 1.55; color: var(--tinta-2);
+  max-width: 70ch; margin: var(--e3) 0 0; text-wrap: pretty;
+}
+.pase-guia { margin: var(--e4) 0 0; }
+.pase-guia .boton { text-align: left; line-height: 1.4; }
 .tabla-categoria { margin-top: var(--e4); }
 
 /* Cabecera de seccion: titulo a la izquierda, apunte a la derecha, filete grueso
@@ -2601,13 +2606,21 @@ a:hover { text-decoration-thickness: 2px; }
    nombre. El grosor no cambia -solo el color-, asi que nada se mueve al pasar por
    encima. En movil no aplica: alli la seccion 28 lo convierte en un "+" de 44 px y le
    devuelve su filete, que ahi es toda la pista de que se puede pulsar. */
+/* Decision del dueno (2026-09-14): en escritorio se parecen a los de movil. Filete
+   siempre visible y el mismo signo delante ("+" comparar, corazon mi lista), con la
+   palabra al lado porque aqui si cabe. */
 .marcar {
-  display: inline-block; margin-top: var(--e1); padding: .15rem .45rem;
+  display: inline-flex; align-items: center; gap: .4rem;
+  margin-top: var(--e1); margin-right: var(--e1); padding: .25rem .6rem .25rem .45rem;
   font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
-  letter-spacing: .04em; color: var(--tinta-3);
-  background: none; border: 1px solid transparent; cursor: pointer;
+  letter-spacing: .04em; color: var(--tinta-2);
+  background: none; border: 1px solid var(--regla); cursor: pointer;
   transition: border-color .15s ease, color .15s ease;
 }
+.marcar::before { content: "+"; font-family: var(--display); font-size: 1rem; line-height: 1; }
+.marcar[aria-pressed="true"]::before { content: "\2713"; font-size: .85rem; }
+.marcar.mi-lista::before { content: "\2661"; font-family: inherit; font-size: .95rem; }
+.marcar.mi-lista[aria-pressed="true"]::before { content: "\2665"; }
 tr:hover .marcar, .marcar:focus-visible { border-color: var(--regla-2); }
 .marcar:hover { color: var(--senal-txt); border-color: var(--senal); }
 .marcar[aria-pressed="true"] {
@@ -2992,8 +3005,13 @@ table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
   .cabecera-pagina:has(~ .tabla-categoria) { display: contents; }
   .cabecera-pagina:has(~ .tabla-categoria) > h1 { margin-bottom: var(--e4); }
   .cabecera-pagina:has(~ .tabla-categoria) > .respuesta,
-  .cabecera-pagina:has(~ .tabla-categoria) > .pase-guia,
   .cabecera-pagina:has(~ .tabla-categoria) > .entradilla { order: 1; }
+  /* Lo que hace el suplemento y el boton a la guia se quedan ARRIBA (decision del dueno,
+     2026-09-14): son dos lineas, no los 600 px de prosa de antes, y el boton tiene que
+     verse. */
+  .que-hace { font-size: 1rem; line-height: 1.5; margin-top: 0; }
+  .pase-guia { margin: var(--e3) 0 var(--e2); }
+  .pase-guia .boton { width: 100%; justify-content: space-between; padding: .8rem 1rem; }
   /* La cabecera de la tabla (titulo + cifras) es de la tabla, no de la prosa: sin esto
      se quedaba con el `order: 0` por defecto y la linea de cifras aparecia ENCIMA del
      titular de la pagina. */

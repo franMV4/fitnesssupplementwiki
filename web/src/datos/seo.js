@@ -91,28 +91,6 @@ export function resumen(cat, productos) {
   };
 }
 
-/* --- La respuesta corta -------------------------------------------------------
-   Tres frases bajo el H1 que contestan la consulta con nombre propio, precio y
-   fecha. Es la unidad que copia un modelo de lenguaje y la que Google usa como
-   fragmento destacado, asi que va antes que cualquier tabla. */
-export function respuestaCategoria(cat, productos, generado) {
-  const r = resumen(cat, productos);
-  if (!r.lider || !r.barato) return null;
-  const p = [];
-  p.push(`De los ${r.n} productos de ${cat.termino} que compara esta web en ${r.tiendas} ` +
-         `tiendas espanolas, el que mejor puntua es ${nom(r.lider)} de ${tiendaDe(r.lider)}: ` +
-         `${r.precio(r.lider.precio_referencia)} y nivel ${r.lider.nivel_verificacion} de ` +
-         `verificacion sobre 4.`);
-  if (r.barato.id !== r.lider.id) {
-    p.push(`Lo mas barato por ${r.unidad} es ${nom(r.barato)} de ${tiendaDe(r.barato)}, ` +
-           `a ${r.precio(r.barato.precio_referencia)}.`);
-  }
-  p.push(`La categoria entera va de ${r.precio(r.barato.precio_referencia)} a ` +
-         `${r.precio(r.caro.precio_referencia)}, con una mediana de ${r.precio(r.mediana)}.`);
-  p.push(`Precios recogidos el ${fechaLarga(generado)}.`);
-  return p.join(' ');
-}
-
 /* --- Respuestas del FAQ -------------------------------------------------------
    Una funcion por clave de `consultas` en categorias.py. Devolver null quita la
    pregunta de la pagina: preferimos una FAQ corta a una respuesta inventada. */

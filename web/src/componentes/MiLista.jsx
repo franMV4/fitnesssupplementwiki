@@ -117,7 +117,7 @@ export default function MiLista() {
         {banner}
         <p className="vacio">
           Todavia no has guardado nada. En cualquier tabla de categoria, el boton
-          <b> + mi lista</b> de cada fila lo trae aqui; en la ficha de un producto esta al
+          <b> &#9825; mi lista</b> de cada fila lo trae aqui; en la ficha de un producto esta al
           lado del precio, junto a la dosis que tomas. Se guarda en tu cuenta.
         </p>
       </>
