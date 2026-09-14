@@ -26,8 +26,10 @@ export const NIVEL = {
 // Los cuatro puntos del indicador de nivel: [true, true, false, false] para el 2.
 export const puntos = (n) => [1, 2, 3, 4].map((i) => i <= n);
 
+// Espacio DURO entre numero y simbolo (U+00A0): "8,95 €" no se parte en dos lineas,
+// que es como se escribe una cifra de dinero en espanol (PLAN-ESTETICA F1.5).
 export const eur = (n, dec = 2) =>
-  n == null ? '—' : n.toFixed(dec).replace('.', ',') + ' €';
+  n == null ? '—' : n.toFixed(dec).replace('.', ',') + ' €';
 
 // El precio con el que se compara y se puntua. La unidad la manda la categoria (polvo
 // por kilo, perlas por capsula) y viaja siempre pegada al numero: "0,07 €" no dice nada

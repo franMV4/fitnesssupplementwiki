@@ -2729,8 +2729,9 @@ table.comparativa td.destacado { color: var(--senal-txt); font-weight: 700; }
    salte de cifra a cifra. */
 .horquilla-dato { font-size: 1.15rem; }
 .horquilla-dato .a {
-  font-family: var(--mono); font-size: .55em; font-weight: 400;
-  color: var(--tinta-3); text-transform: lowercase; padding: 0 .4em;
+  font-family: var(--mono); font-size: .72em; font-weight: 400;
+  color: var(--tinta-3); text-transform: lowercase; padding: 0 .35em;
+  vertical-align: baseline;
 }
 /* El unico numero de los tres que puede llevar la tinta de senal, y solo cuando NO es
    cero: en naranja, un cero cantaria como un logro. */

@@ -22,7 +22,7 @@ const { n, min, max, unidad, dec = 2, nivel4 } = Astro.props;
   </div>
   <div class="cifra-celda">
     <p class="cifra-dato horquilla-dato">
-      {min != null ? eur(min, dec) : '—'}<span class="a">a</span>{max != null ? eur(max, dec) : '—'}
+      de {min != null ? eur(min, dec) : '—'} <span class="a">a</span> {max != null ? eur(max, dec) : '—'}
     </p>
     <p class="cifra-pie">por {unidad}</p>
   </div>

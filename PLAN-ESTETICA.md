@@ -9,7 +9,9 @@
 > **F3 hecha** (móvil: aviso de afiliación plegado a una línea, filtros plegados tras un
 > botón "Filtrar y ordenar" que `tabla.js` cierra solo en móvil, chips con pista de scroll;
 > primera fila a 446 px en 375×812). **Pendiente de F1**: firma y nota del editor (F1.4,
-> necesita frases del dueño), tipografía española de cifras (F1.5).
+> necesita frases del dueño). **F1.5 hecha** (espacio duro en `eur()` para que "8,95 €" no
+> se parta; horquilla de cifras como "de X a Y" y el conector "a" legible). F1.4 descartada
+> por el dueño.
 > **F4.1 hecha** (la regla de precios como cabecera de categoría: `ReglaPrecios.astro`).
 > **F5 hecha** en su parte segura (`text-wrap: balance/pretty`, `hanging-punctuation`,
 > `text-underline-offset`, hamburguesa hereda la fuente); el rediseño del logotipo (F5.4)
