@@ -1690,6 +1690,17 @@ def test_las_redirecciones_no_llevan_a_otro_404():
     assert destinos <= {"/%s/" % c for c in categorias_web}
 
 
+def test_indexnow_solo_avisa_de_lo_reciente():
+    import indexnow
+    xml = ("<urlset><url><loc>https://x/a/</loc><lastmod>2026-09-13</lastmod></url>"
+           "<url><loc>https://x/b/</loc><lastmod>2026-09-01</lastmod></url>"
+           "<url><loc>https://x/c/</loc></url></urlset>")
+    pares = indexnow.entradas(xml)
+    assert len(pares) == 3
+    assert indexnow.recientes(pares, "2026-09-12") == ["https://x/a/", "https://x/c/"]
+    assert len(indexnow.recientes(pares, None)) == 3
+
+
 def main():
     pruebas = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in pruebas:
