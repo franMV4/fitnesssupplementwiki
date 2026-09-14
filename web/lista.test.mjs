@@ -15,9 +15,8 @@ globalThis.localStorage = {
   setItem: (k, v) => almacen.set(k, String(v)),
 };
 
-const { CLAVE_LISTA, aEnlace, alternarEnLista, apuntarVisto, conDosis, costeMes, deEnlace,
-        duracionDias, enLista, guardarLista, leerMiLista,
-        TOPE_VISTOS } = await import('./src/datos/util.js');
+const { aEnlace, alternarEnLista, apuntarVisto, conDosis, costeMes, deEnlace,
+        duracionDias, enLista, TOPE_VISTOS } = await import('./src/datos/util.js');
 
 // 30 servicios en el envase, 15 EUR: medio euro el servicio.
 const bote = { servicios_por_envase: 30, precio_eur: 15 };
@@ -53,11 +52,12 @@ test('cambiar la dosis no toca al resto de la lista', () => {
     [{ s: 'a', c: 'c1', d: 1 }, { s: 'b', c: 'c2', d: 2 }]);
 });
 
-test('lo guardado por una version anterior no rompe la lista', () => {
-  guardarLista(CLAVE_LISTA, [{ s: 'a', c: 'c1' }, null, { c: 'sin-slug' }]);
-  assert.deepEqual(leerMiLista().map((e) => e.s), ['a']);
-  almacen.set(CLAVE_LISTA, 'esto no es json');
-  assert.deepEqual(leerMiLista(), []);
+test('lo que llega a la API como lista no mete basura en la base de datos', async () => {
+  const { limpiarLista } = await import('./functions/api/[[ruta]].js');
+  assert.deepEqual(limpiarLista([{ s: 'a', c: 'c1' }, null, { c: 'sin-slug' }, { s: 'b', c: 'c2', d: 99 }]),
+    [{ s: 'a', c: 'c1', d: 1 }, { s: 'b', c: 'c2', d: 1 }]);
+  assert.deepEqual(limpiarLista('esto no es una lista'), []);
+  assert.equal(limpiarLista(Array.from({ length: 80 }, (_, i) => ({ s: `p${i}`, c: 'c' }))).length, 50);
 });
 
 test('los vistos van del ultimo al primero, sin repetidos y con tope', () => {

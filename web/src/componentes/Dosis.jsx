@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { alternarEnLista, conDosis, costeMes, duracionDias, enLista, eur,
-         guardarMiLista, leerMiLista } from '../datos/util.js';
+import { alternarEnLista, conDosis, costeMes, duracionDias, enLista, eur } from '../datos/util.js';
+import { guardarMiLista, irAEntrar, leerMiLista, quienSoy } from './api.js';
 
 // La calculadora de la ficha: "yo tomo esto al dia" -> cuanto dura el envase, cuanto sale
 // al mes y cuando toca volver a comprarlo.
@@ -20,19 +20,34 @@ const FECHA = { day: 'numeric', month: 'long' };
 const DOSIS = [0.5, 1, 1.5, 2, 3];
 
 export default function Dosis({ slug, categoria, servicios, precio }) {
-  const [lista, setLista] = useState(null);
+  const [lista, setLista] = useState(null);     // null = todavia no se sabe
+  const [usuario, setUsuario] = useState(null);
   const [porDia, setPorDia] = useState(1);
+  const [error, setError] = useState('');
 
-  // La lista vive en localStorage, asi que no puede venir pintada del build: el HTML de
-  // esta ficha es el mismo para todo el mundo.
+  // La lista vive en el servidor y es de cada cuenta: no puede venir pintada del build.
+  // Sin sesion la calculadora funciona igual; lo que pide entrar es guardar.
   useEffect(() => {
-    const guardada = leerMiLista();
-    setLista(guardada);
-    const mio = guardada.find((e) => e.s === slug);
-    if (mio?.d > 0) setPorDia(mio.d);
+    quienSoy().then(async (u) => {
+      setUsuario(u);
+      const guardada = u ? await leerMiLista().catch(() => []) : [];
+      setLista(guardada);
+      const mio = guardada.find((e) => e.s === slug);
+      if (mio?.d > 0) setPorDia(mio.d);
+    });
   }, [slug]);
 
   if (lista === null) return null;
+
+  const guardar = async (nueva) => {
+    const antes = lista;
+    setLista(nueva); setError('');
+    try {
+      await guardarMiLista(nueva);
+    } catch (fallo) {
+      setLista(antes); setError(fallo.message);
+    }
+  };
 
   const dentro = enLista(lista, slug);
   const p = { servicios_por_envase: servicios, precio_eur: precio };
@@ -43,18 +58,12 @@ export default function Dosis({ slug, categoria, servicios, precio }) {
     setPorDia(d);
     // Si ya esta guardado, la dosis nueva se guarda con el: lo contrario es que mi lista
     // sume el gasto con un numero que el lector acaba de corregir en pantalla.
-    if (dentro) {
-      const nueva = conDosis(lista, slug, d);
-      setLista(nueva);
-      guardarMiLista(nueva);
-    }
+    if (dentro) guardar(conDosis(lista, slug, d));
   };
 
-  const alternar = () => {
-    const nueva = alternarEnLista(lista, { s: slug, c: categoria, d: porDia });
-    setLista(nueva);
-    guardarMiLista(nueva);
-  };
+  const alternar = () => (usuario
+    ? guardar(alternarEnLista(lista, { s: slug, c: categoria, d: porDia }))
+    : irAEntrar());
 
   return (
     <div className="calculadora">
@@ -93,12 +102,13 @@ export default function Dosis({ slug, categoria, servicios, precio }) {
 
       <p>
         <button type="button" className={`boton ${dentro ? '' : 'primario'}`} onClick={alternar}>
-          {dentro ? 'Quitar de mi lista' : 'Guardar en mi lista'}
+          {!usuario ? 'Entrar para guardar en mi lista' : dentro ? 'Quitar de mi lista' : 'Guardar en mi lista'}
         </button>
         {dentro && <a className="enlace-accion" href="/mis-suplementos/">ver mi lista →</a>}
       </p>
+      {error && <p className="fallo-form">{error}</p>}
       <p className="sutil">
-        Mi lista se guarda en tu navegador: no hace falta cuenta y no sale de tu ordenador.
+        Mi lista se guarda en tu cuenta: la tienes igual en el movil y en el ordenador.
       </p>
     </div>
   );

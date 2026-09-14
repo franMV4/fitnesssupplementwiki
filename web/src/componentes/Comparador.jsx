@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TIENDAS, UNIDAD, eur, guardarSeleccion, leerSeleccion } from '../datos/util.js';
+import { irAEntrar, quienSoy } from './api.js';
 
 // La comparativa que arma el lector: los productos que ha ido guardando desde las tablas,
 // enfrentados fila a fila.
@@ -32,6 +33,9 @@ export default function Comparador() {
   const [elegidos, setElegidos] = useState([]);
   const [datos, setDatos] = useState({});
   const [cargando, setCargando] = useState(true);
+  const [usuario, setUsuario] = useState(undefined);   // undefined = aun preguntando
+
+  useEffect(() => { quienSoy().then(setUsuario); }, []);
 
   useEffect(() => {
     const lista = leerSeleccion();
@@ -53,14 +57,21 @@ export default function Comparador() {
 
   const vaciar = () => { setElegidos([]); guardarSeleccion([]); };
 
-  if (cargando) return <p className="sutil">Cargando tu comparativa…</p>;
+  if (usuario === null) {
+    return (
+      <p className="vacio">
+        Comparar productos es para lectores con cuenta.{' '}
+        <button type="button" className="boton primario" onClick={irAEntrar}>Entrar</button>
+      </p>
+    );
+  }
+  if (cargando || usuario === undefined) return <p className="sutil">Cargando tu comparativa…</p>;
 
   if (elegidos.length === 0) {
     return (
       <p className="vacio">
         Todavia no has guardado ningun producto. En cualquier tabla de categoria, el boton
-        <b> + comparar</b> de cada fila lo trae aqui. Se guarda en tu navegador: no hace
-        falta cuenta y no sale de tu ordenador.
+        <b> + comparar</b> de cada fila lo trae aqui.
       </p>
     );
   }

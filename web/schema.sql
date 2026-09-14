@@ -49,27 +49,15 @@ CREATE TABLE IF NOT EXISTS votos (
   PRIMARY KEY (resena, usuario)
 );
 
--- Preguntas y respuestas de la ficha de producto. Una sola tabla para las dos cosas: una
--- respuesta es una pregunta con padre. Dos tablas casi identicas serian dos consultas,
--- dos inserciones y dos sitios donde arreglar el mismo borrado.
---
--- Solo un nivel: se responde a una pregunta, no a una respuesta. Un hilo de hilos
--- necesita sangrados, plegados y moderacion de discusiones, y esto es un tablon de dudas
--- sobre un bote de creatina.
---
--- El producto es el slug, igual que en resenas y por el mismo motivo: los ids del
--- catalogo cambian cada pasada del scraper y el slug no.
-CREATE TABLE IF NOT EXISTS preguntas (
-  id       INTEGER PRIMARY KEY,
-  usuario  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  producto TEXT NOT NULL,
-  -- NULL: es una pregunta. Con valor: es la respuesta a esa pregunta, y se va con ella.
-  padre    INTEGER REFERENCES preguntas(id) ON DELETE CASCADE,
-  texto    TEXT NOT NULL,
-  creado   TEXT NOT NULL DEFAULT (datetime('now'))
+-- Mi lista: lo que toma cada lector, con su dosis. Una fila por usuario y la lista
+-- entera en JSON ([{s: slug, c: categoria, d: servicios al dia}]): la web siempre la lee y
+-- la escribe entera, asi que partirla en filas seria montar y desmontar lo mismo.
+-- (La tabla `preguntas` se quito de la web el 2026-09-14; en D1 se queda con sus datos.)
+CREATE TABLE IF NOT EXISTS listas (
+  usuario  INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+  datos    TEXT NOT NULL DEFAULT '[]',
+  cambiado TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
-CREATE INDEX IF NOT EXISTS idx_preguntas_producto ON preguntas (producto, creado);
 
 -- Avisos de precio: "escribeme si este bote baja de 25 EUR".
 --

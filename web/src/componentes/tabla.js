@@ -11,8 +11,9 @@
 // `data-` de cada <tr>. Si un dia cambia una regla de filtrado, se cambia alli y esto no
 // se entera, que es justo lo que se queria.
 
-import { ORDENES, TOPE_SELECCION, alternarEnLista, enLista, filtrar, guardarMiLista,
-         guardarSeleccion, leerMiLista, leerSeleccion } from '../datos/util.js';
+import { ORDENES, TOPE_SELECCION, alternarEnLista, enLista, filtrar, guardarSeleccion,
+         leerSeleccion } from '../datos/util.js';
+import { guardarMiLista, irAEntrar, leerMiLista, quienSoy } from './api.js';
 
 // `filtrar` compara `${marca} ${nombre}`, y en el HTML las dos ya vienen juntas y en
 // minusculas en data-busca: la marca va vacia para no meter un espacio de mas.
@@ -63,8 +64,11 @@ export function montarTabla(raiz) {
   // "Ver todas" se pega al filtro puesto, no a la sesion: al cambiar un filtro la tabla
   // vuelve a recortarse. Si no, un filtro que deja 300 filas las suelta todas de golpe.
   let todo = false;
-  let elegidos = leerSeleccion();
-  let mios = leerMiLista();
+  // Comparar y mi lista solo con sesion: hasta que /api/yo conteste, `usuario` es null y
+  // un toque lleva a /entrar, que es tambien lo que pasa si de verdad no hay nadie.
+  let usuario = null;
+  let elegidos = [];
+  let mios = [];
 
   const estado = () => ({
     busqueda: campos.busqueda.value,
@@ -194,12 +198,17 @@ export function montarTabla(raiz) {
 
     // Antes que `.marcar`: el boton de mi lista lleva las dos clases (comparte estilo)
     // y sin este orden caeria en el guardado de la comparativa.
+    if (boton.classList.contains('marcar') && !usuario) { irAEntrar(); return; }
+
     if (boton.classList.contains('mi-lista')) {
       const fila = boton.closest('tr');
       const p = productos.find((o) => o.tr === fila);
+      const antes = mios;
       mios = alternarEnLista(mios, { s: p.slug, c: p.categoria });
-      guardarMiLista(mios);
       pintaSeleccion();
+      // Si el servidor no lo guarda, el boton vuelve a como estaba: mejor eso que un
+      // "en tu lista" que al recargar no esta.
+      guardarMiLista(mios).catch(() => { mios = antes; pintaSeleccion(); });
       return;
     }
 
@@ -215,9 +224,16 @@ export function montarTabla(raiz) {
     }
   });
 
-  // La seleccion vive en localStorage y por eso no puede venir pintada del build: el HTML
-  // es el mismo para todo el mundo. Se aplica en cuanto carga el script.
+  // La seleccion (localStorage) y mi lista (servidor) son de cada lector y no pueden venir
+  // pintadas del build: el HTML es el mismo para todo el mundo.
   pintaSeleccion();
+  quienSoy().then(async (u) => {
+    usuario = u;
+    if (!u) return;
+    elegidos = leerSeleccion();
+    mios = await leerMiLista().catch(() => []);
+    pintaSeleccion();
+  });
 
   // La nota que le ponen los lectores DE ESTA WEB, que hasta ahora solo se veia dentro de
   // la ficha. Una peticion por pagina para las 200 filas, cacheada cinco minutos en el

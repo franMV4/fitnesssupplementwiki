@@ -137,9 +137,8 @@ export async function onRequest({ request, env, params }) {
     if (ruta === 'valoraciones' && metodo === 'GET') return await valoraciones(env);
     if (ruta === 'util' && metodo === 'POST') return await util(request, env);
     if (ruta === 'lector' && metodo === 'GET') return await lector(request, env);
-    if (ruta === 'preguntas' && metodo === 'GET') return await verPreguntas(request, env);
-    if (ruta === 'preguntas' && metodo === 'POST') return await preguntar(request, env);
-    if (ruta === 'pregunta' && metodo === 'POST') return await borrarPregunta(request, env);
+    if (ruta === 'lista' && metodo === 'GET') return await miLista(request, env);
+    if (ruta === 'lista' && metodo === 'POST') return await guardarLista(request, env);
     if (ruta === 'alertas' && metodo === 'GET') return await misAlertas(request, env);
     if (ruta === 'alerta' && metodo === 'POST') return await alerta(request, env);
     if (ruta === 'salida' && metodo === 'POST') return await salida(request, env);
@@ -335,80 +334,38 @@ async function lector(request, env) {
                 media, total: results.length, resenas: results });
 }
 
-// --- Preguntas y respuestas de la ficha -------------------------------------------
-// Lo que un lector quiere saber antes de comprar y no esta en la tabla nutricional: si
-// sabe a algo, si el bote trae cuchara, si se apelmaza. Una tabla, un solo nivel de
-// respuesta y nada mas: ver schema.sql.
+// --- Mi lista ----------------------------------------------------------------------
+// Lo que toma el lector, con su dosis. Vive en el servidor (decision del dueno, 2026-09-14)
+// para que siga ahi al cambiar de navegador o de movil. Una fila por usuario con la lista
+// entera en JSON: el navegador ya calcula la lista nueva en cada cambio, asi que el POST la
+// sustituye entera y no hace falta una ruta por operacion.
+// ponytail: ultima escritura gana; dos pestanas editando a la vez se pisan, y da igual.
 
-const MAX_PREGUNTA = 700;
+const TOPE_LISTA = 50;
 
-async function verPreguntas(request, env, producto = new URL(request.url).searchParams.get('producto')) {
-  if (!producto) return error('Falta el producto.');
-  const yo = await sesion(request, env);
-
-  // El hilo entero en una consulta y el arbol se arma aqui: son como mucho 200 filas de
-  // una ficha, y una consulta por pregunta serian veinte viajes a D1 por visita.
-  const { results } = await env.DB.prepare(
-    `SELECT p.id, p.padre, p.texto, p.creado, p.usuario, u.nombre
-       FROM preguntas p JOIN usuarios u ON u.id = p.usuario
-      WHERE p.producto = ? ORDER BY p.creado LIMIT 200`).bind(producto).all();
-
-  const mio = ({ usuario, ...r }) => ({ ...r, mia: usuario === yo, lector: usuario });
-  const hilos = results.filter((r) => r.padre == null).map((r) => ({
-    ...mio(r),
-    // Las respuestas, en el orden en que se escribieron: es una conversacion.
-    respuestas: results.filter((x) => x.padre === r.id).map(mio),
-  }));
-  // Las preguntas al reves: la ultima arriba, que es la que sigue sin contestar.
-  return json({ preguntas: hilos.reverse(), total: results.length });
+async function miLista(request, env) {
+  const id = await sesion(request, env);
+  if (!id) return json({ lista: [] });
+  const fila = await env.DB.prepare('SELECT datos FROM listas WHERE usuario = ?').bind(id).first();
+  return json({ lista: fila ? JSON.parse(fila.datos) : [] });
 }
 
-async function preguntar(request, env) {
+// Lo que llega lo escribe cualquiera: se queda solo lo que tiene forma de entrada.
+export const limpiarLista = (lista) => (Array.isArray(lista) ? lista : [])
+  .filter((e) => e && typeof e.s === 'string' && typeof e.c === 'string'
+                 && e.s.length > 0 && e.s.length <= 200 && e.c.length > 0 && e.c.length <= 100)
+  .map((e) => ({ s: e.s, c: e.c, d: Number(e.d) > 0 && Number(e.d) <= 10 ? Number(e.d) : 1 }))
+  .slice(0, TOPE_LISTA);
+
+async function guardarLista(request, env) {
   const id = await sesion(request, env);
-  if (!id) return error('Hay que entrar para preguntar o responder.', 401);
-  const { producto, texto, padre } = await request.json();
-  const slug = String(producto ?? '');
-  const limpio = String(texto ?? '').trim().slice(0, MAX_PREGUNTA);
-  if (!slug) return error('Falta el producto.');
-  if (limpio.length < 5) return error('Escribelo con un poco mas de detalle.');
-
-  let padreId = null;
-  if (padre != null) {
-    padreId = Number(padre);
-    const arriba = await env.DB.prepare('SELECT padre, producto FROM preguntas WHERE id = ?')
-      .bind(padreId).first();
-    // Un solo nivel, y dentro de la misma ficha. Sin esto, una respuesta puede colgar de
-    // otra respuesta (y entonces no se pinta) o salir en un producto que no es el suyo.
-    if (!arriba || arriba.padre != null || arriba.producto !== slug) {
-      return error('Esa pregunta ya no esta.', 404);
-    }
-  }
-
+  if (!id) return error('Hay que entrar para guardar tu lista.', 401);
+  const lista = limpiarLista((await request.json()).lista);
   await env.DB.prepare(
-    'INSERT INTO preguntas (usuario, producto, padre, texto) VALUES (?, ?, ?, ?)')
-    .bind(id, slug, padreId, limpio).run();
-  return await verPreguntas(request, env, slug);
-}
-
-// Toda la moderacion que hay, y llega: cada uno borra lo suyo y un administrador borra
-// cualquier cosa. Una cola de revision con estados es para cuando entran cien mensajes al
-// dia; para lo que hay, es una pantalla mas que mantener.
-async function borrarPregunta(request, env) {
-  const id = await sesion(request, env);
-  if (!id) return error('Hay que entrar.', 401);
-  const pid = Number((await request.json()).id);
-  if (!Number.isInteger(pid)) return error('Falta la pregunta.');
-
-  const fila = await env.DB.prepare('SELECT usuario, producto FROM preguntas WHERE id = ?')
-    .bind(pid).first();
-  if (!fila) return error('Eso ya no existe.', 404);
-  if (fila.usuario !== id) {
-    const u = await env.DB.prepare('SELECT email FROM usuarios WHERE id = ?').bind(id).first();
-    if (!esAdmin(env.ADMINS, u?.email)) return error('Solo puedes borrar lo que escribes tu.', 403);
-  }
-  // Las respuestas se van con su pregunta por la cascada de la clave foranea.
-  await env.DB.prepare('DELETE FROM preguntas WHERE id = ?').bind(pid).run();
-  return await verPreguntas(request, env, fila.producto);
+    `INSERT INTO listas (usuario, datos) VALUES (?, ?)
+     ON CONFLICT (usuario) DO UPDATE SET datos = excluded.datos, cambiado = datetime('now')`)
+    .bind(id, JSON.stringify(lista)).run();
+  return json({ ok: true, lista });
 }
 
 // --- Avisos de precio --------------------------------------------------------------
@@ -956,8 +913,7 @@ const LIMITES = {
   // Votar es un clic y se hacen varios seguidos leyendo una ficha: el tope esta para
   // frenar un robot, no a quien lee.
   util: [120, 60],
-  preguntas: [10, 60],    // escribir una pregunta o una respuesta
-  pregunta: [20, 60],     // borrar la propia
+  lista: [120, 10],       // cada toque en "+ mi lista" o en la dosis es una escritura
   alerta: [30, 60],
   // Salir a una tienda es un clic normal leyendo un ranking, y se hacen varios seguidos
   // comparando. El tope frena a quien quiera inflar el contador, no a quien compra.

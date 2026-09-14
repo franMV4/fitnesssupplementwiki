@@ -59,3 +59,31 @@ async function llamar(ruta, opciones, ms) {
 const mensajeDe = (estado) => estado === 404
   ? 'La API no responde. Si estas en local, arranca "npm run api" en otra terminal.'
   : `El servidor ha respondido con un error (${estado}). Intentalo otra vez en un momento.`;
+
+// --- Sesion y mi lista ------------------------------------------------------------
+// Comparar, mi lista y los avisos de precio solo los usa quien ha entrado (decision del
+// dueno, 2026-09-14). `null` = no hay nadie dentro.
+export const quienSoy = () => fetch('/api/yo').then((r) => r.json())
+  .then((d) => d.usuario ?? null).catch(() => null);
+
+// A /entrar y de vuelta exactamente aqui, con el ?l= de una lista compartida incluido.
+export const irAEntrar = () => {
+  location.href = `/entrar/?volver=${encodeURIComponent(location.pathname + location.search)}`;
+};
+
+// Mi lista vive en el servidor. Lo que alguien guardo en el navegador antes del cambio se
+// sube la primera vez que entra con la lista del servidor vacia, y se borra de alli: sin
+// esto, quien ya la tenia la veria desaparecer.
+export async function leerMiLista() {
+  const { lista } = await traer('/api/lista');
+  let vieja = [];
+  try { vieja = JSON.parse(localStorage.getItem('mi-lista') ?? '[]'); } catch { /* nada */ }
+  if (lista.length === 0 && Array.isArray(vieja) && vieja.length > 0) {
+    const subida = (await pedir('/api/lista', { lista: vieja })).lista;
+    localStorage.removeItem('mi-lista');
+    return subida;
+  }
+  return lista;
+}
+
+export const guardarMiLista = async (lista) => (await pedir('/api/lista', { lista })).lista;

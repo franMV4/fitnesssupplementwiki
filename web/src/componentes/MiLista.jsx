@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { TIENDAS, aEnlace, comoSeLee, conDosis, costeMes, deEnlace, duracionDias, eur,
-         guardarMiLista, leerMiLista } from '../datos/util.js';
-import { pedir } from './api.js';
+import { TIENDAS, aEnlace, comoSeLee, conDosis, costeMes, deEnlace, duracionDias, eur }
+  from '../datos/util.js';
+import { guardarMiLista, irAEntrar, leerMiLista, pedir, quienSoy } from './api.js';
 
 // Mi lista: lo que toma el lector, con su dosis, lo que le dura cada envase y lo que le
 // cuesta el mes entero. Ademas, dos cosas que solo tienen sentido aqui: la lista que
@@ -11,9 +11,8 @@ import { pedir } from './api.js';
 // el numero que importa es el de abajo del todo, y es el que hace volver: "estoy en 47
 // EUR al mes" es un dato que nadie tiene apuntado en ningun sitio.
 //
-// Como /comparar: la lista vive en el navegador y los datos se piden a
-// /datos/<categoria>.json, que ya existia para que otros citen el ranking. Ni una copia
-// mas del catalogo, ni una tabla nueva en la base de datos, ni una cuenta que crear.
+// La lista vive en el servidor, en la cuenta del lector (una fila de `listas` en D1), y
+// los datos se piden a /datos/<categoria>.json: ni una copia mas del catalogo.
 
 const DOSIS = [0.5, 1, 1.5, 2, 3];
 // Los campos del catalogo publico no se llaman igual que los del dataset del build, y las
@@ -28,9 +27,14 @@ export default function MiLista() {
   const [compartida, setCompartida] = useState([]);
   const [copiado, setCopiado] = useState(false);
   const [alertas, setAlertas] = useState([]);
+  const [usuario, setUsuario] = useState(undefined);   // undefined = aun preguntando
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const guardada = leerMiLista();
+  useEffect(() => { (async () => {
+    const u = await quienSoy();
+    setUsuario(u);
+    if (!u) return;
+    const guardada = await leerMiLista().catch(() => []);
     // Lo que llega por el enlace de otra persona no se guarda solo: se ensena arriba y se
     // anade si el lector quiere. Una lista que se sobreescribe sola al abrir un enlace es
     // una lista que alguien pierde.
@@ -51,9 +55,17 @@ export default function MiLista() {
     // Sin sesion la API devuelve una lista vacia, asi que aqui no hay nada que preguntar.
     fetch('/api/alertas').then((r) => r.json()).then((d) => setAlertas(d.alertas ?? []))
       .catch(() => {});
-  }, []);
+  })(); }, []);
 
-  const guardar = (nueva) => { setLista(nueva); guardarMiLista(nueva); };
+  const guardar = async (nueva) => {
+    const antes = lista;
+    setLista(nueva); setError('');
+    try {
+      await guardarMiLista(nueva);
+    } catch (fallo) {
+      setLista(antes); setError(fallo.message);
+    }
+  };
   const quitar = (slug) => guardar(lista.filter((e) => e.s !== slug));
   const vaciar = () => guardar([]);
 
@@ -76,6 +88,14 @@ export default function MiLista() {
     setAlertas(alertas.filter((a) => a.producto !== producto));
   };
 
+  if (usuario === null) {
+    return (
+      <p className="vacio">
+        Mi lista va guardada en tu cuenta, asi que hay que entrar para verla.{' '}
+        <button type="button" className="boton primario" onClick={irAEntrar}>Entrar</button>
+      </p>
+    );
+  }
   if (cargando) return <p className="sutil">Cargando tu lista…</p>;
 
   const banner = compartida.length > 0 && (
@@ -98,8 +118,7 @@ export default function MiLista() {
         <p className="vacio">
           Todavia no has guardado nada. En cualquier tabla de categoria, el boton
           <b> + mi lista</b> de cada fila lo trae aqui; en la ficha de un producto esta al
-          lado del precio, junto a la dosis que tomas. Se guarda en tu navegador: no hace
-          falta cuenta y no sale de tu ordenador.
+          lado del precio, junto a la dosis que tomas. Se guarda en tu cuenta.
         </p>
       </>
     );
@@ -123,6 +142,7 @@ export default function MiLista() {
   return (
     <>
       {banner}
+      {error && <p className="fallo-form">{error}</p>}
 
       <p className="contador">
         <b>{lista.length}</b> {lista.length === 1 ? 'producto' : 'productos'} en tu lista

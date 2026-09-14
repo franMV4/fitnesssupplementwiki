@@ -96,21 +96,14 @@ export const TIENDAS = {
   '226ers': '226ERS',
 };
 
-// --- Las tres listas que guarda el navegador ------------------------------------
-// Lo que estas comparando, lo que tomas y lo que acabas de mirar. Viven en el navegador
-// de quien las hace y en ningun sitio mas: son slugs, no hace falta cuenta, ni servidor,
-// ni cookie que consentir. Sobreviven al cierre del navegador, que es justo lo que
-// convierte "mi lista" en algo a lo que se vuelve y no en un carrito que se borra al
-// cambiar de pagina.
-//
-// Las tres pasan por el mismo par de funciones. Tres pares copiados serian tres sitios
-// donde arreglar el mismo try/catch del modo privado el dia que falle.
+// --- Las listas del lector -------------------------------------------------------
+// Lo que estas comparando y lo que acabas de mirar viven en el navegador. Mi lista (lo que
+// tomas) vive en el servidor desde el 2026-09-14: ver leerMiLista en componentes/api.js.
+// Las dos del navegador pasan por el mismo par de funciones.
 export const CLAVE_SELECCION = 'comparar';
-export const CLAVE_LISTA = 'mi-lista';
 export const CLAVE_VISTOS = 'vistos';
 export const TOPE_SELECCION = 4;
-// Mi lista no se pinta como tabla de columnas, asi que su tope no lo manda el ancho de
-// la pantalla: esta solo para que un localStorage lleno no acabe rompiendo la pagina.
+// El mismo tope que aplica el servidor (TOPE_LISTA en functions/api).
 export const TOPE_LISTA = 50;
 export const TOPE_VISTOS = 8;
 
@@ -137,8 +130,6 @@ export const guardarSeleccion = (lista) => guardarLista(CLAVE_SELECCION, lista);
 // Un producto de mi lista es {s: slug, c: categoria, d: servicios al dia}. La dosis va
 // en la lista y no en el producto porque es de quien lo toma, no del bote: el mismo
 // envase dura dos meses o veinte dias segun quien lo abra.
-export const leerMiLista = () => leerLista(CLAVE_LISTA, TOPE_LISTA);
-export const guardarMiLista = (lista) => guardarLista(CLAVE_LISTA, lista);
 
 export const enLista = (lista, slug) => lista.some((e) => e.s === slug);
 export const alternarEnLista = (lista, item) => (enLista(lista, item.s)

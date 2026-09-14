@@ -6,7 +6,6 @@ import Resenas from '../../componentes/Resenas.jsx';
 import Dosis from '../../componentes/Dosis.jsx';
 import Vistos from '../../componentes/Vistos.jsx';
 import Alerta from '../../componentes/Alerta.jsx';
-import Preguntas from '../../componentes/Preguntas.jsx';
 import Historico from '../../componentes/Historico.astro';
 import { abs } from '../../sitio.js';
 import { marcaDe } from '../../datos/marcas.js';
@@ -551,13 +550,6 @@ const schema = [
       {/* Isla React: solo se carga cuando el lector llega a esta altura de la ficha.
           Es la unica parte de la web que habla con una base de datos (/api/*). */}
       <Resenas client:visible producto={p.slug} />
-
-      <h2 id="preguntas">Preguntas de los lectores</h2>
-      <p class="sutil">
-        Lo que no esta en la ficha. Pregunta lo que eches en falta y contesta lo que sepas:
-        las dos cosas se quedan aqui para el siguiente que llegue.
-      </p>
-      <Preguntas client:visible producto={p.slug} />
 
       <Vistos client:visible slug={p.slug} nombre={nom(p)} />
 
