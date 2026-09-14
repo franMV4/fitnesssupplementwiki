@@ -88,7 +88,7 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `web/src/pages/datos/catalogo.json.js` | El volcado que lee el panel: campos editables, sin históricos ni desglose. |
 | `web/functions/api/[[ruta]].js` | **Toda la API** (cuentas, reseñas, votos, mi lista y avisos de precio), una sola Pages Function. Sin dependencias: PBKDF2 y HMAC de WebCrypto. |
 | `web/schema.sql` | Tablas de D1 (`usuarios`, `resenas`, `votos`, `listas`, `alertas`, `ediciones`, `intentos`; `preguntas` sigue en D1 pero la web ya no la usa). Ojo: NO es `data/schema.sql`, que es la de SQLite del catálogo. |
-| `web/wrangler.toml` | Bindings de D1 y R2. Existe para que `wrangler pages deploy` suba también las funciones. |
+| `web/wrangler.toml` | Bindings de D1 y R2. Existe para que el build de Pages (y `wrangler pages deploy`) suba también las funciones. |
 | `web/api.test.mjs` | `cd web && node --test`. Prueba claves, firma de sesión y el filtro de `?volver`. |
 | `web/tabla.test.mjs` | El filtrado y el orden de la tabla, y que `paraTabla` no deje pasar campos que la isla no pinta. |
 | `web/lista.test.mjs` | Las cuentas con dosis (lo que dura un envase y lo que cuesta el mes) y el enlace para compartir; `limpiarLista` de la API. |
@@ -593,14 +593,18 @@ esto vive aparte, en Cloudflare, y no toca el pipeline de Python para nada.
   da igual. El escalon siguiente, si hace falta, es una regla del WAF de Cloudflare, que
   corta antes de llegar aqui y no cuesta una escritura. Probado en `api.test.mjs` con una
   D1 de mentira: si deja de contar, la web se ve igual de bien y se queda abierta.
-- **Desplegar**: `cd web; npx wrangler pages deploy --branch main`. **La bandera no es
-  opcional**: la rama de produccion del proyecto es `main` y el repo local esta en
-  `master`; wrangler detecta la rama de git y sin `--branch main` publica una vista previa
-  (`master.*.pages.dev`) mientras produccion se queda con el build viejo. Y ademas las
-  vistas previas usan los secretos del entorno preview, que estan vacios, asi que la API
-  contesta 503 y parece que el codigo esta roto cuando lo que falla es donde se subio.
-  Desde la carpeta de arriba se sube el
-  sitio sin la API. Ver `PUBLICAR.md` paso 9 para crear D1, R2 y el secreto.
+- **Desplegar**: `git push origin master`. El proyecto de Pages esta conectado a GitHub y
+  su rama de produccion es `master`: cada push compila y publica en
+  fitnesssupplementwiki.com en unos minutos (comprobado 2026-09-14, commit 5b8b3c3).
+  Antes de subir, `dataset.json` tiene que estar exportado y commiteado: Cloudflare compila
+  lo que hay en el repo, no lo que hay en tu disco.
+  **`wrangler pages deploy --branch main` ya NO publica**: `main` es hoy una vista previa
+  (`main.fitnesssupplement.pages.dev`), y las vistas previas usan los secretos del entorno
+  preview, que estan vacios, asi que la API contesta 503 y parece que el codigo esta roto
+  cuando lo que falla es donde se subio. Si hace falta subir sin push, la rama es
+  `--branch master`, desde `web/` (desde la carpeta de arriba se sube el sitio sin la API).
+  Comprobar siempre en el dominio, no en la URL que imprime el comando.
+  Ver `PUBLICAR.md` paso 9 para crear D1, R2 y el secreto.
 - **Entrar con Google**: flujo de código de autorización escrito a mano (dos redirecciones
   y una llamada). El `id_token` llega de Google por TLS en la misma petición, no a través
   del navegador, así que no hace falta verificar su firma. El `state` viaja en una cookie
