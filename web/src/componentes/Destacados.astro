@@ -1,6 +1,7 @@
 ---
 import { NIVEL, TIENDAS, precioReferencia, puntos } from '../datos/util.js';
 import { nom, porScore } from '../datos/seo.js';
+import { textos } from '../i18n.js';
 
 // Los tres atajos de arriba de la tabla. Quien llega a /proteina-whey desde Google se
 // encuentra 120 filas y no sabe por donde empezar: el 80 % de las visitas quiere una de
@@ -9,7 +10,8 @@ import { nom, porScore } from '../datos/seo.js';
 // No son "recomendaciones": son el primero de tres ordenaciones distintas de la misma
 // tabla, y cada uno dice literalmente por que esta ahi. Si un producto gana dos, sale
 // una sola vez con las dos razones: repetirlo daria tres ganadores donde hay dos.
-const { productos, unidad } = Astro.props;
+const { productos, unidad, lang = 'es' } = Astro.props;
+const t = textos(lang);
 
 const conPrecio = productos.filter((p) => p.precio_referencia != null);
 const mejor = porScore(conPrecio)[0] ?? null;
@@ -20,12 +22,12 @@ const barato = conPrecio.slice().sort((a, b) => a.precio_referencia - b.precio_r
 const certificado = porScore(conPrecio.filter((p) => p.nivel_verificacion === 4))[0] ?? null;
 
 const candidatos = [
-  { clave: 'calidad-precio', rotulo: 'Mejor calidad-precio', p: mejor,
-    razon: mejor ? `Score ${mejor.score_final?.toFixed(0)} de 100: la nota mas alta con la mitad del peso en el precio por ${unidad}.` : '' },
-  { clave: 'barato', rotulo: `Mas barato por ${unidad}`, p: barato,
-    razon: barato ? `Nadie de esta tabla baja de ${precioReferencia(barato).valor} por ${unidad}. Barato no es bueno: mira su nivel de verificacion.` : '' },
-  { clave: 'certificado', rotulo: 'Mejor certificado', p: certificado,
-    razon: certificado ? 'Nivel 4: el sello lo respalda un tercero, no la marca. Es el que mejor puntua de los verificados.' : '' },
+  { clave: 'calidad-precio', rotulo: t('destacado.calidad_precio'), p: mejor,
+    razon: mejor ? t('destacado.razon.calidad_precio', mejor.score_final?.toFixed(0), unidad) : '' },
+  { clave: 'barato', rotulo: t('destacado.barato', unidad), p: barato,
+    razon: barato ? t('destacado.razon.barato', precioReferencia(barato, lang).valor, unidad) : '' },
+  { clave: 'certificado', rotulo: t('destacado.certificado'), p: certificado,
+    razon: certificado ? t('destacado.razon.certificado') : '' },
 ].filter((d) => d.p);
 
 // Un producto que gana dos categorias se funde en una sola tarjeta con las dos razones.
@@ -33,7 +35,7 @@ const destacados = [];
 for (const d of candidatos) {
   const ya = destacados.find((o) => o.p.id === d.p.id);
   if (ya) {
-    ya.rotulo = `${ya.rotulo} y ${d.rotulo.toLowerCase()}`;
+    ya.rotulo = `${ya.rotulo} ${t('destacado.y')} ${d.rotulo.toLowerCase()}`;
     ya.razones.push(d.razon);
   } else {
     destacados.push({ ...d, razones: [d.razon] });
@@ -43,13 +45,13 @@ for (const d of candidatos) {
 {destacados.length > 0 && (
   <div class="destacados aparece d2">
     {destacados.map((d) => {
-      const n = NIVEL[d.p.nivel_verificacion];
+      const n = NIVEL[lang][d.p.nivel_verificacion];
       return (
         <div class="bloque destacado-bloque">
           <span class="rotulo-destacado">{d.rotulo}</span>
           <h3><a href={`/producto/${d.p.slug}/`}>{nom(d.p)}</a></h3>
           <p class="linea-destacado">
-            <span class="cifra">{precioReferencia(d.p).valor}<span class="unidad">/{precioReferencia(d.p).unidad}</span></span>
+            <span class="cifra">{precioReferencia(d.p, lang).valor}<span class="unidad">/{precioReferencia(d.p, lang).unidad}</span></span>
             <span class={`nivel ${n.clase}`}>
               <span class="puntos">{puntos(d.p.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
               {n.etiqueta}
@@ -57,7 +59,7 @@ for (const d of candidatos) {
           </p>
           {d.razones.map((r) => <p>{r}</p>)}
           <p class="sutil">
-            En {TIENDAS[d.p.tienda] ?? d.p.tienda} · <a href={`/producto/${d.p.slug}/`}>ver el desglose de su nota</a>
+            {t('destacado.en_tienda')} {TIENDAS[d.p.tienda] ?? d.p.tienda} · <a href={`/producto/${d.p.slug}/`}>{t('destacado.ver_desglose')}</a>
           </p>
         </div>
       );

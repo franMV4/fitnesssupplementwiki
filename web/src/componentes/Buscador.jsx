@@ -53,9 +53,13 @@ const mejor = (...encajes) => {
 // ancho de la pagina; el de la cabecera lo pasa mas corto porque su campo mide un tercio.
 // `lista` es el id de la lamina: el panel movil pinta un segundo buscador y dos ids
 // iguales dejan el aria-controls apuntando al que no es.
-export default function Buscador({ categorias = [], total = 0,
-                                   etiqueta = 'Busca una marca, un producto o un suplemento',
-                                   lista = 'resultados-buscador' }) {
+// `lang` decide el prefijo de los enlaces a categoria ('/en/creatina/') y el idioma de
+// los rotulos de nivel; `txt` trae las nueve frases de la lamina ya traducidas desde la
+// pagina .astro, que es lo que evita meter el diccionario entero en el bundle.
+// La ficha de producto NO lleva prefijo: solo existe en espanol.
+export default function Buscador({ categorias = [], total = 0, lang = 'es', txt = {},
+                                   etiqueta, lista = 'resultados-buscador' }) {
+  const pre = lang === 'es' ? '' : `/${lang}`;
   const [q, setQ] = useState('');
   const [indice, setIndice] = useState(null);
   const [abierto, setAbierto] = useState(false);
@@ -135,7 +139,7 @@ export default function Buscador({ categorias = [], total = 0,
 
   useEffect(() => { setSel(0); }, [texto]);
 
-  const destino = (r) => (r.tipo === 'cat' ? `/${r.slug}/` : `/producto/${r.s}/`);
+  const destino = (r) => (r.tipo === 'cat' ? `${pre}/${r.slug}/` : `/producto/${r.s}/`);
   const ir = (r) => { if (r) window.location.href = destino(r); };
 
   const teclado = (e) => {
@@ -164,8 +168,8 @@ export default function Buscador({ categorias = [], total = 0,
           aria-expanded={abierto && buscando}
           aria-controls={lista}
           aria-autocomplete="list"
-          aria-label={`Buscar entre ${total} productos y sus comparativas`}
-          placeholder={etiqueta}
+          aria-label={txt.aria?.replace('%n', total)}
+          placeholder={etiqueta ?? txt.hueco}
           autoComplete="off"
           spellCheck="false"
           enterKeyHint="go"
@@ -180,7 +184,7 @@ export default function Buscador({ categorias = [], total = 0,
         <div className="buscador-lamina" id={lista} role="listbox">
           {!buscando && (
             <div className="buscador-pista">
-              <p className="rotulo">Empieza por aqui</p>
+              <p className="rotulo">{txt.empieza}</p>
               <div className="grupo-chips">
                 {/* El chip escribe el `termino` de busqueda, no el nombre completo: con
                     "Proteina whey (concentrado)" dentro del campo, el parentesis es una
@@ -193,16 +197,15 @@ export default function Buscador({ categorias = [], total = 0,
                   </button>
                 ))}
               </div>
-              <p className="sutil">{total} productos indexados. Escribe dos letras.</p>
+              <p className="sutil">{txt.indexados?.replace('%n', total)}</p>
             </div>
           )}
 
-          {esperando && <p className="buscador-vacio">Cargando el indice...</p>}
+          {esperando && <p className="buscador-vacio">{txt.cargando}</p>}
 
           {buscando && !esperando && resultados.length === 0 && (
             <p className="buscador-vacio">
-              Nada con <b>{q.trim()}</b>. Puede que esa marca no la venda ninguna de las
-              tiendas que se rastrean.
+              {txt.nada} <b>{q.trim()}</b>. {txt.nadaCola}
             </p>
           )}
 
@@ -213,24 +216,24 @@ export default function Buscador({ categorias = [], total = 0,
             // dos respuestas distintas: "la tabla entera" y "este bote".
             const titulo = r.tipo !== resultados[i - 1]?.tipo && (
               <p className="grupo-resultados" key={`g-${r.tipo}`} aria-hidden="true">
-                {r.tipo === 'cat' ? 'Comparativas' : 'Productos'}
+                {r.tipo === 'cat' ? txt.grupoCat : txt.grupoProd}
               </p>
             );
             if (r.tipo === 'cat') {
               return (
                 <Fragment key={`c-${r.slug}`}>
                   {titulo}
-                  <a className={`resultado categoria${activo ? ' activo' : ''}`} href={`/${r.slug}/`}
+                  <a className={`resultado categoria${activo ? ' activo' : ''}`} href={`${pre}/${r.slug}/`}
                      role="option" aria-selected={activo}
                      onMouseEnter={() => setSel(i)}>
                     <span className="linea1">{r.nombre}</span>
-                    <span className="linea2">Ver la comparativa completa</span>
-                    <span className="cola">{r.productos} productos</span>
+                    <span className="linea2">{txt.verComparativa}</span>
+                    <span className="cola">{r.productos} {txt.grupoProd?.toLowerCase()}</span>
                   </a>
                 </Fragment>
               );
             }
-            const n = NIVEL[r.v];
+            const n = NIVEL[lang][r.v];
             return (
               <Fragment key={r.s}>
               {titulo}
@@ -246,7 +249,7 @@ export default function Buscador({ categorias = [], total = 0,
                   </span>
                 </span>
                 <span className="cola">
-                  {r.p == null ? '—' : `${eur(r.p, r.u === 'kg' ? 2 : 3)}/${UNIDAD[r.u] ?? r.u}`}
+                  {r.p == null ? '—' : `${eur(r.p, r.u === 'kg' ? 2 : 3, lang)}/${UNIDAD[lang][r.u] ?? r.u}`}
                   <b>{r.q == null ? '' : `${r.q.toFixed(0)}`}</b>
                 </span>
               </a>

@@ -1,0 +1,113 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { SITIO, abs } from '../../sitio.js';
+import { LANG, fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+
+// E-E-A-T. Google trata la suplementacion como YMYL ("Your Money or Your Life") y no
+// posiciona arriba una web de salud sin nadie identificable detras. Esta pagina existe
+// para eso, y por eso dice tambien lo que NO se es: la unica forma de firmar una web de
+// suplementos sin ser sanitario es no dar consejo sanitario, y decirlo en la misma pagina
+// donde se dice quien eres. Un titulo inventado tumba el dominio entero, no la pagina.
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+const canonica = abs(r('/quienes-somos'));
+const autor = SITIO.autor;
+// El rol y los dos limites del autor se traducen: son texto, no un dato del dataset.
+const rol = t('sitio.autor.rol');
+const hace = t('sitio.autor.hace');
+const noHace = t('sitio.autor.no_hace');
+
+const schema = [
+  {
+    '@type': 'AboutPage',
+    '@id': canonica,
+    url: canonica,
+    name: t('quienes.schema', SITIO.nombre),
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+    mainEntity: { '@id': abs('/#autor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r('/')) },
+      { '@type': 'ListItem', position: 2, name: t('chrome.quienes_somos'), item: canonica },
+    ],
+  },
+];
+---
+<Base lang={lang} titulo={t('quienes.titulo')}
+      descripcion={t('quienes.descripcion', SITIO.nombre, tiendas)}
+      schema={schema}>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('chrome.quienes_somos')}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{t('quienes.antetitulo')}</p>
+    <h1 class="aparece d1">{t('chrome.quienes_somos')}</h1>
+    <p class="entradilla aparece d2">{t('quienes.entradilla')}</p>
+  </section>
+
+  <div class="prosa">
+    <section class="seccion-doc">
+      <h2><span class="num">01</span> {t('quienes.h2_quien')}</h2>
+      <p>
+        <strong>{autor.nombre}</strong>. {rol}. {hace}{t('quienes.quien_p1')}
+      </p>
+      <p>
+        {t('quienes.contacto')}<a href={`mailto:${SITIO.contacto}`}>{SITIO.contacto}</a>{t('quienes.contacto_cola')}
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">02</span> {t('quienes.h2_no_es')}</h2>
+      <p class="nota">
+        <strong>{noHace}</strong>{t('quienes.no_es_nota')}
+      </p>
+      <p>
+        {t('quienes.no_es_p1')}<strong>{t('quienes.no_es_hechos')}</strong>{t('quienes.no_es_p2')}<strong>{t('quienes.ingrediente')}</strong>{t('quienes.no_es_p3')}
+        <a href={r('/metodologia/#referencias')}>{t('quienes.la_metodologia')}</a>{t('quienes.y_en')}
+        <a href={r('/guias/')}>{t('quienes.las_guias')}</a>.
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">03</span> {t('quienes.h2_como')}</h2>
+      <p>
+        {t('quienes.como_p1', datos.productos.length, tiendas, datos.categorias.length)}
+        <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>.
+      </p>
+      <ul>
+        <li><strong>{t('quienes.li_precio_t')}</strong>{t('quienes.li_precio')}</li>
+        <li><strong>{t('quienes.li_cert_t')}</strong>{t('quienes.li_cert')}</li>
+        <li><strong>{t('quienes.li_score_t')}</strong>{t('quienes.li_score')}</li>
+        <li><strong>{t('quienes.li_afiliado_t')}</strong>{t('quienes.li_afiliado')}</li>
+      </ul>
+      <p>
+        {t('quienes.como_p2_1')}<a href={r('/metodologia/')}>{t('quienes.la_metodologia')}</a>{t('quienes.como_p2_2')}
+        <a href={`/datos/${datos.categorias[0].slug}.json`}>{t('quienes.en_json')}</a>{t('quienes.como_p2_3')}
+      </p>
+    </section>
+
+    <section class="seccion-doc">
+      <h2><span class="num">04</span> {t('quienes.h2_dinero')}</h2>
+      <p>
+        {datos.hay_afiliados ? t('quienes.dinero_con') : t('quienes.dinero_sin')}
+        {' '}<a href={r('/metodologia/#afiliacion')}>{t('quienes.dinero_enlace')}</a> ·
+        {' '}<a href={r('/legal/')}>{t('quienes.aviso_legal')}</a>.
+      </p>
+      <p>{t('quienes.dinero_p2')}</p>
+    </section>
+  </div>
+
+  <p class="volver"><a class="boton" href={r('/metodologia/')}>{t('quienes.volver')} →</a></p>
+</Base>

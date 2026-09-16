@@ -1,11 +1,14 @@
 ---
 import Jsonld from './Jsonld.astro';
+import { textos } from '../i18n.js';
 
 // Preguntas y respuestas generadas desde el dataset (datos/seo.js). Van visibles y
 // planas, no dentro de un <details>: lo que se pliega se lee peor y lo que se lee peor
 // no lo cita nadie. El JSON-LD sale de las mismas cadenas, asi que no pueden decir
 // cosas distintas.
-const { faqs, titulo = 'Preguntas frecuentes' } = Astro.props;
+const { faqs, titulo, lang = 'es' } = Astro.props;
+const t = textos(lang);
+const rotulo = titulo ?? t('faq.titulo');
 const esquema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -19,8 +22,8 @@ const esquema = {
 {faqs.length > 0 && (
   <section class="seccion faq">
     <div class="cabecera-seccion">
-      <h2>{titulo}</h2>
-      <p class="apunte">Respondidas con los datos de esta pagina</p>
+      <h2>{rotulo}</h2>
+      <p class="apunte">{t('faq.apunte')}</p>
     </div>
     <dl>
       {faqs.map((f) => (

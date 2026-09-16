@@ -15,7 +15,7 @@ import { EVENTO, OFICIAL } from './ControlPeso.jsx';
 // filas en lugar de 426.
 const puntua = (c, suelo, w) => (w / 100) * 100 * (suelo / c.p) + (1 - w / 100) * c.cal;
 
-export default function Ponderador({ filas = [] }) {
+export default function Ponderador({ filas = [], lang = 'es', txt = {} }) {
   const [w, setW] = useState(OFICIAL);
 
   useEffect(() => {
@@ -43,30 +43,30 @@ export default function Ponderador({ filas = [] }) {
       {w !== OFICIAL && (
         <p className="contador" aria-live="polite">
           {cambian === 0
-            ? <>Con <b>{w} % precio</b> no cambia ni un lider: los de aqui lo son por las dos mitades.</>
-            : <>Con <b>{w} % precio</b>, <b>{cambian}</b> de {filas.length} categorias cambian de lider.</>}
+            ? txt.sinCambio?.replace('%w', w)
+            : txt.cambian?.replace('%w', w).replace('%n', cambian).replace('%t', filas.length)}
         </p>
       )}
 
       <div className="tabla-marco">
         <div className="tabla-scroll">
           <table className="apilable">
-            <caption>Producto con mejor score de cada categoria</caption>
+            <caption>{txt.caption}</caption>
             <thead>
               <tr>
-                <th>Producto</th>
-                <th>Tienda</th>
-                <th className="num">Precio unidad</th>
-                <th>Verificacion</th>
-                <th className="num">Score</th>
+                <th>{txt.producto}</th>
+                <th>{txt.tienda}</th>
+                <th className="num">{txt.precioUnidad}</th>
+                <th>{txt.verificacion}</th>
+                <th className="num">{txt.score}</th>
               </tr>
             </thead>
             {/* Un <tbody> por categoria, no uno para toda la tabla: cada categoria son
                 DOS filas (el lider y su horquilla de precios) y agruparlas es lo que
                 permite subrayarlas juntas y separar una categoria de la siguiente. */}
             {lideres.map((f) => {
-              const n = NIVEL[f.p.v];
-              const unidad = UNIDAD[f.unidad] ?? f.unidad;
+              const n = NIVEL[lang][f.p.v];
+              const unidad = UNIDAD[lang][f.unidad] ?? f.unidad;
               return (
                 <tbody key={f.slug} className="grupo-cat">
                   {/* El nombre de la categoria no es una celda mas: es el rotulo de la
@@ -79,12 +79,12 @@ export default function Ponderador({ filas = [] }) {
                         {f.nombre}
                         <span className="flecha" aria-hidden="true">&rarr;</span>
                       </a>
-                      {f.cambia && <span className="marca-cambio">cambia de lider</span>}
+                      {f.cambia && <span className="marca-cambio">{txt.cambia}</span>}
                     </td>
                   </tr>
 
                   <tr className={f.cambia ? 'cambiada' : undefined}>
-                    <td data-et="Producto">
+                    <td data-et={txt.producto}>
                       {/* La foto la sirve la CDN de la tienda; aqui no se aloja ninguna.
                           Perezosa: son treinta imagenes en una tabla que ni siquiera esta
                           en la primera pantalla. */}
@@ -106,11 +106,11 @@ export default function Ponderador({ filas = [] }) {
                         </a>
                       </div>
                     </td>
-                    <td data-et="Tienda">{TIENDAS[f.p.tienda] ?? f.p.tienda}</td>
-                    <td className="num" data-et="Precio">
-                      {eur(f.p.p, unidad === 'kg' ? 2 : 3)}<span className="sutil">/{unidad}</span>
+                    <td data-et={txt.tienda}>{TIENDAS[f.p.tienda] ?? f.p.tienda}</td>
+                    <td className="num" data-et={txt.precio}>
+                      {eur(f.p.p, unidad === 'kg' ? 2 : 3, lang)}<span className="sutil">/{unidad}</span>
                     </td>
-                    <td data-et="Verificacion">
+                    <td data-et={txt.verificacion}>
                       <span className={`nivel ${n.clase}`}>
                         <span className="puntos">
                           {puntos(f.p.v).map((on, i) => <i key={i} className={on ? 'on' : ''} />)}
@@ -118,7 +118,7 @@ export default function Ponderador({ filas = [] }) {
                         {n.etiqueta}
                       </span>
                     </td>
-                    <td className="num" data-et="Score">
+                    <td className="num" data-et={txt.score}>
                       <span className="cifra">{f.score.toFixed(0)}</span>
                       <span className="barra mini"><span style={{ width: `${f.score}%` }} /></span>
                     </td>
@@ -130,9 +130,9 @@ export default function Ponderador({ filas = [] }) {
                   <tr className="detalle-cat">
                     <td colSpan={5}>
                       <p className="meta-cat">
-                        <b>{f.productos}</b> productos
-                        {' · '}<b>{f.tiendas}</b> {f.tiendas === 1 ? 'tienda' : 'tiendas'}
-                        {f.nivel4 > 0 && <>{' · '}<b>{f.nivel4}</b> de nivel 4</>}
+                        <b>{f.productos}</b> {txt.productos}
+                        {' · '}<b>{f.tiendas}</b> {f.tiendas === 1 ? txt.tienda1 : txt.tiendaN}
+                        {f.nivel4 > 0 && <>{' · '}<b>{f.nivel4}</b> {txt.nivel4}</>}
                       </p>
                       {f.min != null && f.max != null && (
                         <div className="horquilla">
@@ -144,9 +144,9 @@ export default function Ponderador({ filas = [] }) {
                             )}
                           </div>
                           <p className="pies">
-                            <span><b>{eur(f.min, f.dec)}</b>/{unidad}</span>
-                            <span className="sutil">mediana {eur(f.mediana, f.dec)}</span>
-                            <span><b>{eur(f.max, f.dec)}</b>/{unidad}</span>
+                            <span><b>{eur(f.min, f.dec, lang)}</b>/{unidad}</span>
+                            <span className="sutil">{txt.mediana} {eur(f.mediana, f.dec, lang)}</span>
+                            <span><b>{eur(f.max, f.dec, lang)}</b>/{unidad}</span>
                           </p>
                         </div>
                       )}

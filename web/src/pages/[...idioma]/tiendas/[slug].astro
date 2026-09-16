@@ -1,0 +1,236 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Aviso from '../../../componentes/Aviso.astro';
+import Faq from '../../../componentes/Faq.astro';
+import datos from '../../../datos/dataset.json';
+import { VERSUS_TIENDAS } from '../../../datos/tiendas.js';
+import { COMPARATIVAS } from '../../../datos/landings.js';
+import { UNIDAD, eur } from '../../../datos/util.js';
+import { enIdioma } from '../../../datos/categorias-i18n.js';
+import { copia } from '../../../datos/landings-i18n.js';
+import { abs } from '../../../sitio.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../../i18n.js';
+
+// "HSN o Prozis" a secas, sin categoria: la comparacion de antes de elegir donde comprar.
+// Las comparativas por categoria que ya existen contestan "cual de las dos para creatina";
+// esta contesta la de arriba, y por eso su tabla es una fila por categoria compartida en
+// vez de una fila por producto.
+export function getStaticPaths() {
+  return porIdioma(VERSUS_TIENDAS.map((v) => ({ params: { slug: v.slug }, props: { v } })));
+}
+
+const { v, lang } = Astro.props;
+const t = textos(lang);
+const r_ = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+const { a, b } = v;
+const canonica = abs(r_(`/tiendas/${v.slug}`));
+const pct = (n) => (n > 0 ? `+${n} %` : `${n} %`);
+const precio = (n, cat) => {
+  const unidad = UNIDAD[lang][cat.unidad_precio] ?? 'kg';
+  return n == null ? '—' : `${eur(n, cat.unidad_precio === 'capsula' ? 3 : 2, lang)}/${unidad}`;
+};
+const miles = (n) => n.toLocaleString({ es: 'es-ES', en: 'en-GB', fr: 'fr-FR' }[lang]);
+const decimal = (n) => (lang === 'en' ? n.toFixed(1) : n.toFixed(1).replace('.', ','));
+// La comparativa por categoria de estas dos tiendas, si existe: es la pagina que de verdad
+// resuelve la compra, y desde aqui se entra a ella con el nombre de la categoria.
+const detalle = (slug) => COMPARATIVAS.find((c) => c.cat.slug === slug
+  && [c.a, c.b].includes(a.tienda) && [c.a, c.b].includes(b.tienda));
+
+const masBarata = a.indice <= b.indice ? a : b;
+const otra = masBarata === a ? b : a;
+const empate = v.comunes.length - v.ganaA - v.ganaB;
+const lado = (x) => (x.indice < 0 ? t('tvs.debajo') : t('tvs.encima'));
+const catNombre = (x) => enIdioma(x.cat, lang).nombre.toLowerCase();
+const respuesta = t('tvs.resp', v.comunes.length, a.nombre, v.ganaA, b.nombre, v.ganaB, empate,
+  masBarata.nombre, Math.abs(masBarata.indice), lado(masBarata), otra.nombre, Math.abs(otra.indice), lado(otra));
+
+const faqs = [
+  {
+    p: t('tvs.faq1_p', a.nombre, b.nombre),
+    r: respuesta + t('tvs.faq1_cola', a.nombre, a.verificados, b.nombre, b.verificados),
+  },
+  {
+    p: t('tvs.faq2_p'),
+    r: t('tvs.faq2_r', a.nombre,
+         v.comunes.filter((x) => x.a.mediana < x.b.mediana).map(catNombre).join(', ') || t('tvs.ninguna'),
+         b.nombre,
+         v.comunes.filter((x) => x.b.mediana < x.a.mediana).map(catNombre).join(', ') || t('tvs.ninguna'),
+         fechaLarga(datos.generado)),
+  },
+  {
+    p: t('tvs.faq3_p'),
+    r: t('tvs.faq3_r', a.nombre, a.productos, a.categorias.length, b.nombre, b.productos,
+         b.categorias.length, a.marcas, b.marcas),
+  },
+];
+
+const h1 = t('tvs.h1', a.nombre, b.nombre, v.comunes.length);
+const titulo = t('tvs.titulo', a.nombre, b.nombre);
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: titulo,
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r_('/')) },
+      { '@type': 'ListItem', position: 2, name: t('tiendas.miga'), item: abs(r_('/tiendas')) },
+      { '@type': 'ListItem', position: 3, name: `${a.nombre} vs ${b.nombre}`, item: canonica },
+    ],
+  },
+];
+
+const filas = [
+  { que: t('tvs.f_indice'), a: pct(a.indice), b: pct(b.indice), explica: t('tvs.f_indice_x') },
+  { que: t('tvs.f_cats'), a: a.comparables.length, b: b.comparables.length, explica: t('tvs.f_cats_x') },
+  { que: t('land.f_productos'), a: a.productos, b: b.productos, explica: t('tvs.f_prods_x') },
+  { que: t('tvs.f_marcas'), a: a.marcas, b: b.marcas, explica: t('tvs.f_marcas_x') },
+  { que: t('tiendas.col_analisis'), a: t('land.de', a.verificados, a.productos),
+    b: t('land.de', b.verificados, b.productos), explica: t('tvs.f_analisis_x') },
+  { que: t('tvs.f_aditivos'), a: a.aditivos == null ? '—' : `${a.aditivos} %`,
+    b: b.aditivos == null ? '—' : `${b.aditivos} %`, explica: t('tvs.f_aditivos_x') },
+  ...(a.nota != null && b.nota != null ? [{
+    que: copia(lang).pq_nota_t,
+    a: `${decimal(a.nota)}/5`, b: `${decimal(b.nota)}/5`,
+    explica: t('tvs.f_nota_x', miles(a.opiniones), miles(b.opiniones)),
+  }] : []),
+];
+---
+<Base lang={lang} ancho="completo" titulo={titulo} schema={schema}
+      descripcion={t('tvs.descripcion', a.nombre, b.nombre, v.comunes.length, fechaLarga(datos.generado))}>
+
+  <p class="migas">
+    <a href={r_('/')}>{t('comun.inicio')}</a> / <a href={r_('/tiendas/')}>{t('tiendas.miga')}</a> / {a.nombre} vs {b.nombre}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {t('tvs.antetitulo')} · {t('cat.datos_del')}{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{h1}</h1>
+    <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>
+    <p class="entradilla aparece d2">{t('tvs.entradilla')}</p>
+  </section>
+
+  <Aviso lang={lang} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('tvs.h2_cats')}</h2>
+      <p class="apunte">{t('tvs.apunte_cats')}</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{t('tvs.caption_cats', a.nombre, b.nombre, v.comunes.length)}</caption>
+          <thead>
+            <tr>
+              <th>{t('tvs.col_cat')}</th>
+              <th class="num">{a.nombre}</th>
+              <th class="num">{b.nombre}</th>
+              <th class="num">{t('tvs.col_dif')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {v.comunes.map((x) => {
+              const gana = x.a.mediana === x.b.mediana ? null : (x.a.mediana < x.b.mediana ? a : b);
+              const alta = Math.max(x.a.mediana, x.b.mediana);
+              const baja = Math.min(x.a.mediana, x.b.mediana);
+              const dif = baja ? Math.round(((alta / baja) - 1) * 100) : null;
+              const d = detalle(x.cat.slug);
+              return (
+                <tr>
+                  <td class="principal marca">
+                    <a href={r_(`/${x.cat.slug}/`)}>{enIdioma(x.cat, lang).nombre}</a>
+                    <span class="explica">
+                      {t('tvs.n_de', x.a.n, a.nombre, x.b.n, b.nombre)}
+                      {d && <> <a href={r_(`/comparativa/${d.slug}/`)}>{t('tvs.ver_cara')}</a>.</>}
+                    </span>
+                  </td>
+                  <td class="num" data-et={a.nombre}>
+                    <span class={gana === a ? 'destacado' : ''}>{precio(x.a.mediana, x.cat)}</span>
+                    <span class="explica">{pct(x.a.dif)} {t('tvs.vs_mercado')}</span>
+                  </td>
+                  <td class="num" data-et={b.nombre}>
+                    <span class={gana === b ? 'destacado' : ''}>{precio(x.b.mediana, x.cat)}</span>
+                    <span class="explica">{pct(x.b.dif)} {t('tvs.vs_mercado')}</span>
+                  </td>
+                  <td class="num" data-et={t('tvs.col_dif')}>
+                    {dif == null ? '—' : `${dif} %`}
+                    {gana && <span class="explica">{t('tvs.mas_barata', gana.nombre)}</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota"><strong>{t('land.mediana_nota_t')}</strong>{t('tvs.nota_mediana')}</p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('tvs.h2_datos')}</h2>
+      <p class="apunte">{t('tvs.apunte_datos')}</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{t('tvs.caption_datos', a.nombre, b.nombre)}</caption>
+          <thead>
+            <tr>
+              <th>{t('land.dato')}</th>
+              <th class="num">{a.nombre}</th>
+              <th class="num">{b.nombre}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr>
+                <td class="principal marca">
+                  {f.que}
+                  <span class="explica">{f.explica}</span>
+                </td>
+                <td class="num" data-et={a.nombre}>{f.a}</td>
+                <td class="num" data-et={b.nombre}>{f.b}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <Faq lang={lang} faqs={faqs} titulo={t('tvs.faq_titulo', a.nombre, b.nombre)} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('tvs.seguir')}</h2>
+      <p class="apunte">{t('tvs.apunte_seguir')}</p>
+    </div>
+    <div class="lista-categorias">
+      {v.comunes.map((x) => detalle(x.cat.slug)).filter(Boolean).map((d) => (
+        <a class="fila-categoria" href={r_(`/comparativa/${d.slug}/`)}>
+          <span class="nombre">{t('portada.comparativa_vs', d.na, d.nb, enIdioma(d.cat, lang).termino)}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{d.productos.length} {t('comun.prod_corto')}</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href={r_('/tiendas/')}>
+        <span class="nombre">{t('tvs.todas')}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{t('guias.ranking')}</span>
+      </a>
+    </div>
+  </section>
+</Base>

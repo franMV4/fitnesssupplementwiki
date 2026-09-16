@@ -17,8 +17,11 @@
 
 import datos from './dataset.json' with { type: 'json' };
 import { TIENDAS, eur, reparto } from './util.js';
-import { anio, cap, fechaLarga, formatoDe, nom, porScore, resumen, tiendaDe, titula } from './seo.js';
+import { anio, formatoDe, nom, porScore, resumen, tiendaDe, titula } from './seo.js';
 import { porQuePrecio } from './porque.js';
+import { copia } from './landings-i18n.js';
+import { enIdioma } from './categorias-i18n.js';
+import { fechaLargaEn } from '../i18n.js';
 
 // Cuantos productos hacen falta para que la pagina tenga algo que contar.
 const MIN_SELLO = 3;
@@ -36,19 +39,9 @@ const MIN_BARATO = 10;
 // ya solo 30 con 30. Si las categorias recuperan indexacion, se baja.
 const MIN_TIENDA_INDEXADO = 20;
 
-// Sellos que existen de verdad en el dataset y que son nivel 4 (un tercero detras).
-const SELLOS = {
-  creapure: {
-    nombre: 'Creapure',
-    que: 'Creapure es creatina de Alzchem: usar la marca exige contrato de licencia, asi ' +
-         'que el sello lo respalda un tercero y no la tienda.',
-  },
-  ifos: {
-    nombre: 'IFOS',
-    que: 'IFOS analiza el lote en un laboratorio independiente y publica el informe, asi ' +
-         'que el sello no depende de lo que diga la marca.',
-  },
-};
+// Sellos que existen de verdad en el dataset y que son nivel 4 (un tercero detras). Lo
+// que se dice de cada uno vive en landings-i18n.js (`sello_que`), en los tres idiomas.
+const SELLOS = { creapure: 'Creapure', ifos: 'IFOS' };
 
 const productosDe = (slug) => datos.productos.filter((p) => p.categoria === slug);
 const tieneSello = (p, tipo) => p.certificaciones.some((c) => c.tipo === tipo);
@@ -56,6 +49,7 @@ const tieneSello = (p, tipo) => p.certificaciones.some((c) => c.tipo === tipo);
 // El genero y el numero salen del articulo que ya escribio una persona en categorias.py
 // ("la mejor creatina", "los mejores BCAA"), asi que no hay que declararlos otra vez:
 // "creatina barata", "BCAA baratos". Concordar mal en el H1 delata una pagina generada.
+// Solo cuenta en espanol: el ingles no concuerda y el frances esquiva el genero.
 function concordancia(cat) {
   const m = String(cat.mejor ?? '').toLowerCase();
   if (m.startsWith('las ')) return { adj: 'baratas' };
@@ -64,45 +58,73 @@ function concordancia(cat) {
   return { adj: 'barato' };
 }
 
-/* --- /mejores/<slug> ----------------------------------------------------------- */
+/* --- /mejores/<slug> -----------------------------------------------------------
+   Cada landing guarda los DATOS (que filtro, que productos) y los textos se piden en un
+   idioma con `textosMejores(l, lang)`. Los campos h1/titulo/criterio/matiz del objeto son
+   los del espanol, calculados con la misma funcion, para quien ya los leia (sitemap,
+   portada, llms.txt). Asi no hay dos maneras de escribir el mismo titular. */
 
-function porSello(cat, ps) {
-  return Object.entries(SELLOS).flatMap(([tipo, sello]) => {
-    const sel = ps.filter((p) => tieneSello(p, tipo));
-    if (sel.length < MIN_SELLO) return [];
-    const r = resumen(cat, sel);
-    return [{
-      slug: `${cat.slug}-${tipo}`,
-      indexable: true,
-      cat,
-      productos: sel,
-      // El matiz distingue esta descripcion de la de las otras landings de la misma
-      // categoria: cuando el conjunto de productos coincide (una categoria que vende
-      // una sola tienda), sin el salian dos <meta description> identicas.
-      matiz: `Solo los que declaran ${sello.nombre}.`,
+export function textosMejores(l, lang = 'es') {
+  const T = copia(lang);
+  const cat = enIdioma(l.cat, lang);
+  const r = resumen(l.cat, l.productos, lang);
+  const a = anio(datos.generado);
+  if (l.tipo === 'sello') {
+    const s = SELLOS[l.sello];
+    return {
+      matiz: T.sello_matiz(s),
       // "16 productos" y no "16 comparadas": el articulo de cat.mejor puede ser femenino
       // ("la mejor creatina") y el sustantivo que sigue tiene que concordar con algo, asi
       // que se le pone uno neutro en vez de intentar declinar el participio.
-      h1: `${cap(cat.mejor)} con sello ${sello.nombre}: ${sel.length} productos por precio por ${r.unidad}`,
-      titulo: titula(`Mejor ${cat.termino} ${sello.nombre} ${anio(datos.generado)}`,
-                     `: precio por ${r.unidad} y certificacion`,
-                     `: precio por ${r.unidad} comparado`,
-                     `: precio por ${r.unidad}`),
+      h1: T.sello_h1(cat, s, l.productos.length, r.unidad),
+      titulo: titula(T.sello_titulo(cat, s, a), ...T.sello_sufijos(r.unidad)),
       // El reparto de niveles NO se afirma, se cuenta. Declarar el sello en la ficha no
       // es lo mismo que llevarlo en el nombre: lo primero es la palabra de la tienda
-      // (nivel 2) y lo segundo exige contrato de licencia (nivel 4). Aqui salen los dos
-      // grupos, porque decir "todos son nivel 4" seria mentira en cuanto una tienda
-      // ponga el sello en la descripcion y no en el nombre, que es justo lo que pasa.
-      criterio: `Solo los productos cuya ficha declara ${sello.nombre}, de los ${ps.length} ` +
-                `de ${cat.termino} que compara esta web. ${sello.que} De los ${sel.length}, ` +
-                (r.nivel4 === sel.length
-                  ? `los ${sel.length} llegan al nivel 4: el sello se ha podido comprobar ` +
-                    `contra un tercero.`
-                  : `${r.nivel4} llegan al nivel 4 (el sello se ha podido comprobar contra ` +
-                    `un tercero) y ${sel.length - r.nivel4} se quedan por debajo: lo ` +
-                    `declaran en la ficha pero no lo llevan en el nombre, y un sello suelto ` +
-                    `en la etiqueta es la palabra de quien vende.`),
-    }];
+      // (nivel 2) y lo segundo exige contrato de licencia (nivel 4).
+      criterio: T.sello_criterio(cat, s, productosDe(cat.slug).length, T.sello_que[l.sello],
+                                 l.productos.length, r.nivel4),
+    };
+  }
+  if (l.tipo === 'tienda') {
+    const rTodo = resumen(l.cat, productosDe(cat.slug), lang);
+    // Lo util de una landing de tienda no es "aqui esta el catalogo": es si esa tienda
+    // esta por encima o por debajo del mercado en la unidad en la que se compara.
+    const dif = r.mediana != null && rTodo.mediana != null
+      ? Math.round(((r.mediana / rTodo.mediana) - 1) * 100) : null;
+    const med = rTodo.precio(rTodo.mediana);
+    const sit = dif == null ? '.'
+      : dif === 0 ? T.situacion_igual(med)
+      : dif > 0 ? T.situacion_encima(dif, rTodo.tiendas, med)
+      : T.situacion_debajo(Math.abs(dif), rTodo.tiendas, med);
+    return {
+      matiz: T.tienda_matiz(l.nombreTienda),
+      h1: T.tienda_h1(cat, l.nombreTienda, l.productos.length, r.unidad),
+      titulo: titula(T.tienda_titulo(cat, l.nombreTienda, a), ...T.tienda_sufijos(r.unidad)),
+      criterio: T.tienda_criterio(cat, l.nombreTienda, l.productos.length, r.precio(r.mediana), sit),
+    };
+  }
+  // tipo === 'precio'
+  const rTodo = resumen(l.cat, productosDe(cat.slug), lang);
+  const { adj } = concordancia(l.cat);
+  return {
+    matiz: T.precio_matiz,
+    h1: T.precio_h1(cat, adj, l.productos.length, rTodo.precio(rTodo.mediana)),
+    titulo: titula(T.precio_titulo(cat, adj, a),
+                   ...T.precio_sufijos(l.productos.length, eur(rTodo.mediana, rTodo.dec, lang), rTodo.unidad)),
+    criterio: T.precio_criterio(cat, l.productos.length, rTodo.precio(rTodo.mediana),
+                                productosDe(cat.slug).length, r.precio(r.barato?.precio_referencia),
+                                r.precio(r.caro?.precio_referencia), reparto(undefined, lang)),
+  };
+}
+
+const conTextos = (l) => ({ ...l, ...textosMejores(l, 'es') });
+
+function porSello(cat, ps) {
+  return Object.keys(SELLOS).flatMap((tipo) => {
+    const sel = ps.filter((p) => tieneSello(p, tipo));
+    if (sel.length < MIN_SELLO) return [];
+    return [conTextos({ slug: `${cat.slug}-${tipo}`, indexable: true, cat, productos: sel,
+                        tipo: 'sello', sello: tipo })];
   });
 }
 
@@ -110,41 +132,14 @@ function porTienda(cat, ps) {
   const tiendas = [...new Set(ps.map((p) => p.tienda))]
     .filter((t) => ps.filter((p) => p.tienda === t).length >= MIN_TIENDA)
     .sort();
-  const rTodo = resumen(cat, ps);
   return tiendas.map((t) => {
     const sel = ps.filter((p) => p.tienda === t);
-    const r = resumen(cat, sel);
-    const nombre = TIENDAS[t] ?? t;
-    // Lo util de una landing de tienda no es "aqui esta el catalogo": es si esa tienda
-    // esta por encima o por debajo del mercado en la unidad en la que se compara.
-    const dif = r.mediana != null && rTodo.mediana != null
-      ? Math.round(((r.mediana / rTodo.mediana) - 1) * 100) : null;
-    const situacion =
-      dif == null ? '.'
-      : dif === 0 ? `, la misma que la del mercado comparado aqui (${rTodo.precio(rTodo.mediana)}).`
-      : dif > 0 ? `, un ${dif} % por encima de la mediana de las ${rTodo.tiendas} tiendas comparadas (${rTodo.precio(rTodo.mediana)}).`
-      : `, un ${Math.abs(dif)} % por debajo de la mediana de las ${rTodo.tiendas} tiendas comparadas (${rTodo.precio(rTodo.mediana)}).`;
-    return {
-      slug: `${cat.slug}-de-${t}`,
-      indexable: sel.length >= MIN_TIENDA_INDEXADO,
-      cat,
-      productos: sel,
-      // Quien es la tienda, para que la pagina pueda compararla con el resto del mercado
-      // en la seccion de "por que". Las otras landings (sello, precio) no la llevan y por
-      // eso no pintan esa seccion: comparar "los Creapure" con "el resto" no explica
-      // ningun precio, solo repite el filtro.
-      tienda: t,
-      nombreTienda: nombre,
-      matiz: `Solo lo que vende ${nombre}.`,
-      h1: `${cap(cat.mejor)} de ${nombre}: ${sel.length} productos por precio por ${r.unidad}`,
-      titulo: titula(`Mejor ${cat.termino} de ${nombre} ${anio(datos.generado)}`,
-                     `: precio por ${r.unidad} comparado`,
-                     `: precio por ${r.unidad}`,
-                     ': precios comparados'),
-      criterio: `Los ${sel.length} productos de ${cat.termino} que vende ${nombre}, puntuados ` +
-                `con el mismo score que el resto de la web. Su mediana es ` +
-                `${r.precio(r.mediana)}${situacion}`,
-    };
+    // Quien es la tienda, para que la pagina pueda compararla con el resto del mercado en
+    // la seccion de "por que". Las otras landings (sello, precio) no la llevan y por eso no
+    // pintan esa seccion: comparar "los Creapure" con "el resto" no explica ningun precio.
+    return conTextos({ slug: `${cat.slug}-de-${t}`, indexable: sel.length >= MIN_TIENDA_INDEXADO,
+                       cat, productos: sel, tipo: 'tienda', tienda: t,
+                       nombreTienda: TIENDAS[t] ?? t });
   });
 }
 
@@ -152,25 +147,9 @@ function porPrecio(cat, ps) {
   const r = resumen(cat, ps);
   if (ps.length < MIN_BARATO || r.mediana == null) return [];
   const sel = ps.filter((p) => p.precio_referencia != null && p.precio_referencia <= r.mediana);
-  const rSel = resumen(cat, sel);
   const { adj } = concordancia(cat);
-  return [{
-    slug: `${cat.slug}-${adj}`,
-    indexable: true,
-    cat,
-    productos: sel,
-    matiz: 'Solo la mitad mas barata de la categoria.',
-    h1: `${cap(cat.mejor)} ${adj}: ${sel.length} por debajo de ${r.precio(r.mediana)}`,
-    titulo: titula(`${cap(cat.termino)} ${adj} ${anio(datos.generado)}`,
-                   `: ${sel.length} por debajo de ${eur(r.mediana, r.dec)}/${r.unidad}`,
-                   `: ${sel.length} por debajo de la mediana`,
-                   ': los mas baratos por unidad'),
-    criterio: `La mitad barata de la categoria: los ${sel.length} productos de ${cat.termino} ` +
-              `que cuestan ${r.precio(r.mediana)} o menos, que es la mediana de los ` +
-              `${ps.length} comparados. Van de ${rSel.precio(rSel.barato?.precio_referencia)} ` +
-              `a ${rSel.precio(rSel.caro?.precio_referencia)}. Barato no es lo mismo que bueno: ` +
-              `el orden sigue siendo el score: ${reparto()}.`,
-  }];
+  return [conTextos({ slug: `${cat.slug}-${adj}`, indexable: true, cat, productos: sel,
+                      tipo: 'precio' })];
 }
 
 export const MEJORES = datos.categorias.flatMap((cat) => {
@@ -190,6 +169,17 @@ export const MEJORES = datos.categorias.flatMap((cat) => {
 // con mas catalogo en esa categoria, que son las que aparecen en la consulta de verdad.
 const MAX_TIENDAS_CRUZADAS = 3;
 
+/** H1 y titulo de un versus en un idioma. */
+export function textosComparativa(l, lang = 'es') {
+  const T = copia(lang);
+  const cat = enIdioma(l.cat, lang);
+  const u = resumen(l.cat, l.pa, lang).unidad;
+  return {
+    h1: T.vs_h1(l.na, l.nb, cat, u),
+    titulo: titula(T.vs_titulo(l.na, l.nb, cat), ...T.vs_sufijos(u)),
+  };
+}
+
 export const COMPARATIVAS = datos.categorias.flatMap((cat) => {
   const ps = productosDe(cat.slug);
   const cuantos = (t) => ps.filter((p) => p.tienda === t).length;
@@ -207,121 +197,110 @@ export const COMPARATIVAS = datos.categorias.flatMap((cat) => {
   return pares.map(([a, b]) => {
     const pa = ps.filter((p) => p.tienda === a);
     const pb = ps.filter((p) => p.tienda === b);
-    const ra = resumen(cat, pa);
-    const rb = resumen(cat, pb);
-    const na = TIENDAS[a] ?? a;
-    const nb = TIENDAS[b] ?? b;
     const juntos = [...pa, ...pb];
-    return {
+    const l = {
       slug: `${a}-vs-${b}-${cat.slug}`,
-      cat, a, b, na, nb, pa, pb, ra, rb,
+      cat, a, b, na: TIENDAS[a] ?? a, nb: TIENDAS[b] ?? b, pa, pb,
+      ra: resumen(cat, pa),
+      rb: resumen(cat, pb),
       productos: juntos,
       ganaScore: porScore(juntos)[0] ?? null,
       barato: juntos.filter((p) => p.precio_referencia != null)
         .sort((x, y) => x.precio_referencia - y.precio_referencia)[0] ?? null,
-      h1: `${na} o ${nb} en ${cat.termino}: cual sale mejor por precio por ${ra.unidad}`,
-      titulo: titula(`${na} vs ${nb} en ${cat.termino}`,
-                     `: cual sale mas barato por ${ra.unidad}`,
-                     ': cual sale mas barato',
-                     ': precios comparados'),
     };
+    return { ...l, ...textosComparativa(l, 'es') };
   });
 });
 
 /* --- Copy generado, compartido por las dos rutas -------------------------------- */
 
 /** La respuesta corta de una landing de /mejores: quien gana, cuanto cuesta y de cuando es. */
-export function respuestaMejores(l) {
-  const r = resumen(l.cat, l.productos);
+export function respuestaMejores(l, lang = 'es') {
+  const T = copia(lang);
+  const r = resumen(l.cat, l.productos, lang);
   if (!r.lider || !r.barato) return null;
-  const f = [
-    `De los ${r.n} productos que pasan este filtro, el que mejor puntua es ` +
-    `${nom(r.lider)} de ${tiendaDe(r.lider)}: ${r.precio(r.lider.precio_referencia)} y ` +
-    `nivel ${r.lider.nivel_verificacion} de verificacion sobre 4.`,
-  ];
+  const f = [T.rm_lider(r.n, nom(r.lider), tiendaDe(r.lider), r.precio(r.lider.precio_referencia),
+                        r.lider.nivel_verificacion)];
   if (r.barato.id !== r.lider.id) {
-    f.push(`El mas barato por ${r.unidad} es ${nom(r.barato)} de ${tiendaDe(r.barato)}, a ` +
-           `${r.precio(r.barato.precio_referencia)}.`);
+    f.push(T.rm_barato(r.unidad, nom(r.barato), tiendaDe(r.barato), r.precio(r.barato.precio_referencia)));
   }
-  f.push(`La seleccion va de ${r.precio(r.barato.precio_referencia)} a ` +
-         `${r.precio(r.caro.precio_referencia)}, con una mediana de ${r.precio(r.mediana)}.`);
+  f.push(T.rm_horquilla(r.precio(r.barato.precio_referencia), r.precio(r.caro.precio_referencia),
+                        r.precio(r.mediana)));
   return f.join(' ');
 }
 
 /** La respuesta corta de un versus: quien gana por nota, quien por precio y por cuanto. */
-export function respuestaComparativa(l) {
-  const { ra, rb, na, nb, cat } = l;
+export function respuestaComparativa(l, lang = 'es') {
+  const T = copia(lang);
+  const cat = enIdioma(l.cat, lang);
+  const ra = resumen(l.cat, l.pa, lang);
+  const rb = resumen(l.cat, l.pb, lang);
+  const { na, nb } = l;
   if (!ra.lider || !rb.lider) return null;
-  const f = [];
-  f.push(`En ${cat.termino}, ${na} pone ${ra.n} productos y ${nb} otros ${rb.n}. Por precio ` +
-         `por ${ra.unidad}, la mediana de ${na} es ${ra.precio(ra.mediana)} y la de ${nb}, ` +
-         `${rb.precio(rb.mediana)}.`);
+  const f = [T.rc_medianas(cat, na, ra.n, nb, rb.n, ra.unidad, ra.precio(ra.mediana), rb.precio(rb.mediana))];
   if (l.ganaScore) {
-    f.push(`El que mejor puntua de los dos catalogos es ${nom(l.ganaScore)} de ` +
-           `${tiendaDe(l.ganaScore)}, con ${l.ganaScore.score_final?.toFixed(0)} sobre 100 a ` +
-           `${ra.precio(l.ganaScore.precio_referencia)}.`);
+    f.push(T.rc_gana(nom(l.ganaScore), tiendaDe(l.ganaScore), l.ganaScore.score_final?.toFixed(0),
+                     ra.precio(l.ganaScore.precio_referencia)));
   }
   if (l.barato && l.barato.id !== l.ganaScore?.id) {
-    f.push(`El mas barato por ${ra.unidad} es ${nom(l.barato)} de ${tiendaDe(l.barato)}, a ` +
-           `${ra.precio(l.barato.precio_referencia)}.`);
+    f.push(T.rc_barato(ra.unidad, nom(l.barato), tiendaDe(l.barato), ra.precio(l.barato.precio_referencia)));
   }
   // "0 y 0 llegan al nivel 4" es un dato, pero se lee como un error de la pagina. Cuando
   // en una categoria no hay ni un sello con tercero detras, lo que hay que decir es eso.
-  f.push(ra.nivel4 === 0 && rb.nivel4 === 0
-    ? `Ninguna de las dos tiene productos en el nivel 4 de verificacion: en ${cat.termino} ` +
-      `el techo hoy es el analisis publicado por la propia marca, y eso no es un sello.`
-    : `${ra.nivel4} productos de ${na} y ${rb.nivel4} de ${nb} llegan al nivel 4 de ` +
-      `verificacion.`);
+  f.push(ra.nivel4 === 0 && rb.nivel4 === 0 ? T.rc_sin_n4(cat) : T.rc_n4(ra.nivel4, na, rb.nivel4, nb));
   return f.join(' ');
 }
 
 /** Descripcion para el <meta>: el numero, el precio y la fecha. Sin adjetivos. */
-export const descripcionMejores = (l) => {
-  const r = resumen(l.cat, l.productos);
-  return (`${l.matiz ?? ''} ${r.n} productos de ${l.cat.termino} comparados por precio por ` +
-    `${r.unidad} (desde ${r.precio(r.barato?.precio_referencia)}) y por el nivel de ` +
-    `verificacion de su certificacion. Datos del ${datos.generado}.`).trim();
+export const descripcionMejores = (l, lang = 'es') => {
+  const r = resumen(l.cat, l.productos, lang);
+  const { matiz } = textosMejores(l, lang);
+  return copia(lang).desc_mejores(matiz, r.n, enIdioma(l.cat, lang), r.unidad,
+    r.precio(r.barato?.precio_referencia), fechaLargaEn(lang, datos.generado)).trim();
 };
 
-export const descripcionComparativa = (l) =>
-  `${l.na} o ${l.nb} en ${l.cat.termino}: ${l.ra.n} y ${l.rb.n} productos comparados por ` +
-  `precio por ${l.ra.unidad} (medianas ${l.ra.precio(l.ra.mediana)} y ` +
-  `${l.rb.precio(l.rb.mediana)}) y por certificacion. Datos del ${datos.generado}.`;
+export const descripcionComparativa = (l, lang = 'es') => {
+  const ra = resumen(l.cat, l.pa, lang);
+  const rb = resumen(l.cat, l.pb, lang);
+  return copia(lang).desc_vs(l.na, l.nb, enIdioma(l.cat, lang), ra.n, rb.n, ra.unidad,
+    ra.precio(ra.mediana), rb.precio(rb.mediana), fechaLargaEn(lang, datos.generado));
+};
 
 /** FAQ de una landing de /mejores. Las tres preguntas que trae quien busca asi. */
-export function faqsMejores(l) {
-  const r = resumen(l.cat, l.productos);
+export function faqsMejores(l, lang = 'es') {
+  const T = copia(lang);
+  const cat = enIdioma(l.cat, lang);
+  const r = resumen(l.cat, l.productos, lang);
+  const { criterio } = textosMejores(l, lang);
   const faqs = [];
   if (r.lider) {
     faqs.push({
-      p: `¿${cap(l.cat.mejor)} de esta seleccion?`,
-      r: `${nom(r.lider)} de ${tiendaDe(r.lider)}, con ` +
-         `${r.lider.score_final?.toFixed(0)} puntos sobre 100 a ` +
-         `${r.precio(r.lider.precio_referencia)}. ${l.criterio}`,
+      p: T.fm1_p(cat),
+      r: T.fm1_r(nom(r.lider), tiendaDe(r.lider), r.lider.score_final?.toFixed(0),
+                 r.precio(r.lider.precio_referencia), criterio),
     });
   }
   if (r.barato) {
     faqs.push({
-      p: `¿Cual es el mas barato por ${r.unidad}?`,
-      r: `${nom(r.barato)} de ${tiendaDe(r.barato)}, a ` +
-         `${r.precio(r.barato.precio_referencia)} (envase de ${formatoDe(r.barato)} por ` +
-         `${eur(r.barato.precio_eur)}). Tiene nivel ${r.barato.nivel_verificacion} de ` +
-         `verificacion sobre 4: el precio es solo la mitad de la nota.`,
+      p: T.fm2_p(r.unidad),
+      r: T.fm2_r(nom(r.barato), tiendaDe(r.barato), r.precio(r.barato.precio_referencia),
+                 formatoDe(r.barato, lang), eur(r.barato.precio_eur, 2, lang), r.barato.nivel_verificacion),
     });
   }
   faqs.push({
-    p: '¿Como se ha hecho esta seleccion?',
-    r: `${l.criterio} El orden dentro de la tabla es el score de siempre: ` +
-       `${reparto(r.unidad)}. Los ` +
-       `enlaces de afiliado no entran en el calculo. Precios recogidos el ` +
-       `${fechaLarga(datos.generado)}.`,
+    p: T.fm3_p,
+    r: T.fm3_r(criterio, reparto(r.unidad, lang), fechaLargaEn(lang, datos.generado)),
   });
   return faqs;
 }
 
-/** FAQ de un versus: las tres cosas que se pregunta quien compara dos tiendas. */
-export function faqsComparativa(l) {
-  const { ra, rb, na, nb, cat } = l;
+/** FAQ de un versus: las cosas que se pregunta quien compara dos tiendas. */
+export function faqsComparativa(l, lang = 'es') {
+  const T = copia(lang);
+  const cat = enIdioma(l.cat, lang);
+  const ra = resumen(l.cat, l.pa, lang);
+  const rb = resumen(l.cat, l.pb, lang);
+  const { na, nb } = l;
   const faqs = [];
   const masBarata = ra.mediana != null && rb.mediana != null
     ? (ra.mediana <= rb.mediana ? { r: ra, n: na, otro: rb, nOtro: nb } : { r: rb, n: nb, otro: ra, nOtro: na })
@@ -329,42 +308,32 @@ export function faqsComparativa(l) {
   if (masBarata) {
     const dif = Math.round(((masBarata.otro.mediana / masBarata.r.mediana) - 1) * 100);
     faqs.push({
-      p: `¿${na} o ${nb} para ${cat.termino}?`,
-      r: `Por precio por ${ra.unidad}, ${masBarata.n}: su mediana es ` +
-         `${masBarata.r.precio(masBarata.r.mediana)} frente a ` +
-         `${masBarata.otro.precio(masBarata.otro.mediana)} de ${masBarata.nOtro}` +
-         (dif > 0 ? `, un ${dif} % mas cara.` : '.') +
-         ` La mediana no decide sola: la otra mitad de la nota es la certificacion, y ahi ` +
-         `${na} tiene ${ra.nivel4} productos en nivel 4 y ${nb} tiene ${rb.nivel4}.`,
+      p: T.fv1_p(na, nb, cat),
+      r: T.fv1_r(ra.unidad, masBarata.n, masBarata.r.precio(masBarata.r.mediana),
+                 masBarata.otro.precio(masBarata.otro.mediana), masBarata.nOtro, dif,
+                 na, ra.nivel4, nb, rb.nivel4),
     });
   }
   if (l.barato) {
     faqs.push({
-      p: `¿Cual es ${cat.mejor} mas ${ra.unidad === 'kg' ? 'barata' : 'barato'} de las dos tiendas?`,
-      r: `${nom(l.barato)} de ${tiendaDe(l.barato)}, a ` +
-         `${ra.precio(l.barato.precio_referencia)} (envase de ${formatoDe(l.barato)} por ` +
-         `${eur(l.barato.precio_eur)}), con nivel ${l.barato.nivel_verificacion} de ` +
-         `verificacion sobre 4.`,
+      p: T.fv2_p(cat, ra.unidad),
+      r: T.fv2_r(nom(l.barato), tiendaDe(l.barato), ra.precio(l.barato.precio_referencia),
+                 formatoDe(l.barato, lang), eur(l.barato.precio_eur, 2, lang), l.barato.nivel_verificacion),
     });
   }
   // La pregunta que trae de verdad quien compara dos tiendas y que la pagina no
   // contestaba: por que una cuesta menos. La respuesta sale de los mismos factores que
   // pinta la seccion "por que", asi que la FAQ no puede decir una cosa y la tabla otra.
-  const { intro, factores } = porQuePrecio(cat, { nombre: na, productos: l.pa },
-                                                { nombre: nb, productos: l.pb });
+  const { intro, factores } = porQuePrecio(l.cat, { nombre: na, productos: l.pa },
+                                                  { nombre: nb, productos: l.pb }, lang);
   if (intro) {
-    faqs.push({
-      p: `¿Por que ${na} y ${nb} no cuestan lo mismo?`,
-      r: [intro, ...factores.slice(0, 2).map((f) => f.texto)].join(' '),
-    });
+    faqs.push({ p: T.fv3_p(na, nb), r: [intro, ...factores.slice(0, 2).map((f) => f.texto)].join(' ') });
   }
   if (l.ganaScore) {
     faqs.push({
-      p: `¿Cual puntua mejor de las dos tiendas?`,
-      r: `${nom(l.ganaScore)} de ${tiendaDe(l.ganaScore)}, con ` +
-         `${l.ganaScore.score_final?.toFixed(0)} sobre 100. El score es ` +
-         `${reparto(ra.unidad)}, y se calcula sin mirar los enlaces de afiliado. Precios del ` +
-         `${fechaLarga(datos.generado)}.`,
+      p: T.fv4_p,
+      r: T.fv4_r(nom(l.ganaScore), tiendaDe(l.ganaScore), l.ganaScore.score_final?.toFixed(0),
+                 reparto(ra.unidad, lang), fechaLargaEn(lang, datos.generado)),
     });
   }
   return faqs;

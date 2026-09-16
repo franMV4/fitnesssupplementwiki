@@ -1,0 +1,150 @@
+---
+import Base from '../../../layouts/Base.astro';
+import TablaProductos from '../../../componentes/TablaProductos.astro';
+import Cifras from '../../../componentes/Cifras.astro';
+import Destacados from '../../../componentes/Destacados.astro';
+import CaraACara from '../../../componentes/CaraACara.astro';
+import Aviso from '../../../componentes/Aviso.astro';
+import Faq from '../../../componentes/Faq.astro';
+import datos from '../../../datos/dataset.json';
+import { abs } from '../../../sitio.js';
+import { paraTabla } from '../../../datos/util.js';
+import { agregadoLd, listaLd, resumen } from '../../../datos/seo.js';
+import { enIdioma } from '../../../datos/categorias-i18n.js';
+import { copia } from '../../../datos/landings-i18n.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../../i18n.js';
+import {
+  MEJORES, comparativasDe, descripcionMejores, faqsMejores, mejoresDe, respuestaMejores,
+  textosComparativa, textosMejores,
+} from '../../../datos/landings.js';
+
+// Una pagina por filtro con intencion de compra: "creatina Creapure", "proteina whey de
+// Myprotein", "creatina barata". La lista sale de datos/landings.js y no se escribe a
+// mano ninguna: ver el comentario de cabecera de ese fichero.
+export function getStaticPaths() {
+  return porIdioma(MEJORES.map((l) => ({ params: { slug: l.slug }, props: { l } })));
+}
+
+const { l, lang } = Astro.props;
+const t = textos(lang);
+const r_ = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+const cat = enIdioma(l.cat, lang);
+const { productos } = l;
+const tx = textosMejores(l, lang);
+const r = resumen(l.cat, productos, lang);
+const respuesta = respuestaMejores(l, lang);
+const faqs = faqsMejores(l, lang);
+const descripcion = descripcionMejores(l, lang);
+const canonica = abs(r_(`/mejores/${l.slug}`));
+// Hermanas: las otras landings de la misma categoria y sus versus. El enlace interno con
+// texto que dice la consulta vale mas que un "ver mas", y aqui sale gratis.
+const hermanas = mejoresDe(cat.slug).filter((o) => o.slug !== l.slug);
+// En la landing de una tienda, el contrario natural es el resto del mercado: la pregunta
+// de "creatina de HSN" es la misma que la del versus ("por que la suya cuesta esto") solo
+// que contra todos a la vez. En las landings de sello o de precio no hay dos partes que
+// comparar, asi que la seccion no sale.
+const resto = l.tienda
+  ? datos.productos.filter((p) => p.categoria === cat.slug && p.tienda !== l.tienda) : [];
+const versus = comparativasDe(cat.slug);
+
+const agregado = agregadoLd(tx.titulo, productos, canonica);
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: tx.titulo,
+    description: descripcion,
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+    // La horquilla de la tabla entera, no solo la de los diez de la ItemList.
+    ...(agregado ? { mainEntity: agregado } : {}),
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r_('/')) },
+      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(r_(`/${cat.slug}`)) },
+      { '@type': 'ListItem', position: 3, name: tx.h1, item: canonica },
+    ],
+  },
+  listaLd(tx.titulo, productos),
+];
+---
+<Base lang={lang} ancho="completo" titulo={tx.titulo} descripcion={descripcion} schema={schema}
+      noindex={!l.indexable}>
+
+  <p class="migas">
+    <a href={r_('/')}>{t('comun.inicio')}</a> / <a href={r_(`/${cat.slug}/`)}>{cat.nombre}</a> / {t('land.seleccion')}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {t('land.antetitulo_sel', cat.nombre.toLowerCase())} · {t('cat.datos_del')}{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{tx.h1}</h1>
+    {respuesta && <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>}
+    <p class="entradilla aparece d2">{tx.criterio}</p>
+  </section>
+
+  <Aviso lang={lang} />
+
+  <h2 class="titulo-bloque">{t('land.tres')}</h2>
+  <Destacados lang={lang} productos={productos} unidad={r.unidad} />
+
+  <h2 id="tabla" class="titulo-bloque">{t('land.completa')}</h2>
+  <div class="aparece d3 tabla-categoria">
+    <Cifras lang={lang} n={productos.length} min={r.barato?.precio_referencia}
+            max={r.caro?.precio_referencia} unidad={r.unidad} dec={r.dec} nivel4={r.nivel4} />
+    <TablaProductos lang={lang} productos={productos.map(paraTabla)} />
+  </div>
+
+  {resto.length > 0 && (
+    <CaraACara lang={lang} cat={l.cat}
+               ladoA={{ nombre: l.nombreTienda, productos }}
+               ladoB={{ nombre: copia(lang).cc_resto, productos: resto }} />
+  )}
+
+  <p class="nota">
+    <strong>{t('land.filtro_t')}</strong>{t('land.filtro_a')}<a href={r_(`/${cat.slug}/`)}>{t('land.filtro_enlace', cat.termino)}</a>{t('land.filtro_b')}
+    <a href={r_('/metodologia/#formula')}>{t('cat.nota.enlace')}</a>.
+  </p>
+
+  <Faq lang={lang} faqs={faqs} titulo={t('land.faq_sel', cat.termino)} />
+
+  {(hermanas.length > 0 || versus.length > 0) && (
+    <section class="seccion">
+      <div class="cabecera-seccion">
+        <h2>{t('land.otras_formas', cat.termino)}</h2>
+        <p class="apunte">{t('land.mismo_dataset')}</p>
+      </div>
+      <div class="lista-categorias">
+        <a class="fila-categoria" href={r_(`/${cat.slug}/`)}>
+          <span class="nombre">{cat.consultas?.mejor
+            ? cat.consultas.mejor.charAt(0).toUpperCase() + cat.consultas.mejor.slice(1)
+            : cat.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{cat.productos} {t('comun.prod_corto')}</span>
+        </a>
+        {hermanas.map((o) => (
+          <a class="fila-categoria" href={r_(`/mejores/${o.slug}/`)}>
+            <span class="nombre">{textosMejores(o, lang).h1.split(':')[0].trim()}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{o.productos.length} {t('comun.prod_corto')}</span>
+          </a>
+        ))}
+        {versus.map((o) => (
+          <a class="fila-categoria" href={r_(`/comparativa/${o.slug}/`)}>
+            <span class="nombre">{t('portada.comparativa_vs', o.na, o.nb, cat.termino)}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{o.productos.length} {t('comun.prod_corto')}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+</Base>

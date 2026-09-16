@@ -1,0 +1,114 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { EVIDENCIA } from '../../datos/evidencia.js';
+import { porFamilia } from '../../datos/familias.js';
+import { OBJETIVOS } from '../../datos/eficacia.js';
+import { abs } from '../../sitio.js';
+import { categoriasEn } from '../../datos/categorias-i18n.js';
+import { fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+
+// El indice del sitio en una pagina. Existe porque el pie tenia sesenta enlaces
+// (treinta categorias mas treinta guias) y un pie que hay que leer no lo lee nadie:
+// alli quedan dos botones y todo el mapa esta aqui, agrupado por estante.
+// Los nombres van traducidos (datos/categorias-i18n.js); el slug, nunca.
+const cats = categoriasEn(datos.categorias, lang);
+const categorias = porFamilia(cats, () => true, lang);
+const guias = porFamilia(cats, (c) => EVIDENCIA[c.slug], lang);
+const nGuias = guias.reduce((n, g) => n + g.cats.length, 0);
+const total = datos.productos.length;
+const unidad = (c) => (c.unidad_precio === 'capsula' ? t('comun.capsula') : 'kg');
+
+const schema = [{
+  '@type': 'CollectionPage',
+  '@id': `${abs(r('/guias'))}#pagina`,
+  name: t('guias.schema'),
+  url: abs(r('/guias')),
+  isPartOf: { '@id': abs('/#sitio') },
+}];
+---
+<Base lang={lang} ancho="completo" schema={schema}
+      titulo={t('guias.titulo')}
+      descripcion={t('guias.descripcion', datos.categorias.length, nGuias)}>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{t('guias.antetitulo')}</p>
+    <h1 class="aparece d1">{t('guias.h1')}</h1>
+    <p class="entradilla aparece d2">
+      {t('guias.entradilla_1')}<a href="#categorias">{t('guias.entradilla_cat')}</a>{t('guias.entradilla_2')}<a href="#guias">{t('guias.entradilla_guia')}</a>{t('guias.entradilla_3')}
+    </p>
+  </section>
+
+  <section id="antes" class="seccion-doc">
+    <h2><span class="num">00</span> {t('guias.h2_antes')}</h2>
+    <p class="sutil">{t('guias.sutil_antes')}</p>
+    <div class="lista-categorias">
+      <a class="fila-categoria" href={r('/suplementos-que-funcionan/')}>
+        <span class="nombre">{t('chrome.que_funciona')}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{t('guias.por_evidencia')}</span>
+      </a>
+      {OBJETIVOS.map((o) => (
+        <a class="fila-categoria" href={r(`/para/${o.slug}/`)}>
+          <span class="nombre">{t(`objetivo.${o.slug}.nombre`)}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{t('guias.por_objetivo')}</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href={r('/tiendas/')}>
+        <span class="nombre">{t('chrome.tienda_barata')}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{t('guias.ranking')}</span>
+      </a>
+    </div>
+  </section>
+
+  <section id="categorias" class="seccion-doc">
+    <h2><span class="num">01</span> {t('guias.h2_categorias')}</h2>
+    <p class="sutil">{t('guias.sutil_categorias', datos.categorias.length, total)}</p>
+    <div class="estantes">
+      {categorias.map((g) => (
+        <div class="estante">
+          <p class="rotulo">{t(`familia.${g.nombre}`)}</p>
+          <ul>
+            {g.cats.map((c) => (
+              <li>
+                <a class="fila-indice" href={r(`/${c.slug}/`)}>
+                  <span class="nombre">{c.nombre}</span>
+                  <span class="cuenta">{c.productos} · €/{unidad(c)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section id="guias" class="seccion-doc">
+    <h2><span class="num">02</span> {t('guias.h2_guias')}</h2>
+    <p class="sutil">{t('guias.sutil_guias', nGuias)}</p>
+    <div class="estantes">
+      {guias.map((g) => (
+        <div class="estante">
+          <p class="rotulo">{t(`familia.${g.nombre}`)}</p>
+          <ul>
+            {g.cats.map((c) => (
+              <li>
+                <a class="fila-indice" href={r(`/guia/${c.slug}/`)}>
+                  <span class="nombre">{c.nombre}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>

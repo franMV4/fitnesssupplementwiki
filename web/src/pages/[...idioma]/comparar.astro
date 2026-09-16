@@ -1,0 +1,39 @@
+---
+import Base from '../../layouts/Base.astro';
+import Comparador from '../../componentes/Comparador.jsx';
+import { fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+import { CATEGORIAS_I18N } from '../../datos/categorias-i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+// Solo los nombres del idioma de la pagina: la isla no carga el diccionario de categorias.
+const nombres = Object.fromEntries(Object.entries(CATEGORIAS_I18N)
+  .filter(([, v]) => v[lang]).map(([slug, v]) => [slug, v[lang].nombre]));
+
+// La comparativa que arma el lector con el boton "+ comparar" de las tablas.
+//
+// noindex a proposito: su contenido lo pone el navegador de cada visitante, asi que para
+// Google esta pagina esta vacia y no hay nada que indexar. Es una utilidad, como /entrar.
+---
+<Base lang={lang} titulo={t('comparar.titulo')}
+      descripcion={t('comparar.descripcion')}
+      noindex>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('comparar.miga')}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{t('comparar.antetitulo')}</p>
+    <h1 class="aparece d1">{t('comparar.h1')}</h1>
+    <p class="entradilla aparece d2">{t('comparar.entradilla')}</p>
+  </section>
+
+  <Comparador lang={lang} nombres={nombres} client:load />
+
+  <p class="nota">
+    <strong>{t('comparar.nota.titulo')}</strong> {t('comparar.nota.cuerpo')}
+    <a href={r('/metodologia/#formula')}>{t('comun.como_score')}</a>.
+  </p>
+</Base>

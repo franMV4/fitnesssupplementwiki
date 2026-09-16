@@ -1,31 +1,39 @@
 ---
-import Base from '../layouts/Base.astro';
-import TablaProductos from '../componentes/TablaProductos.astro';
-import Aviso from '../componentes/Aviso.astro';
-import Cifras from '../componentes/Cifras.astro';
-import ReglaPrecios from '../componentes/ReglaPrecios.astro';
-import Faq from '../componentes/Faq.astro';
-import datos from '../datos/dataset.json';
-import { EVIDENCIA } from '../datos/evidencia.js';
-import { BREVE } from '../datos/breve.js';
-import { abs } from '../sitio.js';
-import { eur, paraTabla, UNIDAD } from '../datos/util.js';
+import Base from '../../layouts/Base.astro';
+import TablaProductos from '../../componentes/TablaProductos.astro';
+import Aviso from '../../componentes/Aviso.astro';
+import Cifras from '../../componentes/Cifras.astro';
+import ReglaPrecios from '../../componentes/ReglaPrecios.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { EVIDENCIA } from '../../datos/evidencia.js';
+import { breve } from '../../datos/breve-i18n.js';
+import { abs } from '../../sitio.js';
+import { eur, paraTabla, UNIDAD } from '../../datos/util.js';
 import {
   agregadoLd, descripcionCategoria, faqsCategoria, fechaLarga, h1Categoria, listaLd,
   resumen, tituloCategoria,
-} from '../datos/seo.js';
-import { comparativasDe, mejoresDe } from '../datos/landings.js';
+} from '../../datos/seo.js';
+import { comparativasDe, mejoresDe } from '../../datos/landings.js';
+import { enIdioma } from '../../datos/categorias-i18n.js';
+import { LANG, fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
 
 export function getStaticPaths() {
-  return datos.categorias.map((c) => ({
+  return porIdioma(datos.categorias.map((c) => ({
     params: { categoria: c.slug },
     props: { cat: c, productos: datos.productos.filter((p) => p.categoria === c.slug) },
-  }));
+  })));
 }
 
-const { cat, productos } = Astro.props;
+const { cat: catEs, productos, lang } = Astro.props;
+const t = textos(lang);
+const r_ = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+// La categoria con su nombre, su termino y sus consultas en el idioma de la pagina. El
+// slug es el mismo, asi que la URL, el filtro de productos y el JSON crudo no cambian.
+const cat = enIdioma(catEs, lang);
 const nombre = cat.nombre;
-const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+const unidad = UNIDAD[lang][cat.unidad_precio] ?? 'kg';
 const conDosis = cat.con_dosis;
 const verificados = productos.filter((p) => p.nivel_verificacion === 4).length;
 const tiendas = new Set(productos.map((p) => p.tienda)).size;
@@ -40,14 +48,14 @@ const dec = unidad === 'kg' ? 2 : 3;
 // ("que creatina comprar") no se pierde: sigue siendo la primera pregunta del FAQ de esta
 // misma pagina, que es donde Google la lee para el fragmento destacado.
 const consulta = cat.consultas?.mejor;
-const h1 = h1Categoria(cat, datos.generado);
+const h1 = h1Categoria(cat, datos.generado, lang);
 // Landings de intencion de esta categoria (datos/landings.js).
 const selecciones = mejoresDe(cat.slug);
 const versus = comparativasDe(cat.slug);
-const r = resumen(cat, productos); // para la regla de precios de la cabecera
-const faqs = faqsCategoria(cat, productos, datos.dosis_referencia, datos.generado);
-const otras = datos.categorias.filter((c) => c.slug !== cat.slug);
-const canonica = abs(`/${cat.slug}`);
+const r = resumen(cat, productos, lang); // para la regla de precios de la cabecera
+const faqs = faqsCategoria(cat, productos, datos.dosis_referencia, datos.generado, lang);
+const otras = datos.categorias.filter((c) => c.slug !== cat.slug).map((c) => enIdioma(c, lang));
+const canonica = abs(r_(`/${cat.slug}`));
 // La guia de la categoria, si esta escrita. Esta pagina compara precios; la guia explica
 // que hace el ingrediente y con que fuente. Se enlazan entre si y no compiten: una responde
 // "cual compro" y la otra "para que sirve".
@@ -56,15 +64,15 @@ const guia = EVIDENCIA[cat.slug];
 // Los diez primeros con su oferta. Mas no aporta: nadie lee una ItemList de 118. La
 // horquilla de los otros ciento ocho no se pierde: va en el AggregateOffer.
 const agregado = agregadoLd(
-  `${nombre} en las tiendas comparadas`, productos, canonica);
+  t('cat.schema.agregado', nombre), productos, canonica);
 const schema = [
   {
     '@type': 'CollectionPage',
     '@id': canonica,
     url: canonica,
-    name: tituloCategoria(cat, datos.generado, productos),
-    description: descripcionCategoria(cat, productos, datos.generado),
-    inLanguage: 'es-ES',
+    name: tituloCategoria(cat, datos.generado, productos, lang),
+    description: descripcionCategoria(cat, productos, datos.generado, lang),
+    inLanguage: LANG[lang],
     dateModified: datos.generado,
     // Del sitio y, ademas, del dataset que se declara en la portada: estas treinta
     // tablas no son treinta articulos sueltos, son las particiones de una misma base
@@ -78,32 +86,32 @@ const schema = [
   {
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r_('/')) },
       { '@type': 'ListItem', position: 2, name: nombre, item: canonica },
     ],
   },
-  listaLd(`${nombre}: ranking por precio por ${unidad} y certificacion`, productos),
+  listaLd(t('cat.schema.lista', nombre, unidad), productos),
 ];
 ---
-<Base ancho="completo"
-      titulo={tituloCategoria(cat, datos.generado, productos)}
-      descripcion={descripcionCategoria(cat, productos, datos.generado)}
+<Base lang={lang} ancho="completo"
+      titulo={tituloCategoria(cat, datos.generado, productos, lang)}
+      descripcion={descripcionCategoria(cat, productos, datos.generado, lang)}
       schema={schema}>
 
-  <p class="migas"><a href="/">Inicio</a> / {nombre}</p>
+  <p class="migas"><a href={r_('/')}>{t('comun.inicio')}</a> / {nombre}</p>
 
   <section class="cabecera-pagina">
     <p class="antetitulo aparece">
-      {consulta ? consulta.charAt(0).toUpperCase() + consulta.slice(1) : nombre} · datos del{' '}
+      {consulta ? consulta.charAt(0).toUpperCase() + consulta.slice(1) : nombre} · {t('cat.datos_del')}{' '}
       <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
     </p>
     <h1 class="aparece d1">{h1}</h1>
     {/* Aqui iba "La respuesta corta" (quien gana, horquilla y mediana): repetia la regla
         de precios de debajo y la tabla. Decision del dueno (2026-09-14): la cabecera dice
         que hace el suplemento, en corto, y manda a la guia con un boton que se vea. */}
-    {BREVE[cat.slug] && <p class="que-hace aparece d2">{BREVE[cat.slug]}</p>}
+    {breve(cat.slug, lang) && <p class="que-hace aparece d2">{breve(cat.slug, lang)}</p>}
     {r.barato && r.caro && (
-      <ReglaPrecios min={r.barato.precio_referencia} max={r.caro.precio_referencia}
+      <ReglaPrecios lang={lang} min={r.barato.precio_referencia} max={r.caro.precio_referencia}
                     mediana={r.mediana} lider={r.lider?.precio_referencia}
                     unidad={unidad} dec={dec} />
     )}
@@ -116,20 +124,17 @@ const schema = [
         viene. El enlace se queda, en una linea. */}
     {guia && (
       <p class="pase-guia aparece d2">
-        <a class="boton primario" href={`/guia/${cat.slug}/`}>Que hace {cat.termino}, en que
-        dosis y con que evidencia <span class="flecha" aria-hidden="true">&rarr;</span></a>
+        <a class="boton primario" href={r_(`/guia/${cat.slug}/`)}>{t('cat.pase_guia', cat.termino)}
+        {' '}<span class="flecha" aria-hidden="true">&rarr;</span></a>
       </p>
     )}
   </section>
 
-  <Aviso />
+  <Aviso lang={lang} />
 
   {!conDosis && (
     <p class="nota">
-      <strong>De la formula de esta categoria no se afirma nada.</strong> Ninguna de estas
-      tiendas publica cuanto activo lleva cada dosis, asi que el score sale del precio por
-      {' '}{unidad} y del nivel de verificacion, y nadie aparece aqui como bien o mal
-      dosificado: no tenemos el dato y no nos lo inventamos.
+      <strong>{t('cat.sin_dosis.titulo')}</strong> {t('cat.sin_dosis.cuerpo', unidad)}
     </p>
   )}
 
@@ -137,22 +142,20 @@ const schema = [
       cabecera de la tabla, no dos bloques. Apilados costaban 157 px justo donde mas
       caro sale, entre el titular de la pagina y la primera fila de datos. */}
   <div class="cabecera-tabla titulo-bloque">
-    <h2 id="tabla">Comparativa completa</h2>
-    <Cifras n={productos.length} min={barato} max={caro} unidad={unidad} dec={dec}
+    <h2 id="tabla">{t('cat.h2_tabla')}</h2>
+    <Cifras lang={lang} n={productos.length} min={barato} max={caro} unidad={unidad} dec={dec}
             nivel4={verificados} />
   </div>
   <div class="aparece d3 tabla-categoria">
-    <TablaProductos productos={productos.map(paraTabla)} />
+    <TablaProductos lang={lang} productos={productos.map(paraTabla)} />
   </div>
 
   <p class="nota">
-    <strong>Que estas mirando.</strong> El score es mitad precio por {unidad} frente al mas
-    barato de la categoria y mitad calidad: nivel de verificacion, forma quimica del activo y,
-    donde la tienda publica las dosis, si la formula llega a la dosis efectiva. Cada producto
-    explica su nota linea a linea en su ficha. <a href="/metodologia/#formula">Como se calcula</a>.
+    <strong>{t('cat.nota.titulo')}</strong> {t('cat.nota.cuerpo', unidad)}
+    <a href={r_('/metodologia/#formula')}>{t('cat.nota.enlace')}</a>.
   </p>
 
-  <Faq faqs={faqs} titulo={`Preguntas sobre ${cat.termino}`} />
+  <Faq lang={lang} faqs={faqs} titulo={t('cat.faq_titulo', cat.termino)} />
 
   {/* Las dos colas de enlaces internos median 3.981 px en escritorio y 10.232 en movil,
       o sea el 64 % de la pagina en un movil, para 142 enlaces que nadie recorre de
@@ -164,23 +167,22 @@ const schema = [
     <section class="seccion">
       <details class="cola-enlaces">
         <summary>
-          <span class="titulo-cola">Preguntas mas concretas sobre {cat.termino}</span>
-          <span class="cuenta-cola">{selecciones.length + versus.length} comparativas
-            {' '}&mdash; la misma tabla, filtrada</span>
+          <span class="titulo-cola">{t('cat.cola.titulo', cat.termino)}</span>
+          <span class="cuenta-cola">{t('cat.cola.cuenta', selecciones.length + versus.length)}</span>
         </summary>
         <div class="lista-categorias compacta">
           {selecciones.map((l) => (
-            <a class="fila-categoria" href={`/mejores/${l.slug}/`}>
+            <a class="fila-categoria" href={r_(`/mejores/${l.slug}/`)}>
               <span class="nombre">{l.h1.split(':')[0]}</span>
               <span class="guia" aria-hidden="true"></span>
-              <span class="cuenta">{l.productos.length} prod.</span>
+              <span class="cuenta">{l.productos.length} {t('comun.prod_corto')}</span>
             </a>
           ))}
           {versus.map((l) => (
-            <a class="fila-categoria" href={`/comparativa/${l.slug}/`}>
-              <span class="nombre">{l.na} o {l.nb} en {cat.termino}</span>
+            <a class="fila-categoria" href={r_(`/comparativa/${l.slug}/`)}>
+              <span class="nombre">{t('portada.comparativa_vs', l.na, l.nb, cat.termino)}</span>
               <span class="guia" aria-hidden="true"></span>
-              <span class="cuenta">{l.productos.length} prod.</span>
+              <span class="cuenta">{l.productos.length} {t('comun.prod_corto')}</span>
             </a>
           ))}
         </div>
@@ -191,17 +193,17 @@ const schema = [
   <section class="seccion">
     <details class="cola-enlaces">
       <summary>
-        <span class="titulo-cola">Otras comparativas</span>
-        <span class="cuenta-cola">{otras.length} categorias &mdash; mismo metodo</span>
+        <span class="titulo-cola">{t('cat.otras.titulo')}</span>
+        <span class="cuenta-cola">{t('cat.otras.cuenta', otras.length)}</span>
       </summary>
       <div class="lista-categorias compacta">
         {otras.map((c) => (
-          <a class="fila-categoria" href={`/${c.slug}/`}>
+          <a class="fila-categoria" href={r_(`/${c.slug}/`)}>
             <span class="nombre">{c.consultas?.mejor
               ? c.consultas.mejor.charAt(0).toUpperCase() + c.consultas.mejor.slice(1)
               : c.nombre}</span>
             <span class="guia" aria-hidden="true"></span>
-            <span class="cuenta">{c.productos} prod.</span>
+            <span class="cuenta">{c.productos} {t('comun.prod_corto')}</span>
           </a>
         ))}
       </div>
@@ -209,8 +211,7 @@ const schema = [
   </section>
 
   <p class="nota">
-    <strong>Los datos, en crudo.</strong> Este ranking tambien esta en
-    {' '}<a href={`/datos/${cat.slug}.json`}>JSON</a>, con la fecha de recogida y el enlace a
-    cada ficha. Se puede citar y reutilizar diciendo de donde sale y de que dia son los precios.
+    <strong>{t('cat.crudo.titulo')}</strong> {t('cat.crudo.cuerpo_1')}
+    <a href={`/datos/${cat.slug}.json`}>JSON</a>{t('cat.crudo.cuerpo_2')}
   </p>
 </Base>

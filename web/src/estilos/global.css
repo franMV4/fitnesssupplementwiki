@@ -465,6 +465,27 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
   background: none; border: 0; border-left: 1px solid var(--regla);
   font-family: var(--texto); line-height: 1; min-width: 3.4rem; justify-content: center;
 }
+/* Selector de idioma. En la barra de pestanas es el vecino del boton de tema, y por eso
+   se pinta igual que el: filete a la izquierda, versales y el mismo alto. Tres codigos
+   de dos letras y no tres nombres, porque "Espanol English Francais" no cabe en la barra
+   junto a Metodologia y Comparar sin romper la linea. */
+.idiomas {
+  display: inline-flex; align-items: center; gap: .1rem;
+  border-left: 1px solid var(--regla); padding-inline: .5rem;
+}
+.idiomas > .glifo-panel { display: none; }
+.idiomas a {
+  padding: .2rem .38rem; border-radius: 2px;
+  color: var(--tinta-2); text-decoration: none;
+  font-size: .66rem; font-weight: 700; letter-spacing: .09em;
+  transition: background .16s ease, color .16s ease;
+}
+.idiomas a:hover { background: var(--tinta); color: var(--papel); }
+/* El idioma en el que estas: el mismo naranja con el que la web marca un dato propio.
+   No se desactiva el enlace (sigue siendo su canonical) pero deja de invitar al clic. */
+.idiomas a[aria-current="true"] { color: var(--senal-txt); cursor: default; }
+.idiomas a[aria-current="true"]:hover { background: none; color: var(--senal-txt); }
+
 /* El pie del panel (administracion + tema) vive dentro del <nav> para que en movil
    caiga al fondo del panel lateral. En escritorio no es un bloque: es el ultimo hueco
    de la barra de pestanas, asi que se deshace como contenedor y deja pasar a sus hijos.
@@ -1630,6 +1651,20 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
   .pie-panel > .enlace-admin { display: flex; color: var(--senal-txt); }
   .pie-panel > .enlace-admin[hidden] { display: none; }
   .glifo-panel { font-size: 1.1rem; line-height: 1; }
+  /* En el panel hay sitio de sobra: el selector es una fila mas, con su globo de icono
+     a la izquierda igual que el engranaje de administracion, y los tres codigos
+     separados como botones de verdad (44 px, que es un dedo). */
+  .pie-panel > .idiomas {
+    display: flex; align-items: center; gap: var(--e2);
+    width: 100%; min-height: 52px; box-sizing: border-box;
+    padding: 0 var(--e4); border-left: 0; border-bottom: 1px solid var(--regla);
+  }
+  .pie-panel > .idiomas > .glifo-panel { display: inline; }
+  .pie-panel > .idiomas a {
+    min-width: 44px; min-height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--regla); font-size: .78rem;
+  }
   /* En el panel el tema se lee, no se adivina: el simbolo se queda de icono y el
      nombre va al lado. */
   .pie-panel > .tema {

@@ -1,6 +1,8 @@
 ---
-import { NIVEL, ORDENES, TIENDAS, UNIDAD, eur, precioReferencia, puntos,
+import { NIVEL, ORDENES, TIENDAS, UNIDAD, eur, nombreOrden, precioReferencia, puntos,
          tieneSello } from '../datos/util.js';
+import { ruta, textos } from '../i18n.js';
+import { metodo } from '../datos/metodologia.js';
 
 // La tabla de categoria: se pinta entera en el build y los filtros los mueve un script
 // de ~120 lineas sobre las filas que ya estan en el DOM (tabla.js).
@@ -18,23 +20,39 @@ import { NIVEL, ORDENES, TIENDAS, UNIDAD, eur, precioReferencia, puntos,
 //
 // Sin JavaScript la tabla sigue siendo la de siempre: ordenada por score, con sus
 // puestos, su fila mas barata marcada y las 25 primeras a la vista.
-const { productos } = Astro.props;
+const { productos, lang = 'es' } = Astro.props;
+const t = textos(lang);
+const m = metodo(lang);
+// Los dos sellos de la web los escribe el pipeline en espanol dentro de cada producto
+// ("Mejor precio", "Verificado nivel 4"). Aqui se reconocen por su forma y se reescriben
+// con los textos de la metodologia, que es donde viven los mismos dos sellos traducidos:
+// un sello no puede decir una cosa en la tabla y otra en la pagina que lo explica.
+const sello = (s) => {
+  if (lang === 'es') return s;
+  const nivel = /^Verificado nivel (\d)/.exec(s.texto);
+  if (nivel) return { texto: m('sello_verificado', nivel[1]), criterio: m('sello_verificado_criterio') };
+  const umbral = /(\d+) sobre 100/.exec(s.criterio ?? '');
+  if (s.texto === 'Mejor precio') {
+    return { texto: m('sello_precio'), criterio: umbral ? m('sello_precio_criterio', umbral[1]) : '' };
+  }
+  return s;
+};
 
 const TOPE = 25;
 
 const NIVELES_CHIP = [
-  { v: 1, texto: 'Todos' },
-  { v: 2, texto: '2+ declarado' },
-  { v: 3, texto: '3+ analisis' },
-  { v: 4, texto: '4 verificado' },
+  { v: 1, texto: t('tabla.nivel.todos') },
+  { v: 2, texto: t('tabla.nivel.2') },
+  { v: 3, texto: t('tabla.nivel.3') },
+  { v: 4, texto: t('tabla.nivel.4') },
 ];
 
 // Sellos que existen en el dataset y que valen nivel 4 porque los respalda un tercero.
 // El chip solo aparece si esta tabla tiene alguno: un filtro que siempre deja la tabla
 // vacia es peor que no tener filtro.
 const SELLOS_CHIP = [
-  { tipo: 'creapure', texto: 'Solo Creapure' },
-  { tipo: 'ifos', texto: 'Solo IFOS' },
+  { tipo: 'creapure', texto: t('tabla.solo_sello', 'Creapure') },
+  { tipo: 'ifos', texto: t('tabla.solo_sello', 'IFOS') },
 ];
 
 const tiendas = [...new Set(productos.map((p) => p.tienda))].sort();
@@ -48,7 +66,7 @@ const hayVerificacion = productos.some((p) => p.nivel_verificacion >= 4);
 // Una categoria en capsulas (omega 3, multivitaminicos) no tiene precio por kilo, y
 // poner "€/kg" encima de un precio por capsula es ensenar un numero mintiendo sobre
 // que numero es.
-const unidadPrecio = `€/${UNIDAD[productos.find((p) => p.unidad_precio)?.unidad_precio] ?? 'kg'}`;
+const unidadPrecio = `€/${UNIDAD[lang][productos.find((p) => p.unidad_precio)?.unidad_precio] ?? 'kg'}`;
 
 // Los sellos presentes en ESTA tabla. En proteinas no hay ninguno y los chips no salen.
 const sellosVisibles = SELLOS_CHIP.filter((s) => productos.some((p) => tieneSello(p, s.tipo)));
@@ -62,6 +80,27 @@ const minPrecio = refs.length ? Math.min(...refs) : null;
 // Lo que el script necesita de cada fila para volver a filtrar y ordenar. Son ocho
 // campos cortos por producto, no el producto entero: unos 60 bytes frente a los 900 que
 // costaba serializar el mismo producto en las props de la isla.
+// tabla.js es un modulo suelto (no una isla) y no recibe props: los pocos textos que
+// escribe en caliente (el pie, el estado de los botones, la barra de comparar) viajan
+// aqui dentro y los lee una vez al montar. Un JSON de 400 bytes en vez de tres copias
+// del script o de meter el diccionario entero en el bundle del navegador.
+const textoScript = JSON.stringify({
+  pie: t('tabla.pie'),
+  pieFiltrado: t('tabla.pie_filtrado', '%v', '%n'),
+  comparar: t('tabla.comparar'),
+  enComparativa: t('tabla.en_comparativa'),
+  miLista: t('tabla.mi_lista'),
+  enMiLista: t('tabla.en_mi_lista'),
+  guardado: t('tabla.guardados', 1),
+  guardados: t('tabla.guardados', 2),
+  tope: t('tabla.tope', '%s'),
+  opinion: t('tabla.opiniones_lectores', 1),
+  opiniones: t('tabla.opiniones_lectores', 2),
+  aqui: t('tabla.aqui'),
+  caption: t('tabla.caption', '%s'),
+  ordenes: Object.fromEntries(Object.keys(ORDENES).map((k) => [k, nombreOrden(k, lang)])),
+});
+
 const fila = (p) => ({
   'data-slug': p.slug,
   'data-cat': p.categoria,
@@ -75,7 +114,7 @@ const fila = (p) => ({
 });
 ---
 <div class="tabla-comparador" data-tope={TOPE} data-unidad={unidadPrecio}
-     data-total={productos.length}>
+     data-total={productos.length} data-txt={textoScript}>
 
   {/* El rotulo de cada filtro ya no va ENCIMA del control, va DENTRO: en el hueco del
       campo vacio, o como primera opcion del desplegable. Cuatro rotulos apilados
@@ -87,40 +126,40 @@ const fila = (p) => ({
       JS (y en escritorio) se vean; tabla.js lo cierra al cargar solo si la pantalla es
       de movil. El resumen solo se pinta en movil (seccion 19). */}
   <details class="filtros" open>
-    <summary>Filtrar y ordenar</summary>
+    <summary>{t('tabla.filtrar')}</summary>
   <div class="barra-filtros">
     <label class="campo ancho">
-      <span class="solo-lector">Buscar</span>
-      <input type="search" name="busqueda" placeholder="Buscar marca o producto" />
+      <span class="solo-lector">{t('tabla.buscar')}</span>
+      <input type="search" name="busqueda" placeholder={t('tabla.buscar_hueco')} />
     </label>
     <label class="campo">
-      <span class="solo-lector">Tienda</span>
+      <span class="solo-lector">{t('tabla.tienda')}</span>
       <select name="tienda">
-        <option value="">Todas las tiendas</option>
+        <option value="">{t('tabla.todas_tiendas')}</option>
         {tiendas.map((t) => <option value={t}>{TIENDAS[t] ?? t}</option>)}
       </select>
     </label>
     <label class="campo">
-      <span class="solo-lector">Maximo {unidadPrecio}</span>
-      <input type="number" name="precioMax" min="0" step="1" placeholder={`Maximo ${unidadPrecio}`} />
+      <span class="solo-lector">{t('tabla.maximo', unidadPrecio)}</span>
+      <input type="number" name="precioMax" min="0" step="1" placeholder={t('tabla.maximo', unidadPrecio)} />
     </label>
     {/* Este es el unico que no puede llevar el rotulo dentro: un desplegable ensena
         siempre lo elegido, y "Score (recomendado)" a secas no dice que sea el orden.
         Lleva el glifo de ordenar delante, que ocupa una letra en vez de una linea. */}
     <label class="campo campo-orden">
-      <span class="solo-lector">Ordenar por</span>
+      <span class="solo-lector">{t('tabla.ordenar_por')}</span>
       <select name="orden">
         {/* Los que no dependen de nada dinamico. El de la nota de los lectores lo anade
             tabla.js si la API dice que en esta categoria hay resenas. */}
         {Object.entries(ORDENES).filter(([, v]) => !v.tarde)
-          .map(([k, v]) => <option value={k}>{v.etiqueta}</option>)}
+          .map(([k]) => <option value={k}>{nombreOrden(k, lang)}</option>)}
       </select>
     </label>
     {/* El chip de limpiar solo tiene sentido con algun filtro puesto: al cargar no hay
         ninguno, asi que sale oculto y lo ensena el script. */}
     <div class="campo linea" data-limpiar hidden>
       <div class="grupo-chips">
-        <button type="button" class="chip">limpiar filtros</button>
+        <button type="button" class="chip">{t('tabla.limpiar')}</button>
       </div>
     </div>
     {hayVerificacion && (
@@ -128,7 +167,7 @@ const fila = (p) => ({
         {/* El rotulo baja a un renglon de mando en mono, del mismo tono que las reglas:
             no es un titulo de campo, es lo que hay escrito al lado de una fila de
             botones. */}
-        <span class="rotulo-mando">Verificacion minima</span>
+        <span class="rotulo-mando">{t('tabla.verificacion_minima')}</span>
         <div class="grupo-chips">
           {NIVELES_CHIP.map((n) => (
             <button type="button" class="chip" data-nivel={n.v}
@@ -147,19 +186,19 @@ const fila = (p) => ({
   <div class="tabla-marco">
     <div class="tabla-scroll">
       <table class:list={['apilable', 'fichas', { recortada: visibles.length > TOPE }]}>
-        <caption>Productos ordenados por {ORDENES.score.etiqueta.toLowerCase()}</caption>
+        <caption>{t('tabla.caption', nombreOrden('score', lang).toLowerCase())}</caption>
         <thead>
           <tr>
             <th class="rango">#</th>
-            <th>Producto</th>
-            <th>Tienda</th>
+            <th>{t('tabla.col.producto')}</th>
+            <th>{t('tabla.tienda')}</th>
             {/* Cabecera que ordena al pincharla. El desplegable "Ordenar por" sigue
                 estando (es el unico que se ve en movil, donde la tabla se apila y no hay
                 cabecera): los dos escriben el mismo estado y no pueden contradecirse. */}
-            <th class="num" aria-sort="none"><button type="button" class="orden" data-orden="precio">Envase</button></th>
+            <th class="num" aria-sort="none"><button type="button" class="orden" data-orden="precio">{t('tabla.col.envase')}</button></th>
             <th class="num" aria-sort="none"><button type="button" class="orden" data-orden="kg">{unidadPrecio}</button></th>
-            {hayVerificacion && <th>Verificacion</th>}
-            <th class="num" aria-sort="ascending"><button type="button" class="orden activo" data-orden="score">Score</button></th>
+            {hayVerificacion && <th>{t('tabla.col.verificacion')}</th>}
+            <th class="num" aria-sort="ascending"><button type="button" class="orden activo" data-orden="score">{t('tabla.col.score')}</button></th>
           </tr>
         </thead>
         <tbody>
@@ -192,39 +231,39 @@ const fila = (p) => ({
                         {p.marca !== 'Desconocida' ? ' ' : ''}{p.nombre}
                       </span>
                     </a>
-                    {p.sabores > 1 && <span class="sutil"> · {p.sabores} sabores</span>}
+                    {p.sabores > 1 && <span class="sutil"> · {t('tabla.sabores', p.sabores)}</span>}
                     {/* La nota de los compradores en la tienda y lo que la tabla
                         nutricional dice que es activo. Van en la celda del nombre y no en
                         columnas propias: dos columnas mas estrechan la tabla en movil por
                         dos datos que no todas las tiendas publican. */}
                     {p.valoracion && (
-                      <span class="opinion" title={`${p.n_valoraciones} opiniones en la tienda`}>
+                      <span class="opinion" title={t('tabla.opiniones_tienda', p.n_valoraciones)}>
                         {p.valoracion.toFixed(1)}<i aria-hidden="true">★</i>
                         <span class="sutil"> ({p.n_valoraciones})</span>
                       </span>
                     )}
                     {p.pureza_real && (
-                      <span class="sutil" title="Activo por cada 100 g, segun la tabla de la ficha">
-                        {' · '}{Math.round(p.pureza_real * 100)} % activo
+                      <span class="sutil" title={t('tabla.activo_titulo')}>
+                        {' · '}{t('tabla.activo', Math.round(p.pureza_real * 100))}
                       </span>
                     )}
                     {p.requisitos_total > 0 && (
                       <span class:list={['requisitos-mini',
                                          { incumple: p.requisitos_cumple < p.requisitos_total }]}
-                            title="Requisitos de la categoria que cumple, de los comprobables">
-                        {' · '}{p.requisitos_cumple}/{p.requisitos_total} requisitos
+                            title={t('tabla.requisitos_titulo')}>
+                        {' · '}{t('tabla.requisitos', p.requisitos_cumple, p.requisitos_total)}
                       </span>
                     )}
-                    {p.sellos?.map((s) => <span class="sello" title={s.criterio}>{s.texto}</span>)}
-                    {p.flag_infradosaje && <div class="infradosis">infradosificado</div>}
+                    {p.sellos?.map(sello).map((s) => <span class="sello" title={s.criterio}>{s.texto}</span>)}
+                    {p.flag_infradosaje && <div class="infradosis">{t('tabla.infradosis')}</div>}
                     {/* Guardar para comparar. Va dentro de la celda del nombre y no en
                         una columna nueva: una columna mas estrecha la tabla en movil por
                         una funcion que no usa todo el mundo. */}
-                    <button type="button" class="marcar" aria-pressed="false">comparar</button>
+                    <button type="button" class="marcar" aria-pressed="false">{t('tabla.comparar')}</button>
                     {/* Comparar es para esta tarde: cuatro botes enfrentados y a decidir.
                         Mi lista es para el mes que viene: lo que tomas, con tu dosis y lo
                         que te cuesta. Son dos cosas distintas y por eso son dos botones. */}
-                    <button type="button" class="marcar mi-lista" aria-pressed="false">mi lista</button>
+                    <button type="button" class="marcar mi-lista" aria-pressed="false">{t('tabla.mi_lista')}</button>
                   </div>
                 </div>
               </td>
@@ -234,23 +273,23 @@ const fila = (p) => ({
                    data-salida={p.tienda} data-afiliado={p.url_afiliado ? '1' : null}
                    target="_blank">{TIENDAS[p.tienda] ?? p.tienda}</a>
               </td>
-              <td class="num" data-et="Envase">{eur(p.precio_eur)}</td>
+              <td class="num" data-et={t('tabla.col.envase')}>{eur(p.precio_eur, 2, lang)}</td>
               <td class:list={['num', 'referencia',
                                { destacado: p.precio_referencia != null
                                             && p.precio_referencia === minPrecio }]}
                   data-et={unidadPrecio}>
-                {precioReferencia(p).valor}
-                {precioReferencia(p).unidad && <span class="sutil"> /{precioReferencia(p).unidad}</span>}
+                {precioReferencia(p, lang).valor}
+                {precioReferencia(p, lang).unidad && <span class="sutil"> /{precioReferencia(p, lang).unidad}</span>}
               </td>
               {hayVerificacion && (
-                <td data-et="Verificacion">
-                  <span class:list={['nivel', NIVEL[p.nivel_verificacion].clase]}>
+                <td data-et={t('tabla.col.verificacion')}>
+                  <span class:list={['nivel', NIVEL[lang][p.nivel_verificacion].clase]}>
                     <span class="puntos">{puntos(p.nivel_verificacion).map((on) => <i class:list={[{ on }]} />)}</span>
-                    {' '}{NIVEL[p.nivel_verificacion].etiqueta}
+                    {' '}{NIVEL[lang][p.nivel_verificacion].etiqueta}
                   </span>
                 </td>
               )}
-              <td class="num puntuacion" data-et="Score">
+              <td class="num puntuacion" data-et={t('tabla.col.score')}>
                 <span class="cifra">{p.score_final?.toFixed(0) ?? '—'}</span>
                 <span class="barra mini"><span style={`width: ${p.score_final ?? 0}%`} /></span>
               </td>
@@ -260,21 +299,20 @@ const fila = (p) => ({
       </table>
     </div>
     <button type="button" class="boton ver-mas" hidden={visibles.length <= TOPE}>
-      Ver los <span data-restantes>{visibles.length - TOPE}</span> productos restantes
+      {t('tabla.ver_mas')} <span data-restantes>{visibles.length - TOPE}</span> {t('tabla.ver_mas_cola')}
       <span class="flecha">↓</span>
     </button>
-    <a class="volver-arriba" href="#contenido" hidden>↑ Volver arriba</a>
+    <a class="volver-arriba" href="#contenido" hidden>↑ {t('tabla.volver_arriba')}</a>
     {/* Era una linea de mono en gris que decia "Ningun producto cumple esos filtros" y
         dejaba al lector en un callejon: la tabla vacia, los filtros arriba fuera de la
         pantalla y ningun sitio donde pulsar. Ahora dice de cuantos habla y trae la
         salida puesta. El boton lleva `data-limpiar` como el chip de arriba: los dos los
         atiende el mismo `closest('[data-limpiar]')` de tabla.js. */}
     <div class="vacio" hidden>
-      <p class="vacio-titulo">Ningun producto pasa ese corte</p>
-      <p class="vacio-pie">De los {productos.length} de esta tabla, ninguno cumple a la vez
-        todos los filtros que hay puestos.</p>
+      <p class="vacio-titulo">{t('tabla.vacio_titulo')}</p>
+      <p class="vacio-pie">{t('tabla.vacio_pie', productos.length)}</p>
       <div data-limpiar>
-        <button type="button" class="chip">Quitar los filtros</button>
+        <button type="button" class="chip">{t('tabla.quitar_filtros')}</button>
       </div>
     </div>
   </div>
@@ -282,11 +320,11 @@ const fila = (p) => ({
   {/* El recuento va DEBAJO, como el pie de una tabla impresa: arriba repetia la cifra
       que ya da el bloque de cifras de la cabecera, y decia dos veces lo mismo con dos
       tipografias distintas. Aqui cierra lo que se acaba de leer. */}
-  <p class="pie-tabla" aria-live="polite"><b>{productos.length}</b> productos en esta tabla</p>
+  <p class="pie-tabla" aria-live="polite"><b>{productos.length}</b> {t('tabla.pie')}</p>
 
   <div class="barra-comparar" hidden>
-    <span><b data-cuenta>0</b> <span data-etiqueta>productos guardados</span></span>
-    <a class="boton primario" href="/comparar/">Ver la comparativa →</a>
+    <span><b data-cuenta>0</b> <span data-etiqueta>{t('tabla.guardados', 0)}</span></span>
+    <a class="boton primario" href={ruta(lang, '/comparar/')}>{t('tabla.ver_comparativa')} →</a>
   </div>
 </div>
 

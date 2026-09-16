@@ -10,13 +10,15 @@ import { useEffect, useState } from 'react';
 export const OFICIAL = 50;
 export const EVENTO = 'peso-score';
 
-const PRESETS = [
-  { v: 100, texto: 'Solo el precio' },
-  { v: OFICIAL, texto: 'Mitad y mitad' },
-  { v: 0, texto: 'Solo la calidad' },
-];
-
-export default function ControlPeso() {
+// `txt` llega ya traducido desde la pagina .astro. Una isla de React no puede llamar a
+// textos() sin arrastrar el diccionario entero al bundle del navegador: serian 30 KB
+// para las nueve frases de este mando.
+export default function ControlPeso({ txt = {} }) {
+  const PRESETS = [
+    { v: 100, texto: txt.soloPrecio },
+    { v: OFICIAL, texto: txt.mitad },
+    { v: 0, texto: txt.soloCalidad },
+  ];
   const [w, setW] = useState(OFICIAL);
 
   useEffect(() => {
@@ -26,28 +28,22 @@ export default function ControlPeso() {
   return (
     <details className="desplegable-peso">
       <summary>
-        <span className="titulo-desplegable">Ordena la tabla con tu criterio</span>
+        <span className="titulo-desplegable">{txt.titulo}</span>
         <span className="pista-desplegable">
-          {w === OFICIAL ? 'ahora: mitad precio, mitad calidad' : `ahora: ${w} % precio, ${100 - w} % calidad`}
+          {w === OFICIAL ? txt.pistaOficial : txt.pista?.replace('%w', w).replace('%c', 100 - w)}
         </span>
       </summary>
 
       <div className="panel-peso">
-        <p className="sutil">
-          El orden de la tabla de abajo sale de una nota de 0 a 100. Aqui repartes a tu
-          gusto las dos partes que discute todo el mundo: el precio frente al mas barato de
-          su categoria y la calidad verificable. La nota de los compradores en la tienda no
-          entra en este mando, que es la parte pequena del score y no la que se discute.
-          Muevelo y mira que aguanta.
-        </p>
+        <p className="sutil">{txt.explicacion}</p>
 
         <label className="mando">
-          <span className="extremo">Calidad<br /><b>{100 - w} %</b></span>
+          <span className="extremo">{txt.calidad}<br /><b>{100 - w} %</b></span>
           <input type="range" min="0" max="100" step="5" value={w}
-                 aria-label="Peso del precio frente a la calidad verificable"
+                 aria-label={txt.mando}
                  onInput={(e) => setW(Number(e.target.value))}
                  onChange={(e) => setW(Number(e.target.value))} />
-          <span className="extremo der">Precio<br /><b>{w} %</b></span>
+          <span className="extremo der">{txt.precio}<br /><b>{w} %</b></span>
         </label>
 
         <div className="grupo-chips">

@@ -1,5 +1,6 @@
 ---
 import { eur } from '../datos/util.js';
+import { textos } from '../i18n.js';
 
 // La regla de precios de una categoria dibujada: del mas barato al mas caro por unidad,
 // con la mediana marcada y, si esta despegado del suelo, el lider (PLAN-ESTETICA F4.1).
@@ -8,7 +9,8 @@ import { eur } from '../datos/util.js';
 //
 // Escala logaritmica, igual que en la portada: en lineal los productos se apelotonan en el
 // primer 5 % de la regla porque el techo suele ser 20 veces el suelo.
-const { min, max, mediana, lider = null, unidad = 'kg', dec = 2 } = Astro.props;
+const { min, max, mediana, lider = null, unidad = 'kg', dec = 2, lang = 'es' } = Astro.props;
+const t = textos(lang);
 const pos = (v) => (min != null && max != null && max > min && v != null
   ? Math.min(99, Math.max(1,
       ((Math.log(v) - Math.log(min)) / (Math.log(max) - Math.log(min))) * 100))
@@ -27,9 +29,9 @@ const posLider = posLiderRaw > 5 ? posLiderRaw : null;
       {posLider != null && <span class="marca-lider" style={`left:${posLider}%`} />}
     </div>
     <p class="pies">
-      <span>desde <b>{eur(min, dec)}</b>/{unidad}</span>
-      <span class="sutil">mediana {eur(mediana, dec)}</span>
-      <span>hasta <b>{eur(max, dec)}</b>/{unidad}</span>
+      <span>{t('regla.desde')} <b>{eur(min, dec, lang)}</b>/{unidad}</span>
+      <span class="sutil">{t('regla.mediana')} {eur(mediana, dec, lang)}</span>
+      <span>{t('regla.hasta')} <b>{eur(max, dec, lang)}</b>/{unidad}</span>
     </p>
   </div>
 )}

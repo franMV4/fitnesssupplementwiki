@@ -9,11 +9,17 @@
 //
 // Todo el calculo esta en datos/porque.js; aqui solo se pinta lo que venga. Si una
 // categoria no tiene el dato, la fila no existe: no hay celdas rellenas con supuestos.
+// Los textos, en los tres idiomas, en datos/landings-i18n.js.
 import { ingredientesCaraACara, mg, porQuePrecio } from '../datos/porque.js';
+import { copia } from '../datos/landings-i18n.js';
+import { enIdioma } from '../datos/categorias-i18n.js';
+import { ruta } from '../i18n.js';
 
-const { cat, ladoA, ladoB } = Astro.props;
-const { intro, factores } = porQuePrecio(cat, ladoA, ladoB);
-const ingredientes = ingredientesCaraACara(ladoA, ladoB);
+const { cat: catEs, ladoA, ladoB, lang = 'es' } = Astro.props;
+const T = copia(lang);
+const cat = enIdioma(catEs, lang);
+const { intro, factores } = porQuePrecio(catEs, ladoA, ladoB, lang);
+const ingredientes = ingredientesCaraACara(ladoA, ladoB, 8, lang);
 const na = ladoA.nombre;
 const nb = ladoB.nombre;
 
@@ -22,30 +28,26 @@ const nb = ladoB.nombre;
 // "No lo declara" y "no llega" son cosas distintas y se dicen distinto.
 const linea = (l) => {
   if (!l.llevan) return null;
-  const partes = [`${l.llevan} de ${l.total} lo llevan`];
-  if (l.cumplen != null) partes.push(`${l.cumplen} llegan a la dosis`);
-  else if (l.llevan && !l.conDosis) partes.push('ninguno publica la dosis');
+  const partes = [T.cc_lo_llevan(l.llevan, l.total)];
+  if (l.cumplen != null) partes.push(T.cc_llegan(l.cumplen));
+  else if (l.llevan && !l.conDosis) partes.push(T.cc_ninguno);
   return partes.join(' · ');
 };
 ---
 {ingredientes.length > 0 && (
   <section class="seccion" id="ingredientes">
     <div class="cabecera-seccion">
-      <h2>Que lleva dentro cada bote</h2>
-      <p class="apunte">Dosis mediana por servicio</p>
+      <h2>{T.cc_h2_ing}</h2>
+      <p class="apunte">{T.cc_apunte_ing}</p>
     </div>
-    <p class="sutil">
-      El precio por kilo no dice cuanto activo hay dentro del kilo. Esta tabla si: por cada
-      ingrediente, la dosis mediana de un servicio en cada tienda y cuantos productos llegan
-      a la dosis que tiene estudios detras (la misma referencia con la que puntua esta web).
-    </p>
+    <p class="sutil">{T.cc_ing_p}</p>
     <div class="tabla-marco">
       <div class="tabla-scroll">
         <table class="apilable">
-          <caption>Ingredientes y dosis por servicio en {na} y {nb}, en {cat.termino}</caption>
+          <caption>{T.cc_caption_ing(na, nb, cat)}</caption>
           <thead>
             <tr>
-              <th>Ingrediente</th>
+              <th>{T.cc_col_ing}</th>
               <th class="num">{na}</th>
               <th class="num">{nb}</th>
             </tr>
@@ -55,20 +57,18 @@ const linea = (l) => {
               <tr>
                 <td class="principal marca">
                   {f.nombre}
-                  {f.min != null && (
-                    <span class="explica">Dosis con evidencia: desde {mg(f.min)} por toma</span>
-                  )}
+                  {f.min != null && <span class="explica">{T.cc_desde(mg(f.min, lang))}</span>}
                 </td>
                 {[f.a, f.b].map((l, i) => (
                   <td class="num" data-et={i === 0 ? na : nb}>
                     {l.llevan ? (
                       <>
                         <span class={l.dosis != null && f.min != null && l.dosis >= f.min ? 'destacado' : ''}>
-                          {mg(l.dosis)}
+                          {mg(l.dosis, lang)}
                         </span>
                         <span class="explica">{linea(l)}</span>
                       </>
-                    ) : <span class="sutil">no lo lleva</span>}
+                    ) : <span class="sutil">{T.cc_no_lleva}</span>}
                   </td>
                 ))}
               </tr>
@@ -77,28 +77,24 @@ const linea = (l) => {
         </table>
       </div>
     </div>
-    <p class="nota">
-      <strong>La dosis es por servicio, no por bote.</strong> Un bote grande con la dosis
-      corta obliga a tomar dos cazos para llegar a lo mismo, y entonces dura la mitad: por eso
-      el precio por dosis de la seccion siguiente no coincide con el precio por kilo.
-    </p>
+    <p class="nota"><strong>{T.cc_nota_ing_t}</strong>{T.cc_nota_ing}</p>
   </section>
 )}
 
 {factores.length > 0 && (
   <section class="seccion" id="por-que">
     <div class="cabecera-seccion">
-      <h2>Por que una es mas barata que la otra</h2>
-      <p class="apunte">Factor a factor, con el dato de las dos</p>
+      <h2>{T.cc_h2_pq}</h2>
+      <p class="apunte">{T.cc_apunte_pq}</p>
     </div>
     {intro && <p class="entradilla">{intro}</p>}
     <div class="tabla-marco">
       <div class="tabla-scroll">
         <table class="apilable">
-          <caption>De donde sale la diferencia de precio entre {na} y {nb} en {cat.termino}</caption>
+          <caption>{T.cc_caption_pq(na, nb, cat)}</caption>
           <thead>
             <tr>
-              <th>Factor</th>
+              <th>{T.cc_col_factor}</th>
               <th class="num">{na}</th>
               <th class="num">{nb}</th>
             </tr>
@@ -119,11 +115,7 @@ const linea = (l) => {
       </div>
     </div>
     <p class="nota">
-      <strong>Ninguno de estos factores es una acusacion.</strong> Son medianas de lo que
-      cada tienda publica en sus fichas el dia de la recogida de precios: donde una ficha no
-      declara un dato, esa tienda no cuenta en esa fila en vez de contar como un cero.
-      Un producto concreto puede desmentir la mediana de su tienda, y para eso esta la tabla
-      completa. <a href="/metodologia/">Como se calcula todo esto</a>.
+      <strong>{T.cc_nota_pq_t}</strong>{T.cc_nota_pq}<a href={ruta(lang, '/metodologia/')}>{T.cc_como}</a>.
     </p>
   </section>
 )}

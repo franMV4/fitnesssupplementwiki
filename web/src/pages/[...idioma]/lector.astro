@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import Lector from '../../componentes/Lector.jsx';
+import { fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+
+// El perfil publico de un lector: /lector?id=12.
+//
+// noindex como /entrar o /comparar: es una utilidad, y ademas su contenido lo pone la API
+// segun la query, asi que la pagina que se genera en el build esta vacia.
+---
+<Base lang={lang} titulo={t('lector.titulo')}
+      descripcion={t('lector.descripcion')}
+      noindex>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('lector.miga')}</p>
+
+  <Lector lang={lang} client:load />
+
+  <p class="nota">
+    <strong>{t('lector.nota.titulo')}</strong> {t('lector.nota.cuerpo')}
+    <a href={r('/metodologia/#formula')}>{t('comun.como_score')}</a>.
+  </p>
+</Base>

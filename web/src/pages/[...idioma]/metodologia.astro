@@ -1,0 +1,253 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { nombreIngrediente, NIVEL, puntos } from '../../datos/util.js';
+import { metodo, nivelesEn } from '../../datos/metodologia.js';
+import { porIdioma, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+// La metodologia tiene su propio diccionario (datos/metodologia.js), igual que el aviso
+// legal: son treinta parrafos largos y dentro de textos.js tapaban el resto de la web.
+const m = metodo(lang);
+const t = textos(lang);
+
+const c = datos.config;
+const pct = (n) => `${Math.round(n * 100)} %`;
+// Los cuatro niveles de verificacion. El dataset los escribe en espanol (los genera el
+// pipeline de Python); en ingles y frances salen de metodologia.js.
+const niveles = nivelesEn(datos.niveles, lang);
+// El nivel de evidencia de cada dosis lo escribe el JSON como "alta" / "media" / "baja".
+const evidencia = (n) => t(`seo.evidencia.${n}`);
+
+const secciones = [
+  { id: 'dosis', titulo: m('idx_dosis') },
+  { id: 'niveles', titulo: m('idx_niveles') },
+  { id: 'formula', titulo: m('idx_formula') },
+  { id: 'composicion', titulo: m('idx_composicion') },
+  { id: 'requisitos', titulo: m('idx_requisitos') },
+  { id: 'referencias', titulo: m('idx_referencias') },
+  { id: 'sellos', titulo: m('idx_sellos') },
+  { id: 'afiliacion', titulo: m('idx_afiliacion') },
+  { id: 'principios', titulo: m('idx_principios') },
+  { id: 'limitaciones', titulo: m('idx_limitaciones') },
+];
+---
+<Base lang={lang} ancho="completo" titulo={m('titulo')} descripcion={m('descripcion')}>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{m('antetitulo')}</p>
+    <h1 class="aparece d1">{m('h1')}</h1>
+    <p class="entradilla aparece d2">{m('entradilla')}</p>
+  </section>
+
+  <div class="con-carril">
+    <aside class="indice carril">
+      <p class="rotulo">{m('contenido')}</p>
+      <ol>
+        {secciones.map((s) => <li><a href={`#${s.id}`}>{s.titulo}</a></li>)}
+      </ol>
+    </aside>
+
+    <div class="prosa">
+      <section id="dosis" class="seccion-doc">
+        <h2><span class="num">01</span> {m('h2_dosis')}</h2>
+        <p>
+          {m('dosis_p1a')}<strong>{m('dosis_por_kilo')}</strong>{m('dosis_p1b')}<strong>{m('dosis_por_capsula')}</strong>{m('dosis_p1c')}
+        </p>
+        <p>{m('dosis_p2')}</p>
+        <p>
+          <strong>{m('dosis_p3_negrita')}</strong>{m('dosis_p3a')}<strong>{m('dosis_efectivas')}</strong>{m('dosis_p3b')}
+        </p>
+        <p>{m('dosis_p4')}</p>
+        <p><strong>{m('dosis_p5_negrita')}</strong>{m('dosis_p5')}</p>
+      </section>
+
+      <section id="niveles" class="seccion-doc">
+        <h2><span class="num">02</span> {m('h2_niveles')}</h2>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>{m('col_nivel')}</th><th>{m('col_significa')}</th><th class="num">{m('col_peso')}</th></tr></thead>
+              <tbody>
+                {[4, 3, 2, 1].map((n) => (
+                  <tr>
+                    <td class="principal">
+                      <span class={`nivel ${NIVEL[lang][n].clase}`}>
+                        <span class="puntos">{puntos(n).map((on) => <i class={on ? 'on' : ''} />)}</span>
+                        <strong>{n}</strong> {niveles[n].nombre}
+                      </span>
+                    </td>
+                    <td data-et={m('col_significa_corto')}>{niveles[n].detalle}</td>
+                    <td class="num" data-et={m('col_peso_corto')}>{pct(c.factor_verificacion[n])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>
+          <strong>{m('niveles_p1_negrita')}</strong>{m('niveles_p1a')}<strong>{m('niveles_en_nombre')}</strong>{m('niveles_p1b')}
+        </p>
+        <p>
+          <strong>{m('niveles_p2_negrita')}</strong>{m('niveles_p2a')}<strong>{m('niveles_nombre')}</strong>{m('niveles_p2b')}
+        </p>
+        <p><strong>{m('niveles_p3_negrita')}</strong>{m('niveles_p3')}</p>
+        <p><strong>{m('niveles_p4_negrita')}</strong>{m('niveles_p4')}</p>
+      </section>
+
+      <section id="formula" class="seccion-doc">
+        <h2><span class="num">03</span> {m('h2_formula')}</h2>
+
+        {/* La formula literal, en la banda de tinta. Es la promesa entera de la web en
+            una linea, y los dos pesos salen del mismo fichero de configuracion que usa
+            el motor: no pueden decir una cosa distinta de lo que hace el calculo. */}
+        <div class="negativo">
+          <p class="rotulo">{m('formula_rotulo')}</p>
+          <p class="formula">
+            {m('formula_nota')} = <em>{pct(c.peso_coste)}</em> &middot; {m('formula_coste')}
+            + <em>{pct(c.peso_calidad)}</em> &middot; {m('formula_calidad')}
+            + <em>{pct(c.peso_valoracion)}</em> &middot; {m('formula_opiniones')}
+          </p>
+        </div>
+
+        <p>{m('formula_intro')}</p>
+        <div class="rejilla">
+          <div class="bloque">
+            <span class="rotulo">{m('bloque_calidad')}</span>
+            <span class="cifra l">{pct(c.peso_calidad)}</span>
+            <p class="sutil">
+              {m('bloque_calidad_p', pct(c.factor_forma_preferida),
+                 pct(c.factor_forma_alternativa), pct(c.factor_forma_desconocida))}
+            </p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">{m('bloque_precio')}</span>
+            <span class="cifra l">{pct(c.peso_coste)}</span>
+            <p class="sutil">{m('bloque_precio_p')}</p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">{m('bloque_requisitos')}</span>
+            <span class="cifra l">{pct(c.peso_requisitos)}</span>
+            <p class="sutil">
+              {m('bloque_requisitos_p')}<a href="#requisitos">{m('bloque_requisitos_enlace')}</a>
+            </p>
+          </div>
+          <div class="bloque">
+            <span class="rotulo">{m('bloque_opiniones')}</span>
+            <span class="cifra l">{pct(c.peso_valoracion)}</span>
+            <p class="sutil">{m('bloque_opiniones_p', c.opiniones_de_referencia)}</p>
+          </div>
+        </div>
+        <p>
+          <strong>{m('infradosaje_negrita')}</strong>{m('infradosaje', pct(c.umbral_infradosaje), c.penalizacion_infradosaje)}
+          <em>fairy dusting</em>{m('infradosaje_cola')}
+        </p>
+        <p>{m('formula_cierre')}</p>
+      </section>
+
+      <section id="composicion" class="seccion-doc">
+        <h2><span class="num">04</span> {m('h2_composicion')}</h2>
+        <p>
+          {m('composicion_p1a')}<strong>{m('composicion_negrita')}</strong>{m('composicion_p1b', pct(c.factor_pureza_max - 1), pct(1 - c.factor_pureza_min))}
+        </p>
+        <p>
+          {m('aditivos_a')}<strong>{m('aditivos_negrita')}</strong>{m('aditivos_b', pct(c.penalizacion_por_aditivo), pct(1 - c.suelo_aditivos))}
+        </p>
+        <p><strong>{m('composicion_p3_negrita')}</strong>{m('composicion_p3')}</p>
+      </section>
+
+      <section id="requisitos" class="seccion-doc">
+        <h2><span class="num">05</span> {m('h2_requisitos')}</h2>
+        <p>
+          {m('requisitos_p1a')}<strong>{m('requisitos_negrita')}</strong>{m('requisitos_p1b', pct(c.peso_requisitos))}
+        </p>
+        <p>{m('requisitos_p2')}</p>
+        <p><strong>{m('requisitos_p3_negrita')}</strong>{m('requisitos_p3')}</p>
+      </section>
+
+      <section id="referencias" class="seccion-doc">
+        <h2><span class="num">06</span> {m('h2_referencias')}</h2>
+        <p>{m('referencias_p1')}</p>
+        <p><strong>{m('referencias_p2_negrita')}</strong>{m('referencias_p2')}</p>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>{m('col_ingrediente')}</th><th class="num">{m('col_dosis')}</th><th>{m('col_evidencia')}</th><th>{m('col_fuente')}</th></tr></thead>
+              <tbody>
+                {Object.entries(datos.dosis_referencia).map(([k, d]) => (
+                  <tr>
+                    <td class="principal marca">{nombreIngrediente(k)}</td>
+                    <td class="num" data-et={m('col_dosis_corto')}>{(d.dosis_efectiva_min_mg / 1000).toFixed(1)}
+                      {d.dosis_efectiva_max_mg ? `–${(d.dosis_efectiva_max_mg / 1000).toFixed(1)}` : ''} g</td>
+                    <td data-et={m('col_evidencia')}>{evidencia(d.nivel_evidencia)}</td>
+                    <td class="sutil" data-et={m('col_fuente')}>{d.fuentes.map((f) => <a href={f.url} rel="nofollow">{f.cita}</a>)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="sellos" class="seccion-doc">
+        <h2><span class="num">07</span> {m('h2_sellos')}</h2>
+        <p>
+          {m('sellos_p1a')}<strong>{m('sellos_negrita')}</strong>{m('sellos_p1b')}
+        </p>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <thead><tr><th>{m('col_sello')}</th><th>{m('col_criterio')}</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="principal"><span class="sello">{m('sello_verificado', c.nivel_sello_verificado)}</span></td>
+                  <td data-et={m('col_criterio_corto')}>{m('sello_verificado_criterio')}</td>
+                </tr>
+                <tr>
+                  <td class="principal"><span class="sello">{m('sello_precio')}</span></td>
+                  <td data-et={m('col_criterio_corto')}>{m('sello_precio_criterio', c.umbral_sello_calidad_precio)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>{m('sellos_cierre')}</p>
+      </section>
+
+      <section id="afiliacion" class="seccion-doc">
+        <h2><span class="num">08</span> {m('h2_afiliacion')}</h2>
+        {/* La seccion no se esconde cuando no hay programas: decir "hoy no ganamos nada
+            con esto" es mas util para el lector que un hueco, y la regla de como
+            funcionaria ya esta escrita antes de que haya dinero de por medio. */}
+        <p>
+          {datos.hay_afiliados ? m('afil_con') : m('afil_sin')}
+          {m('afil_a')}<strong>{m('afil_despues')}</strong>{m('afil_b')}
+        </p>
+      </section>
+
+      <section id="principios" class="seccion-doc">
+        <h2><span class="num">09</span> {m('h2_principios')}</h2>
+        <ul>
+          <li>{m('pri_1')}</li>
+          <li>{m('pri_2')}</li>
+          <li>{m('pri_3')}</li>
+          <li>{m('pri_4')}</li>
+        </ul>
+      </section>
+
+      <section id="limitaciones" class="seccion-doc">
+        <h2><span class="num">10</span> {m('h2_limitaciones')}</h2>
+        <ul>
+          <li>{m('lim_1')}</li>
+          <li>{m('lim_2')}</li>
+          <li>{m('lim_3')}</li>
+        </ul>
+        <p class="nota">
+          <strong>{m('lim_nota_negrita')}</strong> {datos.generado}.{m('lim_nota')}
+        </p>
+      </section>
+    </div>
+  </div>
+</Base>

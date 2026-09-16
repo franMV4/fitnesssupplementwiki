@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import MiLista from '../../componentes/MiLista.jsx';
+import { fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+
+// Lo que toma el lector, con su dosis y lo que le cuesta el mes.
+//
+// noindex por lo mismo que /comparar: su contenido depende de la cuenta de cada
+// visitante, asi que para Google esta pagina esta vacia. Es una utilidad, no contenido.
+---
+<Base lang={lang} titulo={t('milista.titulo')}
+      descripcion={t('milista.descripcion')}
+      noindex>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('chrome.mi_lista')}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">{t('milista.antetitulo')}</p>
+    <h1 class="aparece d1">{t('chrome.mi_lista')}</h1>
+    <p class="entradilla aparece d2">{t('milista.entradilla')}</p>
+  </section>
+
+  <MiLista lang={lang} client:load />
+
+  <p class="nota">
+    <strong>{t('milista.nota.titulo')}</strong> {t('milista.nota.cuerpo')}
+    <a href={r('/metodologia/')}>{t('milista.nota.enlace')}</a>.
+  </p>
+</Base>

@@ -1,5 +1,9 @@
 ---
 import datos from '../datos/dataset.json';
+import { ruta, textos } from '../i18n.js';
+
+const { lang = 'es' } = Astro.props;
+const t = textos(lang);
 
 // Disclosure de afiliacion. Va donde hay enlaces a tienda, a la vista, no en el pie.
 // Solo se ensena si de verdad hay algun enlace de afiliado en el dataset: mientras no
@@ -14,12 +18,9 @@ import datos from '../datos/dataset.json';
 ---
 {datos.hay_afiliados && (
   <details class="aviso-afiliado">
-    <summary><strong>†</strong> Algunos enlaces son de afiliado — no cambian el orden</summary>
+    <summary><strong>†</strong> {t('aviso.resumen')}</summary>
     <p class="nota">
-      Algunos enlaces a tienda son de afiliado: si compras, esta web puede llevarse una
-      comision, sin coste extra para ti. No cambia nada del ranking: el score se calcula
-      antes y sin mirar esos enlaces, y los productos sin programa de afiliado aparecen
-      exactamente igual. <a href="/metodologia/#afiliacion">Como se calcula</a>.
+      {t('aviso.detalle')}<a href={ruta(lang, '/metodologia/#afiliacion')}>{t('aviso.enlace')}</a>.
     </p>
   </details>
 )}

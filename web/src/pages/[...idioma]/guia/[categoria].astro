@@ -1,11 +1,14 @@
 ---
-import Base from '../../layouts/Base.astro';
-import Faq from '../../componentes/Faq.astro';
-import datos from '../../datos/dataset.json';
-import { EVIDENCIA, NIVEL_EVIDENCIA, REVISADO } from '../../datos/evidencia.js';
-import { abs } from '../../sitio.js';
-import { eur, UNIDAD } from '../../datos/util.js';
-import { fechaLarga } from '../../datos/seo.js';
+import Base from '../../../layouts/Base.astro';
+import Faq from '../../../componentes/Faq.astro';
+import datos from '../../../datos/dataset.json';
+import { EVIDENCIA, REVISADO } from '../../../datos/evidencia.js';
+import { evidenciaEn, nivelEvidencia } from '../../../datos/evidencia-i18n.js';
+import { enIdioma } from '../../../datos/categorias-i18n.js';
+import { metodo } from '../../../datos/metodologia.js';
+import { abs } from '../../../sitio.js';
+import { eur, UNIDAD } from '../../../datos/util.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../../i18n.js';
 
 // La guia y la comparativa son dos paginas a proposito: /creatina responde "que creatina
 // comprar" (quiero comprar) y /guia/creatina responde "para que sirve la creatina" (quiero
@@ -14,16 +17,22 @@ import { fechaLarga } from '../../datos/seo.js';
 export function getStaticPaths() {
   // Solo las categorias con evidencia escrita: una categoria nueva no genera una guia
   // vacia, se queda sin guia hasta que alguien escriba la suya con sus fuentes.
-  return datos.categorias
+  return porIdioma(datos.categorias
     .filter((c) => EVIDENCIA[c.slug])
     .map((c) => ({
       params: { categoria: c.slug },
-      props: { cat: c, ev: EVIDENCIA[c.slug],
-               productos: datos.productos.filter((p) => p.categoria === c.slug) },
-    }));
+      props: { catEs: c, productos: datos.productos.filter((p) => p.categoria === c.slug) },
+    })));
 }
 
-const { cat, ev, productos } = Astro.props;
+const { catEs, productos, lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+const cat = enIdioma(catEs, lang);
+// La guia en el idioma de la pagina, montada campo a campo sobre la espanola: cifras,
+// fuentes y nivel salen siempre del espanol (ver datos/evidencia-i18n.js).
+const ev = evidenciaEn(cat.slug, lang);
 
 // Invariante 4 de AGENTS.md, comprobado donde no puede rotar: ninguna cifra sin fuente.
 // Si un efecto apunta a una fuente que no existe, revienta el build en vez de publicar un
@@ -35,19 +44,19 @@ for (const e of ev.efectos) {
   if (!e.f.length) throw new Error(`${cat.slug}: "${e.que}" no cita ninguna fuente`);
 }
 
-const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+const unidad = UNIDAD[lang][cat.unidad_precio] ?? 'kg';
 const dec = unidad === 'kg' ? 2 : 3;
 const precios = productos.map((p) => p.precio_referencia).filter((n) => n != null);
 const barato = precios.length ? Math.min(...precios) : null;
 const tiendas = new Set(productos.map((p) => p.tienda)).size;
-const nivel = NIVEL_EVIDENCIA[ev.nivel];
-const canonica = abs(`/guia/${cat.slug}`);
+const nivel = nivelEvidencia(ev.nivel, lang);
+const canonica = abs(r(`/guia/${cat.slug}`));
 
 const secciones = [
-  { id: 'efectos', titulo: 'Que hace y cuanto' },
-  { id: 'protocolo', titulo: 'Como se toma' },
-  { id: 'situaciones', titulo: 'Cuando tiene sentido' },
-  { id: 'fuentes', titulo: 'Fuentes' },
+  { id: 'efectos', titulo: t('guia.idx_efectos') },
+  { id: 'protocolo', titulo: t('guia.idx_protocolo') },
+  { id: 'situaciones', titulo: t('guia.idx_situaciones') },
+  { id: 'fuentes', titulo: t('guia.idx_fuentes') },
 ];
 
 const schema = [
@@ -58,7 +67,7 @@ const schema = [
     '@id': `${canonica}#articulo`,
     headline: ev.h1,
     description: ev.descripcion,
-    inLanguage: 'es-ES',
+    inLanguage: LANG[lang],
     mainEntityOfPage: canonica,
     // dateModified es de ESTE texto, no de la recogida de precios: son dos frescuras
     // distintas y mezclarlas seria decir que las cifras se revisaron cuando no.
@@ -72,59 +81,53 @@ const schema = [
   {
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Inicio', item: abs('/') },
-      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(`/${cat.slug}`) },
-      { '@type': 'ListItem', position: 3, name: 'Guia', item: canonica },
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r('/')) },
+      { '@type': 'ListItem', position: 2, name: cat.nombre, item: abs(r(`/${cat.slug}`)) },
+      { '@type': 'ListItem', position: 3, name: t('guia.miga'), item: canonica },
     ],
   },
 ];
+const otras = datos.categorias.filter((c) => c.slug !== cat.slug && EVIDENCIA[c.slug]);
 ---
-<Base ancho="completo" titulo={ev.titulo} descripcion={ev.descripcion} schema={schema}>
+<Base lang={lang} ancho="completo" titulo={ev.titulo} descripcion={ev.descripcion} schema={schema}>
 
-  <p class="migas"><a href="/">Inicio</a> / <a href={`/${cat.slug}/`}>{cat.nombre}</a> / Guia</p>
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / <a href={r(`/${cat.slug}/`)}>{cat.nombre}</a> / {t('guia.miga')}</p>
 
   <section class="cabecera-pagina">
     <p class="antetitulo aparece">{cat.nombre} · {nivel.etiqueta}</p>
     <h1 class="aparece d1">{ev.h1}</h1>
-    <p class="respuesta aparece d2"><b>La respuesta corta.</b> {ev.resumen}</p>
-    <p class="entradilla aparece d2">
-      {nivel.explica} Ninguna cifra de esta pagina se atribuye a un producto concreto: el
-      efecto es del ingrediente y cada numero lleva su fuente al lado.
-    </p>
+    <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {ev.resumen}</p>
+    <p class="entradilla aparece d2">{nivel.explica}{t('guia.no_producto')}</p>
   </section>
 
   <div class="con-carril">
     <aside class="indice carril">
-      <p class="rotulo">Contenido</p>
+      <p class="rotulo">{metodo(lang)('contenido')}</p>
       <ol>{secciones.map((s) => <li><a href={`#${s.id}`}>{s.titulo}</a></li>)}</ol>
-      <p class="rotulo" style="margin-top:1.5rem">Revisado</p>
+      <p class="rotulo" style="margin-top:1.5rem">{t('guia.revisado')}</p>
       <p class="mono"><time datetime={REVISADO}>{fechaLarga(REVISADO)}</time></p>
     </aside>
 
     <div class="prosa">
       <section id="efectos" class="seccion-doc">
-        <h2><span class="num">01</span> Que hace y cuanto</h2>
-        <p>
-          Cada fila es un efecto medido, con la cifra que da el estudio y el numero de la
-          fuente. Donde la evidencia no da una cifra, la columna lo dice en vez de inventarse
-          un porcentaje.
-        </p>
+        <h2><span class="num">01</span> {t('guia.idx_efectos')}</h2>
+        <p>{t('guia.efectos_p')}</p>
         <div class="tabla-marco">
           <div class="tabla-scroll">
             <table class="apilable">
-              <caption>Efectos de {cat.termino} con su fuente</caption>
+              <caption>{t('guia.caption', cat.termino)}</caption>
               <thead>
-                <tr><th>Efecto</th><th>Cuanto</th><th>Detalle</th></tr>
+                <tr><th>{t('guia.col_efecto')}</th><th>{t('guia.col_cuanto')}</th><th>{t('guia.col_detalle')}</th></tr>
               </thead>
               <tbody>
                 {ev.efectos.map((e) => (
                   <tr>
-                    <td class="principal" data-et="Efecto">{e.que}</td>
-                    <td data-et="Cuanto"><b class="cifra">{e.cifra}</b></td>
-                    <td data-et="Detalle">
+                    <td class="principal" data-et={t('guia.col_efecto')}>{e.que}</td>
+                    <td data-et={t('guia.col_cuanto')}><b class="cifra">{e.cifra}</b></td>
+                    <td data-et={t('guia.col_detalle')}>
                       {e.detalle}{' '}
                       {e.f.map((i) => (
-                        <a class="ref" href={`#fuente-${i + 1}`} aria-label={`Fuente ${i + 1}`}>[{i + 1}]</a>
+                        <a class="ref" href={`#fuente-${i + 1}`} aria-label={t('guia.fuente_n', i + 1)}>[{i + 1}]</a>
                       ))}
                     </td>
                   </tr>
@@ -136,37 +139,33 @@ const schema = [
       </section>
 
       <section id="protocolo" class="seccion-doc">
-        <h2><span class="num">02</span> Como se toma</h2>
+        <h2><span class="num">02</span> {t('guia.idx_protocolo')}</h2>
         <ul>
-          <li><strong>Dosis.</strong> {ev.protocolo.dosis}</li>
-          <li><strong>Cuando.</strong> {ev.protocolo.cuando}</li>
-          <li><strong>Cuanto tarda en notarse.</strong> {ev.protocolo.tarda}</li>
+          <li><strong>{t('guia.dosis')}</strong> {ev.protocolo.dosis}</li>
+          <li><strong>{t('guia.cuando')}</strong> {ev.protocolo.cuando}</li>
+          <li><strong>{t('guia.tarda')}</strong> {ev.protocolo.tarda}</li>
         </ul>
-        <h3>Detalles que cambian el resultado</h3>
+        <h3>{t('guia.detalles')}</h3>
         <ul>{ev.protocolo.notas.map((n) => <li>{n}</li>)}</ul>
       </section>
 
       <section id="situaciones" class="seccion-doc">
-        <h2><span class="num">03</span> Cuando tiene sentido y cuando no</h2>
+        <h2><span class="num">03</span> {t('guia.h2_situaciones')}</h2>
         <div class="rejilla">
           <div class="bloque">
-            <h3>Compensa si</h3>
+            <h3>{t('guia.compensa')}</h3>
             <ul>{ev.cuando_si.map((s) => <li>{s}</li>)}</ul>
           </div>
           <div class="bloque">
-            <h3>No compensa si</h3>
+            <h3>{t('guia.no_compensa')}</h3>
             <ul>{ev.cuando_no.map((s) => <li>{s}</li>)}</ul>
           </div>
         </div>
       </section>
 
       <section id="fuentes" class="seccion-doc">
-        <h2><span class="num">04</span> Fuentes</h2>
-        <p>
-          Todas las cifras de arriba salen de aqui. Son posicionamientos de sociedades
-          cientificas, metaanalisis y revisiones con revision por pares: si una afirmacion no
-          se puede colgar de una de estas lineas, no esta en la pagina.
-        </p>
+        <h2><span class="num">04</span> {t('guia.idx_fuentes')}</h2>
+        <p>{t('guia.fuentes_p')}</p>
         <ol class="fuentes">
           {ev.fuentes.map((f, i) => (
             <li id={`fuente-${i + 1}`}>
@@ -178,42 +177,38 @@ const schema = [
     </div>
   </div>
 
-  <p class="nota">
-    <strong>Esto no es consejo medico.</strong> Es lo que dicen unos estudios sobre un
-    ingrediente, no una pauta para ti. Con una enfermedad de por medio, medicacion o embarazo,
-    la decision es de un profesional sanitario que te conozca.
-  </p>
+  <p class="nota"><strong>{t('guia.no_medico_t')}</strong>{t('guia.no_medico')}</p>
 
-  <Faq faqs={ev.faqs} titulo={`Preguntas sobre ${cat.termino}`} />
+  <Faq lang={lang} faqs={ev.faqs} titulo={t('cat.faq_titulo', cat.termino)} />
 
   <section class="seccion">
     <div class="cabecera-seccion">
-      <h2>Y ahora, cual comprar</h2>
-      <p class="apunte">Los precios, aparte de la evidencia</p>
+      <h2>{t('guia.h2_comprar')}</h2>
+      <p class="apunte">{t('guia.apunte_comprar')}</p>
     </div>
     <p class="prosa">
-      Esta pagina explica que hace {cat.termino} y no menciona ni una marca a proposito. La
-      comparativa es la otra mitad: <b>{productos.length}</b> productos de {tiendas}{' '}
-      {tiendas === 1 ? 'tienda' : 'tiendas'}
-      {barato != null && <> desde <b>{eur(barato, dec)}</b> por {unidad}</>}, ordenados por
-      precio y por lo comprobable que es su certificacion.
+      {t('guia.comprar_p', cat.termino, productos.length, t('comun.tiendas', tiendas))}
+      {barato != null && t('guia.comprar_desde', eur(barato, dec, lang), unidad)}{t('guia.comprar_cola')}
     </p>
-    <p><a class="boton" href={`/${cat.slug}/`}>Ver la comparativa de {cat.nombre.toLowerCase()}</a></p>
+    <p><a class="boton" href={r(`/${cat.slug}/`)}>{t('guia.ver_comparativa', cat.nombre.toLowerCase())}</a></p>
   </section>
 
   <section class="seccion">
     <div class="cabecera-seccion">
-      <h2>Otras guias</h2>
-      <p class="apunte">Que hace cada suplemento, con sus fuentes</p>
+      <h2>{t('guia.h2_otras')}</h2>
+      <p class="apunte">{t('guia.apunte_otras')}</p>
     </div>
     <div class="lista-categorias">
-      {datos.categorias.filter((c) => c.slug !== cat.slug && EVIDENCIA[c.slug]).map((c) => (
-        <a class="fila-categoria" href={`/guia/${c.slug}/`}>
-          <span class="nombre">{EVIDENCIA[c.slug].h1}</span>
-          <span class="guia" aria-hidden="true"></span>
-          <span class="cuenta">{NIVEL_EVIDENCIA[EVIDENCIA[c.slug].nivel].etiqueta.replace('Evidencia ', '')}</span>
-        </a>
-      ))}
+      {otras.map((c) => {
+        const o = evidenciaEn(c.slug, lang);
+        return (
+          <a class="fila-categoria" href={r(`/guia/${c.slug}/`)}>
+            <span class="nombre">{o.h1}</span>
+            <span class="guia" aria-hidden="true"></span>
+            <span class="cuenta">{nivelEvidencia(o.nivel, lang).etiqueta}</span>
+          </a>
+        );
+      })}
     </div>
   </section>
 </Base>

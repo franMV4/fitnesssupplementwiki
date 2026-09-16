@@ -52,7 +52,7 @@ const ADITIVO = {
   relleno: 'rellenos (maltodextrina, almidon o similar)',
   antiaglomerante: 'antiaglomerantes',
 };
-const nivel = NIVEL[p.nivel_verificacion];
+const nivel = NIVEL.es[p.nivel_verificacion];
 const nivelInfo = datos.niveles[p.nivel_verificacion];
 const categoria = datos.categorias.find((c) => c.slug === p.categoria);
 // El mismo bote en OTRA tienda. La comparacion tiene que ser estricta o deja de ser el
@@ -459,7 +459,7 @@ const schema = [
                 <tr>
                   <td class="principal marca">{c.tipo.replace(/_/g, ' ')}</td>
                   <td data-et="Nivel">
-                    <span class={`nivel ${NIVEL[c.nivel_verificacion].clase}`}>
+                    <span class={`nivel ${NIVEL.es[c.nivel_verificacion].clase}`}>
                       <span class="puntos">{puntos(c.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
                       {c.nivel_verificacion}
                     </span>

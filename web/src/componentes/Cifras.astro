@@ -12,24 +12,26 @@
 // separa igual de bien, es lo que hace un diario entre columnas, y no anade ni una mas
 // a la pila.
 import { eur } from '../datos/util.js';
+import { textos } from '../i18n.js';
 
-const { n, min, max, unidad, dec = 2, nivel4 } = Astro.props;
+const { n, min, max, unidad, dec = 2, nivel4, lang = 'es' } = Astro.props;
+const t = textos(lang);
 ---
 <div class="cifras">
   <div class="cifra-celda">
     <p class="cifra-dato">{n}</p>
-    <p class="cifra-pie">productos comparados</p>
+    <p class="cifra-pie">{t('cifras.productos')}</p>
   </div>
   <div class="cifra-celda">
     <p class="cifra-dato horquilla-dato">
-      de {min != null ? eur(min, dec) : '—'} <span class="a">a</span> {max != null ? eur(max, dec) : '—'}
+      {t('cifras.de')} {min != null ? eur(min, dec, lang) : '—'} <span class="a">{t('cifras.a')}</span> {max != null ? eur(max, dec, lang) : '—'}
     </p>
-    <p class="cifra-pie">por {unidad}</p>
+    <p class="cifra-pie">{t('cifras.por_unidad', unidad)}</p>
   </div>
   <div class="cifra-celda">
     {/* Un cero aqui es un dato, no un hueco: dice que en esta categoria nadie tiene una
         certificacion comprobada contra la fuente. Por eso se pinta igual de grande. */}
     <p class={`cifra-dato ${nivel4 > 0 ? 'con-nivel' : ''}`}>{nivel4}</p>
-    <p class="cifra-pie">con nivel 4 verificado</p>
+    <p class="cifra-pie">{t('cifras.nivel4')}</p>
   </div>
 </div>

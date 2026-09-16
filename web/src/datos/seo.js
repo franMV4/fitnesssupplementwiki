@@ -8,6 +8,7 @@
 // consultas que quiere ganar) vive en categorias.py. Ver SEO-PRODUCTOS.md.
 
 import { eur, reparto, TIENDAS, UNIDAD } from './util.js';
+import { fechaLargaEn, textos } from '../i18n.js';
 import { abs } from '../sitio.js';
 import CON_IMPRESIONES from './con-impresiones.json' with { type: 'json' };
 
@@ -61,24 +62,26 @@ export const titula = (base, ...sufijos) => {
 export const tiendaDe = (p) => TIENDAS[p.tienda] ?? p.tienda;
 export const porScore = (ps) => ps.slice().sort((a, b) => (b.score_final ?? -1) - (a.score_final ?? -1));
 
-export const formatoDe = (p) =>
-  p.formato_gramos ? `${p.formato_gramos} g`
-  : p.unidades ? `${p.unidades} capsulas`
-  : 'formato no declarado';
+export const formatoDe = (p, lang = 'es') => {
+  const t = textos(lang);
+  return p.formato_gramos ? `${p.formato_gramos} g`
+    : p.unidades ? t('seo.formato.capsulas', p.unidades)
+    : t('seo.formato.sin_declarar');
+};
 
 // Miligramos a la unidad en la que se habla: 5000 -> "5 g", 500 -> "500 mg".
 export const dosisTexto = (mg) => (mg >= 1000 ? `${+(mg / 1000).toFixed(1)} g` : `${mg} mg`);
 
 /** Los numeros de una categoria, calculados una sola vez por pagina. */
-export function resumen(cat, productos) {
-  const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
+export function resumen(cat, productos, lang = 'es') {
+  const unidad = UNIDAD[lang][cat.unidad_precio] ?? 'kg';
   const dec = unidad === 'kg' ? 2 : 3;
   const conPrecio = productos
     .filter((p) => p.precio_referencia != null)
     .sort((a, b) => a.precio_referencia - b.precio_referencia);
   return {
     unidad, dec,
-    precio: (n) => (n == null ? '—' : `${eur(n, dec)}/${unidad}`),
+    precio: (n) => (n == null ? '—' : `${eur(n, dec, lang)}/${unidad}`),
     n: productos.length,
     // El lider se busca entre los que tienen precio: sin precio no hay fila que citar.
     lider: porScore(conPrecio)[0] ?? null,
@@ -95,65 +98,62 @@ export function resumen(cat, productos) {
    Una funcion por clave de `consultas` en categorias.py. Devolver null quita la
    pregunta de la pagina: preferimos una FAQ corta a una respuesta inventada. */
 const RESPUESTAS = {
-  mejor: (cat, r) => {
+  mejor: (cat, r, ctx) => {
     if (!r.lider) return null;
-    const razones = (r.lider.desglose ?? []).slice(0, 2).join('; ');
-    return `${nom(r.lider)} de ${tiendaDe(r.lider)}, con ${r.lider.score_final?.toFixed(0)} ` +
-      `puntos sobre 100 a ${r.precio(r.lider.precio_referencia)}` +
-      (razones ? `. Puntua asi porque ${razones}` : '') +
-      `. La nota es ${reparto()}, y ningun acuerdo comercial mueve el orden.`;
+    // El desglose lo escribe el motor de puntuacion en espanol y no se traduce: son
+    // lineas generadas por scoring/motor.py contra el dataset ("0,443 EUR por dosis"),
+    // no prosa. En ingles y frances la respuesta se queda sin esa coletilla antes que
+    // meter media frase en otro idioma dentro de la traduccion.
+    const razones = ctx.lang === 'es' ? (r.lider.desglose ?? []).slice(0, 2).join('; ') : '';
+    return ctx.t('seo.faq.mejor', nom(r.lider), tiendaDe(r.lider),
+                 r.lider.score_final?.toFixed(0), r.precio(r.lider.precio_referencia),
+                 razones, reparto(undefined, ctx.lang));
   },
 
-  barato: (cat, r) => {
+  barato: (cat, r, ctx) => {
     if (!r.barato) return null;
-    return `${nom(r.barato)} de ${tiendaDe(r.barato)}, a ${r.precio(r.barato.precio_referencia)} ` +
-      `(envase de ${formatoDe(r.barato)} por ${eur(r.barato.precio_eur)}). Tiene nivel ` +
-      `${r.barato.nivel_verificacion} de verificacion sobre 4. Barato no es lo mismo que bien ` +
-      `puntuado: el precio es la mitad de la nota y la otra mitad es lo comprobable que sea ` +
-      `su certificacion.`;
+    return ctx.t('seo.faq.barato', nom(r.barato), tiendaDe(r.barato),
+                 r.precio(r.barato.precio_referencia), formatoDe(r.barato, ctx.lang),
+                 eur(r.barato.precio_eur), r.barato.nivel_verificacion);
   },
 
-  precio: (cat, r) => {
+  precio: (cat, r, ctx) => {
     if (r.mediana == null) return null;
-    return `Entre ${r.precio(r.barato.precio_referencia)} y ${r.precio(r.caro.precio_referencia)} ` +
-      `en las ${r.tiendas} tiendas comparadas, con una mediana de ${r.precio(r.mediana)}. ` +
-      `Es el precio por ${r.unidad}, no el del envase: dos botes al mismo precio pueden ` +
-      `costar el doble uno que otro segun lo que traigan dentro.`;
+    return ctx.t('seo.faq.precio', r.precio(r.barato.precio_referencia),
+                 r.precio(r.caro.precio_referencia), r.tiendas, r.precio(r.mediana),
+                 r.unidad);
   },
 
-  certificacion: (cat, r) => {
-    const otros = r.n - r.nivel4 - r.nivel3;
-    return `De los ${r.n} productos comparados, ${r.nivel4} llegan al nivel 4 (el sello lo ` +
-      `respalda un tercero: o lo hemos comprobado en la fuente que lo emite, o el producto ` +
-      `lleva en el nombre una marca que exige un tercero detras, como Creapure o IFOS) y ` +
-      `${r.nivel3} al nivel 3 (analisis publicado por la propia marca). Los ${otros} restantes ` +
-      `se quedan en un sello declarado en la ficha o en ninguno. Solo el nivel 4 esta ` +
-      `comprobado contra quien emite el sello.`;
-  },
+  certificacion: (cat, r, ctx) =>
+    ctx.t('seo.faq.certificacion', r.n, r.nivel4, r.nivel3, r.n - r.nivel4 - r.nivel3),
 
   dosis: (cat, r, ctx) => {
     const ref = ctx.dosisRef?.[cat.dosis_key];
     if (!ref) return null;
     const rango = ref.dosis_efectiva_max_mg
-      ? `de ${dosisTexto(ref.dosis_efectiva_min_mg)} a ${dosisTexto(ref.dosis_efectiva_max_mg)}`
-      : `de ${dosisTexto(ref.dosis_efectiva_min_mg)}`;
-    const fuente = ref.fuentes?.[0];
-    return `La dosis de referencia que usa esta web para ${cat.termino} es ${rango} al dia, ` +
-      `con evidencia ${ref.nivel_evidencia}` +
-      (fuente ? `. Fuente: ${fuente.cita}` : '') +
-      `. Es la dosis del ingrediente en el estudio citado, no una recomendacion para ti ni ` +
-      `una afirmacion sobre ningun producto de la tabla.`;
+      ? `${dosisTexto(ref.dosis_efectiva_min_mg)} - ${dosisTexto(ref.dosis_efectiva_max_mg)}`
+      : dosisTexto(ref.dosis_efectiva_min_mg);
+    return ctx.t('seo.faq.dosis', cat.termino, rango,
+                 ctx.t(`seo.evidencia.${ref.nivel_evidencia}`), ref.fuentes?.[0]?.cita);
   },
 };
 
-const pregunta = (s) => `¿${s.charAt(0).toUpperCase()}${s.slice(1)}?`;
+// La pregunta en cristiano. El espanol abre con "¿" y el frances pide un espacio fino
+// antes del "?": son las dos reglas de puntuacion que se notan si se ignoran.
+const pregunta = (s, lang) => {
+  const c = `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
+  if (lang === 'es') return `¿${c}?`;
+  if (lang === 'fr') return `${c} ?`;
+  return `${c}?`;
+};
 
-export function faqsCategoria(cat, productos, dosisRef, generado) {
-  const r = resumen(cat, productos);
+export function faqsCategoria(cat, productos, dosisRef, generado, lang = 'es') {
+  const r = resumen(cat, productos, lang);
+  const ctx = { dosisRef, generado, lang, t: textos(lang) };
   return Object.entries(cat.consultas ?? {})
     .map(([clave, consulta]) => {
-      const respuesta = RESPUESTAS[clave]?.(cat, r, { dosisRef, generado });
-      return respuesta ? { p: pregunta(consulta), r: respuesta } : null;
+      const respuesta = RESPUESTAS[clave]?.(cat, r, ctx);
+      return respuesta ? { p: pregunta(consulta, lang), r: respuesta } : null;
     })
     .filter(Boolean);
 }
@@ -282,14 +282,14 @@ export const agregadoLd = (nombre, productos, url) => {
 // CTR (09/2026): la pagina ya sale en resultados y no se pincha. Lo que separa un
 // resultado de los de la competencia es el dato que ellos no ponen: el precio de salida
 // y cuantos productos se comparan. Sin productos (llamada antigua) vuelve al de siempre.
-export const tituloCategoria = (cat, generado, productos = []) => {
-  const r = productos.length ? resumen(cat, productos) : null;
+export const tituloCategoria = (cat, generado, productos = [], lang = 'es') => {
+  const t = textos(lang);
+  const r = productos.length ? resumen(cat, productos, lang) : null;
   const desde = r?.barato ? r.precio(r.barato.precio_referencia) : null;
-  return titula(`Mejor ${cat.termino} ${anio(generado)}`,
-         ...(desde ? [`: desde ${desde}, ${r.n} comparados`, `: desde ${desde}`] : []),
-         ': cuál comprar por precio y certificación',
-         ': precio y certificación',
-         ': comparativa de precios');
+  return titula(t('seo.cat.titulo_base', cat.termino, anio(generado)),
+         ...(desde ? [t('seo.cat.sufijo_desde', desde, r.n),
+                      t('seo.cat.sufijo_desde_corto', desde)] : []),
+         ...t('seo.cat.sufijos'));
 };
 
 // Primera letra en mayuscula sin tocar el resto ("la mejor creatina" -> "La mejor creatina").
@@ -305,18 +305,21 @@ export const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 // ("precio por kg y certificacion"). El mordisco largo de antes ocupaba 3-4 lineas en movil
 // y decia lo mismo que el titulo. El criterio sigue a la vista en la respuesta corta, en la
 // nota "Que estas mirando" y en el FAQ.
-export const h1Categoria = (cat, generado) =>
-  `${cap(cat.mejor ?? `mejor ${cat.termino}`)} de ${anio(generado)}`;
+export const h1Categoria = (cat, generado, lang = 'es') =>
+  textos(lang)('seo.cat.h1', cap(cat.mejor ?? cat.termino), anio(generado));
 
 // La descripcion nombra al ganador y al mas barato: es la respuesta entera antes de
 // pinchar, y un nombre propio con precio llama mas que "comparamos X productos".
-export const descripcionCategoria = (cat, productos, generado) => {
-  const r = resumen(cat, productos);
-  const lider = r.lider ? ` Mejor valorado: ${corta(nom(r.lider), 45)} (${r.lider.score_final?.toFixed(0)}/100).` : '';
-  const base = `${cap(cat.termino)} desde ${r.precio(r.barato?.precio_referencia)}: ${r.n} productos de ` +
-    `${r.tiendas} tiendas comparados por precio real y certificación.${lider}`;
+export const descripcionCategoria = (cat, productos, generado, lang = 'es') => {
+  const t = textos(lang);
+  const r = resumen(cat, productos, lang);
+  const lider = r.lider
+    ? t('seo.cat.descripcion_lider', corta(nom(r.lider), 45), r.lider.score_final?.toFixed(0))
+    : '';
+  const base = t('seo.cat.descripcion', cap(cat.termino),
+                 r.precio(r.barato?.precio_referencia), r.n, r.tiendas) + lider;
   // La fecha es lo primero que sobra: sin ella la descripcion se sigue leyendo entera.
-  const conFecha = `${base} Precios del ${fechaLarga(generado)}.`;
+  const conFecha = base + t('seo.cat.descripcion_fecha', fechaLargaEn(lang, generado));
   return conFecha.length <= 200 ? conFecha : corta(base, 200);
 };
 

@@ -5,18 +5,48 @@ import Buscador from '../componentes/Buscador.jsx';
 import { SITIO, abs } from '../sitio.js';
 import { EVIDENCIA } from '../datos/evidencia.js';
 import { porFamilia } from '../datos/familias.js';
+import { categoriasEn } from '../datos/categorias-i18n.js';
 import { OBJETIVOS } from '../datos/eficacia.js';
-import { fechaLarga } from '../datos/seo.js';
 import { ARCHIVO, DISPLAY } from '../estilos/fuentes.js';
+import {
+  IDIOMAS, LANG, NOMBRE_IDIOMA, OG_LOCALE, POR_DEFECTO,
+  fechaLargaEn, ruta, sinPrefijo, textos, txtBuscador,
+} from '../i18n.js';
 import '../estilos/fuentes.css';
 import '../estilos/global.css';
 
 // `schema` son los nodos JSON-LD propios de cada pagina (Product, ItemList, migas...).
 // El WebSite y el editor los pone este layout: van en todas las paginas o no van.
-const { titulo, descripcion, ancho, schema = [], noindex = false } = Astro.props;
-// Ruta normalizada sin barra final: sirve para marcar el enlace activo del menu.
-const aqui = Astro.url.pathname.replace(/\/$/, '') || '/';
+//
+// `lang` es la pieza nueva y hace dos trabajos a la vez: dice en que idioma se pinta la
+// pagina Y dice que esta pagina EXISTE en los tres idiomas. Las que no se traducen (las
+// 2.900 fichas de producto, entrar, registro, el panel) no lo pasan, y asi el layout sabe
+// que no debe escribirles hreflang ni ofrecerles el selector: un alternate que apunta a
+// un 404 hace mas dano que no tener alternate.
+const { titulo, descripcion, ancho, schema = [], noindex = false, lang } = Astro.props;
+const idioma = lang ?? POR_DEFECTO;
+const traducida = lang !== undefined;
+const t = textos(idioma);
+
+// Ruta normalizada sin barra final: sirve para marcar el enlace activo del menu. Se
+// compara SIEMPRE en su forma espanola, que es como se escriben los `href` de aqui abajo.
+const aqui = sinPrefijo(Astro.url.pathname).replace(/\/$/, '') || '/';
+// Un enlace interno: se escribe el camino en espanol y sale con el prefijo que toque.
+const r = (camino) => ruta(idioma, camino);
 const canonica = abs(Astro.url.pathname);
+// Las tres versiones de ESTA pagina, solo si la pagina esta traducida.
+const alternativas = traducida
+  ? Object.fromEntries(IDIOMAS.map((l) => [l, abs(ruta(l, sinPrefijo(Astro.url.pathname)))]))
+  : null;
+
+const fechaLarga = (iso) => fechaLargaEn(idioma, iso);
+// El estante lo bautiza familias.js en espanol, que es decision editorial y no un dato:
+// aqui se traduce por su nombre. Un estante nuevo sin texto cae al espanol, no a un hueco.
+const estante = (nombre) => t(`familia.${nombre}`);
+// Los textos del buscador, ya traducidos: es una isla de React y no puede leer el
+// diccionario sin arrastrarlo entero al navegador (ver i18n.js).
+const txtBusca = txtBuscador(idioma);
+
 const grafo = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -25,8 +55,8 @@ const grafo = {
       '@id': abs('/#sitio'),
       url: SITIO.url,
       name: SITIO.nombre,
-      description: SITIO.descripcion,
-      inLanguage: SITIO.idioma,
+      description: t('sitio.descripcion'),
+      inLanguage: LANG[idioma],
       publisher: { '@id': abs('/#editor') },
     },
     {
@@ -36,8 +66,8 @@ const grafo = {
       '@id': abs('/#editor'),
       name: SITIO.nombre,
       url: SITIO.url,
-      slogan: SITIO.lema,
-      description: SITIO.descripcion,
+      slogan: t('sitio.lema'),
+      description: t('sitio.descripcion'),
       areaServed: SITIO.pais,
       publishingPrinciples: abs('/metodologia'),
       founder: { '@id': abs('/#autor') },
@@ -52,8 +82,8 @@ const grafo = {
       '@type': 'Person',
       '@id': abs('/#autor'),
       name: SITIO.autor.nombre,
-      jobTitle: SITIO.autor.rol,
-      description: `${SITIO.autor.hace} ${SITIO.autor.no_hace}`,
+      jobTitle: t('sitio.autor.rol'),
+      description: `${t('sitio.autor.hace')} ${t('sitio.autor.no_hace')}`,
       email: `mailto:${SITIO.contacto}`,
       url: abs('/quienes-somos'),
       worksFor: { '@id': abs('/#editor') },
@@ -72,19 +102,21 @@ const datoViejo = diasDelDato != null && diasDelDato > 10;
 // Con treinta categorias no cabe una fila de enlaces: van dentro de un <details>,
 // y ahi tampoco se leen en plano: por estante, igual que las guias.
 const enCategoria = datos.categorias.some((c) => aqui === `/${c.slug}`);
-const categorias = porFamilia(datos.categorias);
+// Los nombres de categoria son la navegacion principal de la web y NO salen del dataset
+// tal cual: el dataset los escribe en espanol (categorias.py) y aqui se traducen. Ver
+// datos/categorias-i18n.js. El slug, que es lo que va en la URL, no cambia nunca.
+const cats = categoriasEn(datos.categorias, idioma);
+const categorias = porFamilia(cats, () => true, idioma);
 // Las guias son treinta y tambien: van agrupadas por estante para que el menu se lea.
-const guias = porFamilia(datos.categorias, (c) => EVIDENCIA[c.slug]);
+const guias = porFamilia(cats, (c) => EVIDENCIA[c.slug], idioma);
 const enGuia = aqui === '/guias' || aqui.startsWith('/guia/');
 // El tercer menu: los articulos que se leen antes de elegir categoria (que funciona, para
 // que objetivo, en que tienda). Sin el estaban publicados y no se llegaba a ellos.
 const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/para/')
   || aqui === '/tiendas' || aqui.startsWith('/tiendas/');
-// Lo que desfila en la tira de edicion. Son recuentos del dataset, no eslogans: si
-// manana hay 3.000 productos, la tira lo dice sola.
 ---
 <!doctype html>
-<html lang="es">
+<html lang={LANG[idioma]}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -93,19 +125,57 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
       localStorage.getItem('tema') ||
       (matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro');
   </script>
+  {/* Autodeteccion de idioma. Va aqui arriba, antes de que se pinte nada, y solo en las
+      paginas que existen en los tres idiomas: `alternativas` trae las que hay, asi que
+      desde una ficha de producto (que solo esta en espanol) esto ni se escribe.
+
+      Tres cuidados que son la diferencia entre esto y un bucle de redirecciones:
+        1. Si el visitante ya eligio idioma a mano, manda su eleccion y el navegador no
+           se vuelve a mirar. Es justo lo que pide quien cambia de idioma a proposito.
+        2. Solo se redirige UNA vez por sesion. Sin esto, el boton "atras" devuelve a la
+           version espanola, el script la ve y la manda otra vez a /en/: la pagina se
+           queda atrapada y no hay manera de salir hacia atras.
+        3. `location.replace` y no `location.href`: la version que el visitante no queria
+           no deja entrada en el historial.
+      El idioma del navegador se lee por su raiz ("en-GB" -> "en"). Lo que no este entre
+      los tres se queda en espanol, que es el idioma del mercado que se compara. */}
+  {alternativas && (
+    <script is:inline set:html={`(()=>{try{
+var A=${JSON.stringify(alternativas)},D=${JSON.stringify(idioma)};
+var g=localStorage.getItem('idioma');
+if(!g){
+  if(sessionStorage.getItem('idiomaAuto'))return;
+  sessionStorage.setItem('idiomaAuto','1');
+  g=((navigator.languages&&navigator.languages[0])||navigator.language||'es').slice(0,2).toLowerCase();
+}
+if(g===D||!A[g])return;
+location.replace(A[g]+location.search+location.hash);
+}catch(e){}})();`} />
+  )}
   <title>{titulo}</title>
   <meta name="description" content={descripcion} />
   <link rel="canonical" href={canonica} />
+  {/* hreflang: le dice a Google que estas tres URLs son la misma pagina en tres idiomas y
+      no tres paginas que se copian entre si. `x-default` apunta al espanol, que es donde
+      cae quien busca en un idioma que no esta aqui. Sin esto las tres versiones compiten
+      por la misma consulta y pierden las tres. */}
+  {alternativas && IDIOMAS.map((l) => (
+    <link rel="alternate" hreflang={LANG[l]} href={alternativas[l]} />
+  ))}
+  {alternativas && <link rel="alternate" hreflang="x-default" href={alternativas[POR_DEFECTO]} />}
   <meta property="og:type" content="website" />
   <meta property="og:title" content={titulo} />
   <meta property="og:description" content={descripcion} />
   <meta property="og:url" content={canonica} />
   <meta property="og:site_name" content={SITIO.nombre} />
-  <meta property="og:locale" content="es_ES" />
+  <meta property="og:locale" content={OG_LOCALE[idioma]} />
+  {alternativas && IDIOMAS.filter((l) => l !== idioma).map((l) => (
+    <meta property="og:locale:alternate" content={OG_LOCALE[l]} />
+  ))}
   <meta property="og:image" content={abs('/og.png')} />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content={`${SITIO.nombre}: ${SITIO.lema}`} />
+  <meta property="og:image:alt" content={`${SITIO.nombre}: ${t('sitio.lema')}`} />
   <meta name="twitter:card" content="summary_large_image" />
   <!-- Sin esto Google recorta el fragmento a ~160 caracteres y no coge la respuesta corta. -->
   {/* Entrar y registrarse son utilidades, no contenido: se sirven, pero no se indexan. */}
@@ -135,7 +205,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
   )}
 </head>
 <body>
-  <a class="saltar" href="#contenido">Saltar al contenido</a>
+  <a class="saltar" href="#contenido">{t('chrome.saltar')}</a>
 
   {/* Aqui iba el teletipo: los siete recuentos del dataset desfilando encima de la
       cabecera, en las 2.978 paginas. Se quito porque no decia NADA que no estuviera ya
@@ -147,11 +217,11 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
 
   <header class="sitio">
     <div class="envoltorio">
-      <button class="hamburguesa" type="button" aria-label="Abrir el menu"
+      <button class="hamburguesa" type="button" aria-label={t('chrome.abrir_menu')}
               aria-expanded="false" aria-controls="menu-principal">
         <span aria-hidden="true"></span>
       </button>
-      <a class="marca-sitio" href="/">
+      <a class="marca-sitio" href={r('/')}>
         <img class="glifo" src="/favicon.svg" alt="" width="22" height="22" />
         FitnessSupplement<span class="fina">Wiki</span>
       </a>
@@ -162,34 +232,34 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
           atajo de teclado ("/") se pelean por el foco. */}
       {aqui !== '/' && (
         <div class="buscador-cabecera">
-          <Buscador client:idle categorias={datos.categorias} total={total}
-                    etiqueta="Buscar un producto o una categoria" />
+          <Buscador client:idle categorias={cats} total={total}
+                    lang={idioma} txt={txtBusca} etiqueta={t('chrome.buscar')} />
         </div>
       )}
-      <nav class="principal" id="menu-principal" aria-label="Secciones">
+      <nav class="principal" id="menu-principal" aria-label={t('chrome.secciones')}>
         {/* Solo se ve en movil, dentro del panel: sin un titulo arriba, el panel
             empieza directamente en "Categorias" y no se sabe que es lo que se ha
             abierto. Al entrar en un submenu lo sustituye la fila de vuelta. */}
-        <p class="cabeza-panel" aria-hidden="true">Menu</p>
+        <p class="cabeza-panel" aria-hidden="true">{t('chrome.menu')}</p>
         {/* Por debajo de 62rem el buscador de la cabecera no cabe: vive aqui. */}
         <div class="buscador-panel">
-          <Buscador client:idle categorias={datos.categorias} total={total}
-                    etiqueta="Buscar un producto o una categoria" lista="resultados-panel" />
+          <Buscador client:idle categorias={cats} total={total}
+                    lang={idioma} txt={txtBusca} etiqueta={t('chrome.buscar')} lista="resultados-panel" />
         </div>
         <details class="menu-cat" name="menu">
-          <summary aria-current={enCategoria ? 'page' : undefined}>Categorias</summary>
+          <summary aria-current={enCategoria ? 'page' : undefined}>{t('chrome.categorias')}</summary>
           <div class="lamina laminas-grupos">
             {categorias.map((g) => (
               <div class="grupo-menu">
-                <p class="rotulo-menu">{g.nombre}</p>
+                <p class="rotulo-menu">{estante(g.nombre)}</p>
                 {g.cats.map((c) => (
-                  <a href={`/${c.slug}/`} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
+                  <a href={r(`/${c.slug}/`)} aria-current={aqui === `/${c.slug}` ? 'page' : undefined}>
                     {c.nombre} <span>{c.productos}</span>
                   </a>
                 ))}
               </div>
             ))}
-            <a class="pie-menu" href="/guias/#categorias">Ver todas las categorias &rarr;</a>
+            <a class="pie-menu" href={r('/guias/#categorias')}>{t('chrome.ver_categorias')} &rarr;</a>
           </div>
         </details>
         {/* "Que funciona" era una cuarta pestana con tres grupos de tres enlaces, y
@@ -198,50 +268,50 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             entran ARRIBA de la misma lamina, delante de los estantes de guias. Una
             pestana menos en una barra que ya no cabia en una linea. */}
         <details class="menu-cat" name="menu">
-          <summary aria-current={enGuia || enFunciona ? 'page' : undefined}>Guias</summary>
+          <summary aria-current={enGuia || enFunciona ? 'page' : undefined}>{t('chrome.guias')}</summary>
           <div class="lamina laminas-grupos">
             <div class="grupo-menu">
-              <p class="rotulo-menu">Por evidencia</p>
-              <a href="/suplementos-que-funcionan/"
+              <p class="rotulo-menu">{t('chrome.por_evidencia')}</p>
+              <a href={r('/suplementos-que-funcionan/')}
                  aria-current={aqui === '/suplementos-que-funcionan' ? 'page' : undefined}>
-                Que suplementos funcionan
+                {t('chrome.que_funciona')}
               </a>
             </div>
             <div class="grupo-menu">
-              <p class="rotulo-menu">Por objetivo</p>
+              <p class="rotulo-menu">{t('chrome.por_objetivo')}</p>
               {OBJETIVOS.map((o) => (
-                <a href={`/para/${o.slug}/`} aria-current={aqui === `/para/${o.slug}` ? 'page' : undefined}>
-                  {o.nombre}
+                <a href={r(`/para/${o.slug}/`)} aria-current={aqui === `/para/${o.slug}` ? 'page' : undefined}>
+                  {t(`objetivo.${o.slug}.nombre`)}
                 </a>
               ))}
             </div>
             <div class="grupo-menu">
-              <p class="rotulo-menu">Por tienda</p>
-              <a href="/tiendas/" aria-current={aqui === '/tiendas' ? 'page' : undefined}>
-                Que tienda es mas barata
+              <p class="rotulo-menu">{t('chrome.por_tienda')}</p>
+              <a href={r('/tiendas/')} aria-current={aqui === '/tiendas' ? 'page' : undefined}>
+                {t('chrome.tienda_barata')}
               </a>
             </div>
             {guias.map((g) => (
               <div class="grupo-menu">
-                <p class="rotulo-menu">{g.nombre}</p>
+                <p class="rotulo-menu">{estante(g.nombre)}</p>
                 {g.cats.map((c) => (
-                  <a href={`/guia/${c.slug}/`} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
+                  <a href={r(`/guia/${c.slug}/`)} aria-current={aqui === `/guia/${c.slug}` ? 'page' : undefined}>
                     {c.nombre}
                   </a>
                 ))}
               </div>
             ))}
-            <a class="pie-menu" href="/guias/">Ver todas las guias y categorias &rarr;</a>
+            <a class="pie-menu" href={r('/guias/')}>{t('chrome.ver_guias')} &rarr;</a>
           </div>
         </details>
-        <a href="/metodologia/" aria-current={aqui === '/metodologia' ? 'page' : undefined}>Metodologia</a>
+        <a href={r('/metodologia/')} aria-current={aqui === '/metodologia' ? 'page' : undefined}>{t('chrome.metodologia')}</a>
         {/* Estos dos siguen en el menu de las 2.985 paginas, pero en escritorio no gastan
             pestana: "quienes somos" ya esta en el pie y "mi lista" pasa a icono al lado
             del de cuenta, que es donde una tienda pone su carrito. En movil, donde el
             menu es un panel y no una barra, se ven los dos con su nombre escrito. */}
-        <a class="solo-panel" href="/quienes-somos/" aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>Quienes somos</a>
-        <a class="solo-panel" href="/mis-suplementos/" aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>Mi lista</a>
-        <a class="comparar" href="/guias/#categorias">Comparar</a>
+        <a class="solo-panel" href={r('/quienes-somos/')} aria-current={aqui === '/quienes-somos' ? 'page' : undefined}>{t('chrome.quienes_somos')}</a>
+        <a class="solo-panel" href={r('/mis-suplementos/')} aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>{t('chrome.mi_lista')}</a>
+        <a class="comparar" href={r('/guias/#categorias')}>{t('chrome.comparar')}</a>
 
         {/* El pie del panel: lo que no es navegar por el catalogo. En escritorio solo
             se ve el boton de tema, en su sitio de siempre a la derecha de la barra.
@@ -250,11 +320,30 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
             cacheada, asi que no puede saberlo al generarse. */}
         <div class="pie-panel">
           <a class="enlace-admin" href="/admin/" hidden>
-            <span class="glifo-panel" aria-hidden="true">&#9881;</span>Panel de administracion
+            <span class="glifo-panel" aria-hidden="true">&#9881;</span>{t('chrome.admin')}
           </a>
-          <button class="tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
+          {/* El selector de idioma. Solo sale donde hay a donde ir: ensenarlo en una ficha
+              de producto (espanol y nada mas) seria prometer una version que no existe.
+              Son tres enlaces de verdad, con su href y su hreflang, asi que funcionan sin
+              JavaScript y los sigue un rastreador; el script de abajo solo anota la
+              eleccion para que la autodeteccion no la pise en la pagina siguiente. */}
+          {alternativas && (
+            <div class="idiomas" role="group" aria-label={t('chrome.elegir_idioma')}>
+              <span class="glifo-panel" aria-hidden="true">&#127760;</span>
+              {/* Se pinta el codigo ("ES") y no el nombre ("Espanol"): tres nombres
+                  completos no caben en la barra de pestanas al lado del tema, y el
+                  codigo de dos letras lo entiende todo el mundo. El nombre entero va en
+                  el `title` y en el `aria-label`, que es donde lo lee quien lo necesita. */}
+              {IDIOMAS.map((l) => (
+                <a href={alternativas[l]} hreflang={LANG[l]} lang={LANG[l]} data-idioma={l}
+                   title={NOMBRE_IDIOMA[l]} aria-label={NOMBRE_IDIOMA[l]}
+                   aria-current={l === idioma ? 'true' : undefined}>{l.toUpperCase()}</a>
+              ))}
+            </div>
+          )}
+          <button class="tema" type="button" aria-label={t('chrome.tema')}>
             <span class="luna" aria-hidden="true">&#9789;</span><span class="sol" aria-hidden="true">&#9788;</span>
-            <span class="texto-tema">Cambiar de tema</span>
+            <span class="texto-tema">{t('chrome.tema_corto')}</span>
           </button>
         </div>
       </nav>
@@ -263,15 +352,19 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         centrado, asi que en una pantalla ancha su borde derecho no es el de la
         ventana. Estos van posicionados contra la cabecera, que si llega a la esquina.
         El href del acceso lleva de vuelta a la pagina desde la que se pulsa. */}
-    <a class="mi-lista-cabecera" href="/mis-suplementos/" title="Mi lista"
-       aria-label="Mi lista de suplementos guardados"
+    <a class="mi-lista-cabecera" href={r('/mis-suplementos/')} title={t('chrome.mi_lista')}
+       aria-label={t('chrome.mi_lista_larga')}
        aria-current={aqui === '/mis-suplementos' ? 'page' : undefined}>
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none"
            stroke="currentColor" stroke-width="1.9" stroke-linecap="square">
         <path d="M4 5h16M4 11h16M4 17h9" />
       </svg>
     </a>
-    <a class="acceso-cabecera" href="/entrar/" aria-label="Entrar en tu cuenta" title="Entrar">
+    {/* `data-cuenta` lleva el molde de "Tu cuenta: %s" traducido. El script de abajo es
+        inline y se escribe una sola vez para los tres idiomas, asi que el texto tiene que
+        llegarle desde el HTML: es eso o tres copias del script. */}
+    <a class="acceso-cabecera" href="/entrar/" aria-label={t('chrome.entrar_larga')}
+       title={t('chrome.entrar')} data-cuenta={t('chrome.tu_cuenta', '%s')}>
       <svg class="silueta" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
         <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9" />
         <path d="M4.6 20.2a7.4 7.4 0 0 1 14.8 0" fill="none" stroke="currentColor"
@@ -283,9 +376,8 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
 
   {datoViejo && (
     <p class="aviso-caducado">
-      <strong>Estos precios tienen {diasDelDato} dias.</strong> La recogida automatica no se
-      ha ejecutado desde el {datos.generado}: sirven para comparar entre productos, pero el
-      precio bueno es el de la tienda.
+      <strong>{t('chrome.caducado.titulo', diasDelDato)}</strong>{' '}
+      {t('chrome.caducado.cuerpo', fechaLarga(datos.generado))}
     </p>
   )}
 
@@ -299,56 +391,43 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         <div>
           <h4>{SITIO.nombre}</h4>
           <p>
-            {total} suplementos comparados por <strong>precio por kilo o por capsula</strong> y
-            por lo comprobable que es su certificacion. Ni estrellas, ni opiniones, ni comisiones
-            que muevan el orden.
+            {t('pie.sitio.texto', total)}<strong>{t('pie.sitio.negrita')}</strong>{t('pie.sitio.cola')}
           </p>
         </div>
         <div>
-          <h4>Categorias</h4>
-          <p>
-            Las {datos.categorias.length} categorias comparadas por precio real, cada una con
-            su tabla ordenable y su ganador.
-          </p>
-          <a class="boton" href="/guias/#categorias">Ver todas las categorias <span class="flecha">&rarr;</span></a>
+          <h4>{t('chrome.categorias')}</h4>
+          <p>{t('pie.categorias.texto', datos.categorias.length)}</p>
+          <a class="boton" href={r('/guias/#categorias')}>{t('chrome.ver_categorias')} <span class="flecha">&rarr;</span></a>
         </div>
         <div>
-          <h4>Guias</h4>
-          <p>
-            Para que sirve cada suplemento, con la dosis y la fuente al lado. Sin precios
-            dentro: eso esta en la categoria.
-          </p>
-          <a class="boton" href="/guias/#guias">Ver todas las guias <span class="flecha">&rarr;</span></a>
+          <h4>{t('chrome.guias')}</h4>
+          <p>{t('pie.guias.texto')}</p>
+          <a class="boton" href={r('/guias/#guias')}>{t('chrome.ver_guias')} <span class="flecha">&rarr;</span></a>
         </div>
         <div>
-          <h4>Transparencia</h4>
+          <h4>{t('pie.transparencia')}</h4>
           <ul>
-            <li><a href="/quienes-somos/">Quienes somos</a></li>
-            <li><a href="/metodologia/">Metodologia</a></li>
-            <li><a href="/marcas/">Precios por marca</a></li>
-            <li><a href="/metodologia/#niveles">Niveles de verificacion</a></li>
-            <li><a href="/metodologia/#formula">La formula del score</a></li>
-            <li><a href="/metodologia/#afiliacion">Afiliacion</a></li>
-            <li><a href="/llms.txt">Resumen para modelos de IA</a></li>
-            <li><a href="/legal/">Aviso legal y privacidad</a></li>
-            <li><a href={`mailto:${SITIO.contacto}`}>Contacto</a></li>
+            <li><a href={r('/quienes-somos/')}>{t('chrome.quienes_somos')}</a></li>
+            <li><a href={r('/metodologia/')}>{t('chrome.metodologia')}</a></li>
+            <li><a href={r('/marcas/')}>{t('pie.marcas')}</a></li>
+            <li><a href={r('/metodologia/#niveles')}>{t('pie.niveles')}</a></li>
+            <li><a href={r('/metodologia/#formula')}>{t('pie.formula')}</a></li>
+            <li><a href={r('/metodologia/#afiliacion')}>{t('pie.afiliacion')}</a></li>
+            <li><a href="/llms.txt">{t('pie.llms')}</a></li>
+            <li><a href={r('/legal/')}>{t('pie.legal')}</a></li>
+            <li><a href={`mailto:${SITIO.contacto}`}>{t('pie.contacto')}</a></li>
           </ul>
         </div>
       </div>
       <div class="colofon">
-        <p class="mono">Recogida de precios del <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time> · {total} productos · {datos.categorias.length} categorias</p>
+        <p class="mono">{t('pie.colofon.recogida', fechaLarga(datos.generado), total, datos.categorias.length)}</p>
         <p>
-          Datos recogidos y metodo mantenido por <a href="/quienes-somos/">{SITIO.autor.nombre}</a>.
-          {' '}{SITIO.autor.no_hace}
+          {t('pie.colofon.autor')} <a href={r('/quienes-somos/')}>{SITIO.autor.nombre}</a>.
+          {' '}{t('sitio.autor.no_hace')}
         </p>
+        <p>{t('pie.colofon.precios')}</p>
         <p>
-          Precios recogidos automaticamente de las tiendas. Pueden variar; el precio bueno
-          siempre es el de la tienda.
-        </p>
-        <p>
-          Esta web informa de hechos verificables sobre productos e ingredientes. No da consejo
-          medico ni nutricional. Ningun efecto se atribuye a un producto: la evidencia se cita
-          por ingrediente en <a href="/metodologia/">la metodologia</a>.
+          {t('pie.colofon.aviso')}<a href={r('/metodologia/')}>{t('pie.colofon.aviso_enlace')}</a>.
         </p>
       </div>
     </div>
@@ -379,6 +458,15 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
       raiz.dataset.tema = raiz.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
       localStorage.setItem('tema', raiz.dataset.tema);
     });
+    // Elegir idioma a mano gana para siempre. El enlace navega solo (es un <a> con su
+    // href); lo unico que hace esto es dejar constancia de la eleccion, para que la
+    // autodeteccion de la pagina de destino la respete en vez de devolver al visitante
+    // al idioma de su navegador. Es la diferencia entre un selector y un boton inutil.
+    for (const a of document.querySelectorAll('.idiomas a')) {
+      a.addEventListener('click', () => {
+        try { localStorage.setItem('idioma', a.dataset.idioma); } catch { /* modo privado */ }
+      });
+    }
     document.addEventListener('click', (e) => {
       for (const d of document.querySelectorAll('nav.principal details[open]')) {
         if (!d.contains(e.target)) d.open = false;
@@ -402,7 +490,7 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
         if (!usuario) return;
         icono.classList.add('dentro');
         icono.title = usuario.nombre;
-        icono.setAttribute('aria-label', 'Tu cuenta: ' + usuario.nombre);
+        icono.setAttribute('aria-label', icono.dataset.cuenta.replace('%s', usuario.nombre));
         const inicial = icono.querySelector('.inicial');
         inicial.textContent = [...usuario.nombre][0].toUpperCase();
         inicial.hidden = false;

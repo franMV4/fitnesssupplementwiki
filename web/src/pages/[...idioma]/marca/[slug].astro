@@ -1,0 +1,153 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Aviso from '../../../componentes/Aviso.astro';
+import Faq from '../../../componentes/Faq.astro';
+import datos from '../../../datos/dataset.json';
+import { MARCAS } from '../../../datos/marcas.js';
+import { NIVEL, TIENDAS, UNIDAD, eur, puntos } from '../../../datos/util.js';
+import { anio, corta, formatoDe, listaLd, nom, resumen, tiendaDe, titula } from '../../../datos/seo.js';
+import { enIdioma } from '../../../datos/categorias-i18n.js';
+import { abs } from '../../../sitio.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../../i18n.js';
+
+export function getStaticPaths() {
+  return porIdioma(MARCAS.map((m) => ({ params: { slug: m.slug }, props: { m } })));
+}
+
+const { m, lang } = Astro.props;
+const t = textos(lang);
+const r_ = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+const canonica = abs(r_(`/marca/${m.slug}`));
+const n = m.productos.length;
+const nombresTiendas = m.tiendas.map((x) => TIENDAS[x] ?? x);
+
+// Por categoria: la horquilla en su unidad y el mas barato. Es la fila que se copia en
+// la respuesta corta y en la descripcion. La categoria va en el idioma de la pagina.
+const bloques = m.categorias.map((g) => ({ ...g, cat: enIdioma(g.cat, lang), r: resumen(g.cat, g.productos, lang) }));
+const principales = bloques.slice(0, 3).filter((b) => b.r.barato);
+
+const titulo = titula(t('marca.titulo', m.nombre, anio(datos.generado), n), ...t('marca.titulo_sufijos'));
+
+const descripcion = corta(
+  t('marca.desc_a', m.nombre, t('comun.tiendas', nombresTiendas.length)) +
+  principales.map((b) => t('marca.desc_cat', b.cat.nombre.toLowerCase(), b.r.precio(b.r.barato.precio_referencia)))
+    .join(', ') +
+  t('marca.desc_b', n, fechaLarga(datos.generado)), 200);
+
+const respuesta = [
+  t('marca.resp_1', n, m.nombre, m.categorias.length, nombresTiendas.join(', ')),
+  m.lider?.score_final != null
+    ? t('marca.resp_lider', nom(m.lider), m.lider.score_final.toFixed(0), eur(m.lider.precio_eur, 2, lang), tiendaDe(m.lider))
+    : '',
+  ...principales.map((b) => t('marca.resp_cat', b.cat.nombre.toLowerCase(), b.r.unidad, nom(b.r.barato),
+                              b.r.precio(b.r.barato.precio_referencia))),
+  t('marca.resp_fecha', fechaLarga(datos.generado)),
+].filter(Boolean).join(' ');
+
+const faqs = [
+  principales[0] && {
+    p: t('marca.faq1_p', m.nombre),
+    r: principales.map((b) => t('marca.faq1_cat', b.cat.nombre.toLowerCase(), nom(b.r.barato),
+      tiendaDe(b.r.barato), eur(b.r.barato.precio_eur, 2, lang), formatoDe(b.r.barato, lang),
+      b.r.precio(b.r.barato.precio_referencia))).join(' ') + t('marca.faq1_cola'),
+  },
+  m.lider?.score_final != null && {
+    p: t('marca.faq2_p', m.nombre),
+    r: t('marca.faq2_r', m.nombre, nom(m.lider), m.lider.score_final.toFixed(0)),
+  },
+  {
+    p: t('marca.faq3_p', m.nombre),
+    r: nombresTiendas.length === 1
+      ? t('marca.faq3_una', nombresTiendas[0], m.nombre)
+      : t('marca.faq3_varias', nombresTiendas.join(', ')),
+  },
+].filter(Boolean);
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: titulo,
+    description: descripcion,
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    about: { '@type': 'Brand', name: m.nombre },
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+    mainEntity: listaLd(t('marca.lista_ld', m.nombre), m.productos),
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r_('/')) },
+      { '@type': 'ListItem', position: 2, name: t('marcas.miga'), item: abs(r_('/marcas')) },
+      { '@type': 'ListItem', position: 3, name: m.nombre, item: canonica },
+    ],
+  },
+];
+---
+<Base lang={lang} ancho="completo" titulo={titulo} descripcion={descripcion} schema={schema}
+      noindex={!m.indexable}>
+
+  <p class="migas"><a href={r_('/')}>{t('comun.inicio')}</a> / <a href={r_('/marcas/')}>{t('marcas.miga')}</a> / {m.nombre}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {t('marca.antetitulo')} · {t('cat.datos_del')} <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{t('marca.h1', m.nombre, n)}</h1>
+    <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>
+  </section>
+
+  <Aviso lang={lang} />
+
+  {bloques.map((b) => {
+    const unidad = UNIDAD[lang][b.cat.unidad_precio] ?? 'kg';
+    return (
+      <section class="seccion" id={b.cat.slug}>
+        <div class="cabecera-seccion">
+          <h2>{t('marca.h2_cat', b.cat.nombre, m.nombre)}</h2>
+          <p class="apunte">{t('marca.apunte_cat', b.productos.length, unidad)}</p>
+        </div>
+        <div class="tabla-marco">
+          <div class="tabla-scroll">
+            <table class="apilable">
+              <caption>{t('marca.caption_cat', b.cat.nombre, m.nombre, unidad)}</caption>
+              <thead>
+                <tr><th>{t('tabla.col.producto')}</th><th>{t('marca.col_formato')}</th><th class="num">{t('marca.col_precio')}</th>
+                  <th class="num">€/{unidad}</th><th>{t('marca.col_nivel')}</th><th class="num">{t('tabla.col.score')}</th><th>{t('tabla.tienda')}</th></tr>
+              </thead>
+              <tbody>
+                {b.productos.map((p, i) => (
+                  <tr>
+                    <td class="principal marca"><a href={`/producto/${p.slug}/`}>{p.nombre}</a></td>
+                    <td data-et={t('marca.col_formato')}>{formatoDe(p, lang)}</td>
+                    <td class="num" data-et={t('marca.col_precio')}>{eur(p.precio_eur, 2, lang)}</td>
+                    <td class:list={['num', { barato: i === 0 }]} data-et={`€/${unidad}`}>{b.r.precio(p.precio_referencia)}</td>
+                    <td data-et={t('marca.col_nivel')}>
+                      <span class={`nivel ${NIVEL[lang][p.nivel_verificacion].clase}`}>
+                        <span class="puntos">{puntos(p.nivel_verificacion).map((on) => <i class={on ? 'on' : ''} />)}</span>
+                        {p.nivel_verificacion}
+                      </span>
+                    </td>
+                    <td class="num" data-et={t('tabla.col.score')}>{p.score_final?.toFixed(0) ?? '—'}</td>
+                    <td data-et={t('tabla.tienda')}>{tiendaDe(p)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="sutil">
+          <a href={r_(`/${b.cat.slug}/`)}>{t('marca.comparar_con', b.cat.productos, b.cat.termino)} →</a>
+        </p>
+      </section>
+    );
+  })}
+
+  <Faq lang={lang} faqs={faqs} titulo={t('marca.faq_titulo', m.nombre)} />
+
+  <p class="volver"><a class="boton" href={r_('/marcas/')}>← {t('marca.todas')}</a></p>
+</Base>

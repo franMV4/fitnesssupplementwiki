@@ -18,12 +18,15 @@ export const FAMILIAS = [
 
 // Reparte las categorias del dataset por estante conservando el orden de FAMILIAS.
 // `filtro` sirve para el menu de guias, que solo lista las categorias con evidencia escrita.
-export function porFamilia(categorias, filtro = () => true) {
+export function porFamilia(categorias, filtro = () => true, lang = 'es') {
   const cats = categorias.filter(filtro);
   const colocadas = new Set(FAMILIAS.flatMap((f) => f.slugs));
   // Dentro del estante manda el alfabeto: FAMILIAS decide en que balda va cada una,
   // no en que puesto. Asi el orden no depende de como se escribio la lista.
-  const alfabetico = (a, b) => a.nombre.localeCompare(b.nombre, 'es');
+  // El alfabeto es el del idioma en el que se lee: en ingles "Creatine" va delante de
+  // "Caffeine"? no, pero "Whey protein" cae en otro sitio que "Proteina whey", y un menu
+  // ordenado por el alfabeto espanol dentro de una pagina en ingles se lee desordenado.
+  const alfabetico = (a, b) => a.nombre.localeCompare(b.nombre, lang);
   const grupos = FAMILIAS.map((f) => ({
     nombre: f.nombre,
     cats: f.slugs.map((s) => cats.find((c) => c.slug === s)).filter(Boolean).sort(alfabetico),

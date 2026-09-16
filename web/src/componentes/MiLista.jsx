@@ -20,7 +20,48 @@ const DOSIS = [0.5, 1, 1.5, 2, 3];
 const como = (p) => ({ servicios_por_envase: p.servicios_por_envase,
                        precio_eur: p.precio_envase_eur });
 
-export default function MiLista() {
+const T = {
+  es: { conCuenta: 'Mi lista va guardada en tu cuenta, asi que hay que entrar para verla.', entrar: 'Entrar',
+        cargando: 'Cargando tu lista…', teHan: (n) => `Alguien te ha pasado una lista de ${n} productos.`,
+        nadaAun: 'No se ha guardado nada todavia: se anaden a la tuya solo si lo dices tu.',
+        anadir: 'anadirlos a mi lista', noGracias: 'no, gracias',
+        vacio: ['Todavia no has guardado nada. En cualquier tabla de categoria, el boton', ' ♡ mi lista', ' de cada fila lo trae aqui; en la ficha de un producto esta al lado del precio, junto a la dosis que tomas. Se guarda en tu cuenta.'],
+        enLista: (n) => (n === 1 ? 'producto en tu lista' : 'productos en tu lista'), vaciar: 'vaciar',
+        copiado: 'enlace copiado', copiar: 'copiar enlace', caption: 'Lo que tomas, con tu dosis',
+        producto: 'Producto', alDia: 'Al dia', envase: 'Envase', dura: 'Dura', alMes: 'Al mes',
+        yaNo: 'ya no esta en el ranking', servicios: 'Servicios al dia', dias: 'dias', quitar: 'quitar',
+        gastoMes: 'Tu gasto al mes', conDosis: (n) => `${n} ${n === 1 ? 'producto' : 'productos'} con la dosis que has puesto`,
+        sinSumar: (n) => ` · ${n} sin sumar: su tienda no declara los servicios por envase`,
+        avisos: 'Tus avisos de precio', baja: (p) => ` · te avisamos si baja de ${p}` },
+  en: { conCuenta: 'My list is saved to your account, so you need to sign in to see it.', entrar: 'Sign in',
+        cargando: 'Loading your list…', teHan: (n) => `Someone has shared a list of ${n} products with you.`,
+        nadaAun: 'Nothing has been saved yet: they are only added to yours if you say so.',
+        anadir: 'add them to my list', noGracias: 'no, thanks',
+        vacio: ['You have not saved anything yet. In any category table, the', ' ♡ my list', ' button on each row brings it here; on a product page it sits next to the price, with the dose you take. It is saved to your account.'],
+        enLista: (n) => (n === 1 ? 'product in your list' : 'products in your list'), vaciar: 'clear',
+        copiado: 'link copied', copiar: 'copy link', caption: 'What you take, with your dose',
+        producto: 'Product', alDia: 'Per day', envase: 'Pack', dura: 'Lasts', alMes: 'Per month',
+        yaNo: 'no longer in the ranking', servicios: 'Servings per day', dias: 'days', quitar: 'remove',
+        gastoMes: 'Your monthly spend', conDosis: (n) => `${n} ${n === 1 ? 'product' : 'products'} with the dose you set`,
+        sinSumar: (n) => ` · ${n} not counted: their store does not state servings per pack`,
+        avisos: 'Your price alerts', baja: (p) => ` · we will let you know if it drops below ${p}` },
+  fr: { conCuenta: 'Ma liste est enregistrée dans votre compte : connectez-vous pour la voir.', entrar: 'Se connecter',
+        cargando: 'Chargement de votre liste…', teHan: (n) => `Quelqu’un vous a transmis une liste de ${n} produits.`,
+        nadaAun: 'Rien n’a encore été enregistré : ils ne s’ajoutent à la vôtre que si vous le décidez.',
+        anadir: 'les ajouter à ma liste', noGracias: 'non, merci',
+        vacio: ['Vous n’avez encore rien enregistré. Dans n’importe quel tableau de catégorie, le bouton', ' ♡ ma liste', ' de chaque ligne l’ajoute ici ; sur la fiche d’un produit, il se trouve à côté du prix, avec la dose que vous prenez. C’est enregistré dans votre compte.'],
+        enLista: (n) => (n === 1 ? 'produit dans votre liste' : 'produits dans votre liste'), vaciar: 'vider',
+        copiado: 'lien copié', copiar: 'copier le lien', caption: 'Ce que vous prenez, avec votre dose',
+        producto: 'Produit', alDia: 'Par jour', envase: 'Contenant', dura: 'Dure', alMes: 'Par mois',
+        yaNo: 'n’est plus dans le classement', servicios: 'Portions par jour', dias: 'jours', quitar: 'retirer',
+        gastoMes: 'Votre dépense mensuelle', conDosis: (n) => `${n} ${n === 1 ? 'produit' : 'produits'} avec la dose indiquée`,
+        sinSumar: (n) => ` · ${n} non comptés : leur boutique n’indique pas les portions par contenant`,
+        avisos: 'Vos alertes de prix', baja: (p) => ` · nous vous prévenons s’il passe sous ${p}` },
+};
+
+export default function MiLista({ lang = 'es' }) {
+  const t = T[lang] ?? T.es;
+  const e2 = (n) => eur(n, 2, lang);
   const [lista, setLista] = useState([]);
   const [datos, setDatos] = useState({});
   const [cargando, setCargando] = useState(true);
@@ -91,22 +132,22 @@ export default function MiLista() {
   if (usuario === null) {
     return (
       <p className="vacio">
-        Mi lista va guardada en tu cuenta, asi que hay que entrar para verla.{' '}
-        <button type="button" className="boton primario" onClick={irAEntrar}>Entrar</button>
+        {t.conCuenta}{' '}
+        <button type="button" className="boton primario" onClick={irAEntrar}>{t.entrar}</button>
       </p>
     );
   }
-  if (cargando) return <p className="sutil">Cargando tu lista…</p>;
+  if (cargando) return <p className="sutil">{t.cargando}</p>;
 
   const banner = compartida.length > 0 && (
     <p className="nota">
-      <strong>Alguien te ha pasado una lista de {compartida.length} productos.</strong>{' '}
-      No se ha guardado nada todavia: se anaden a la tuya solo si lo dices tu.
+      <strong>{t.teHan(compartida.length)}</strong>{' '}
+      {t.nadaAun}
       <button type="button" className="enlace-accion" onClick={anadirCompartida}>
-        anadirlos a mi lista
+        {t.anadir}
       </button>
       <button type="button" className="enlace-accion" onClick={() => setCompartida([])}>
-        no, gracias
+        {t.noGracias}
       </button>
     </p>
   );
@@ -116,9 +157,7 @@ export default function MiLista() {
       <>
         {banner}
         <p className="vacio">
-          Todavia no has guardado nada. En cualquier tabla de categoria, el boton
-          <b> &#9825; mi lista</b> de cada fila lo trae aqui; en la ficha de un producto esta al
-          lado del precio, junto a la dosis que tomas. Se guarda en tu cuenta.
+          {t.vacio[0]}<b>{t.vacio[1]}</b>{t.vacio[2]}
         </p>
       </>
     );
@@ -145,24 +184,24 @@ export default function MiLista() {
       {error && <p className="fallo-form">{error}</p>}
 
       <p className="contador">
-        <b>{lista.length}</b> {lista.length === 1 ? 'producto' : 'productos'} en tu lista
-        <button type="button" className="chip" onClick={vaciar}>vaciar</button>
+        <b>{lista.length}</b> {t.enLista(lista.length)}
+        <button type="button" className="chip" onClick={vaciar}>{t.vaciar}</button>
         <button type="button" className="chip" onClick={copiar}>
-          {copiado ? 'enlace copiado' : 'copiar enlace'}
+          {copiado ? t.copiado : t.copiar}
         </button>
       </p>
 
       <div className="tabla-marco">
         <div className="tabla-scroll">
           <table className="apilable mi-lista-tabla">
-            <caption>Lo que tomas, con tu dosis</caption>
+            <caption>{t.caption}</caption>
             <thead>
               <tr>
-                <th>Producto</th>
-                <th>Al dia</th>
-                <th className="num">Envase</th>
-                <th className="num">Dura</th>
-                <th className="num">Al mes</th>
+                <th>{t.producto}</th>
+                <th>{t.alDia}</th>
+                <th className="num">{t.envase}</th>
+                <th className="num">{t.dura}</th>
+                <th className="num">{t.alMes}</th>
                 <th />
               </tr>
             </thead>
@@ -176,29 +215,29 @@ export default function MiLista() {
                       <a href={`/producto/${f.s}/`}>{f.ficha ? f.ficha.nombre : comoSeLee(f.s)}</a>
                       {f.ficha
                         ? <span className="sutil"> · {TIENDAS[f.ficha.tienda] ?? f.ficha.tienda}</span>
-                        : <span className="sutil"> · ya no esta en el ranking</span>}
+                        : <span className="sutil"> · {t.yaNo}</span>}
                     </td>
-                    <td data-et="Al dia">
+                    <td data-et={t.alDia}>
                       {/* aria-label y no un <label> con texto escondido: la columna ya
                           se llama "Al dia" en la cabecera, y en movil el rotulo lo pone
                           el data-et de la celda. */}
-                      <select value={f.d} aria-label="Servicios al dia"
+                      <select value={f.d} aria-label={t.servicios}
                               onChange={(e) => guardar(conDosis(lista, f.s, Number(e.target.value)))}>
                         {DOSIS.map((d) => (
-                          <option key={d} value={d}>{String(d).replace('.', ',')}</option>
+                          <option key={d} value={d}>{lang === 'en' ? String(d) : String(d).replace('.', ',')}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="num" data-et="Envase">
-                      {f.ficha ? eur(f.ficha.precio_envase_eur) : '—'}
+                    <td className="num" data-et={t.envase}>
+                      {f.ficha ? e2(f.ficha.precio_envase_eur) : '—'}
                     </td>
-                    <td className="num" data-et="Dura">
-                      {dias != null ? `${Math.round(dias)} dias` : '—'}
+                    <td className="num" data-et={t.dura}>
+                      {dias != null ? `${Math.round(dias)} ${t.dias}` : '—'}
                     </td>
-                    <td className="num" data-et="Al mes">{mes != null ? eur(mes) : '—'}</td>
+                    <td className="num" data-et={t.alMes}>{mes != null ? e2(mes) : '—'}</td>
                     <td>
                       <button type="button" className="enlace-accion peligro"
-                              onClick={() => quitar(f.s)}>quitar</button>
+                              onClick={() => quitar(f.s)}>{t.quitar}</button>
                     </td>
                   </tr>
                 );
@@ -209,25 +248,24 @@ export default function MiLista() {
       </div>
 
       <p className="total-lista">
-        <span className="rotulo-total">Tu gasto al mes</span>
-        <b>{eur(total)}</b>
+        <span className="rotulo-total">{t.gastoMes}</span>
+        <b>{e2(total)}</b>
         <span className="sutil">
-          {calculables.length} {calculables.length === 1 ? 'producto' : 'productos'} con la
-          dosis que has puesto
-          {sinCuenta > 0 && ` · ${sinCuenta} sin sumar: su tienda no declara los servicios por envase`}
+          {t.conDosis(calculables.length)}
+          {sinCuenta > 0 && t.sinSumar(sinCuenta)}
         </span>
       </p>
 
       {alertas.length > 0 && (
         <section className="avisos-puestos">
-          <h2>Tus avisos de precio</h2>
+          <h2>{t.avisos}</h2>
           <ul>
             {alertas.map((a) => (
               <li key={a.producto}>
                 <a href={`/producto/${a.producto}/`}>{comoSeLee(a.producto)}</a>
-                <span className="sutil"> · te avisamos si baja de {eur(a.objetivo)}</span>
+                <span className="sutil">{t.baja(e2(a.objetivo))}</span>
                 <button type="button" className="enlace-accion peligro"
-                        onClick={() => quitarAlerta(a.producto)}>quitar</button>
+                        onClick={() => quitarAlerta(a.producto)}>{t.quitar}</button>
               </li>
             ))}
           </ul>

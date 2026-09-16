@@ -1,0 +1,271 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Aviso from '../../../componentes/Aviso.astro';
+import Faq from '../../../componentes/Faq.astro';
+import datos from '../../../datos/dataset.json';
+import { REVISADO } from '../../../datos/evidencia.js';
+import { OBJETIVOS_RESUELTOS } from '../../../datos/eficacia.js';
+import { EVIDENCIA } from '../../../datos/evidencia.js';
+import { evidenciaEn, nivelEvidencia } from '../../../datos/evidencia-i18n.js';
+import { enIdioma } from '../../../datos/categorias-i18n.js';
+import { eur, precioReferencia } from '../../../datos/util.js';
+import { nom, tiendaDe, titula } from '../../../datos/seo.js';
+import { abs } from '../../../sitio.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../../i18n.js';
+
+// "Que suplementos tomar para ganar masa muscular" y sus cinco hermanas. Son consultas de
+// volumen alto que hoy contesta un foro o una tienda, y las dos contestan lo mismo: la
+// lista entera. Aqui la pagina tiene dos mitades y la segunda es la que importa, la de lo
+// que no hace falta comprar.
+//
+// El reparto de categorias por objetivo es editorial y esta escrito en datos/eficacia.js.
+// Todo lo demas (evidencia, dosis, precio, producto) sale de donde ya salia.
+export function getStaticPaths() {
+  return porIdioma(OBJETIVOS_RESUELTOS.map((o) => ({ params: { objetivo: o.slug }, props: { o } })));
+}
+
+const { o: oEs, lang } = Astro.props;
+const t = textos(lang);
+const r_ = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+const mes = (n) => (n == null ? '—' : eur(n, 2, lang));
+// Cada suplemento de la lista, vestido en el idioma de la pagina: nombre de categoria,
+// dosis, efecto y resumen de su guia. El efecto se busca por POSICION en la guia, que es
+// como evidencia-i18n.js empareja traducciones, asi que la cifra es la misma en los tres.
+const vestir = (x) => {
+  const ev = evidenciaEn(x.slug, lang);
+  const i = x.efecto ? EVIDENCIA[x.slug].efectos.indexOf(x.efecto) : -1;
+  return {
+    ...x,
+    cat: enIdioma(x.cat, lang),
+    dosis: x.dosis ? ev.protocolo.dosis : null,
+    efecto: i >= 0 ? ev.efectos[i] : x.efecto,
+    resumen: ev.resumen,
+  };
+};
+const o = {
+  ...oEs,
+  nombre: t(`objetivo.${oEs.slug}.nombre`),
+  h1: t(`objetivo.${oEs.slug}.h1`),
+  entrada: t(`objetivo.${oEs.slug}.entrada`),
+  incluye: oEs.incluye.map(vestir),
+  descarta: oEs.descarta.map(vestir),
+  nucleo: oEs.nucleo.map(vestir),
+  conPrecio: oEs.conPrecio.map(vestir),
+};
+o.titulo = titula(o.h1, ...t('para.titulo_sufijos'));
+const minus = o.nombre.toLowerCase();
+const canonica = abs(r_(`/para/${o.slug}`));
+const baja = nivelEvidencia('baja', lang);
+const y = (xs) => xs.join(t('para.y'));
+
+const descripcion = t('para.descripcion', o.incluye.length, minus, o.alMes != null ? mes(o.alMes) : null,
+                      o.descarta.length);
+
+const faqs = [
+  {
+    p: t('para.faq1_p', minus),
+    r: o.nucleo.length
+      ? t('para.faq1_r', y(o.nucleo.map((x) => x.cat.nombre.toLowerCase())),
+          o.alMes != null ? mes(o.alMes) : null, o.incluye.length - o.nucleo.length)
+      : t('para.faq1_r_sin'),
+  },
+  ...(o.descarta.length ? [{
+    p: t('para.faq2_p', o.descarta.map((x) => x.cat.nombre.toLowerCase()).join(', ')),
+    r: t('para.faq2_r', o.descarta.map((x) => x.cat.nombre).join(', '), o.descarta.length > 1,
+         baja.explica, minus),
+  }] : []),
+  {
+    p: t('para.faq3_p'),
+    r: t('para.faq3_r', datos.productos.length, new Set(datos.productos.map((p) => p.tienda)).size,
+         fechaLarga(datos.generado), fechaLarga(REVISADO)),
+  },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: o.h1,
+    description: descripcion,
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r_('/')) },
+      { '@type': 'ListItem', position: 2, name: t('funciona.miga'), item: abs(r_('/suplementos-que-funcionan')) },
+      { '@type': 'ListItem', position: 3, name: o.nombre, item: canonica },
+    ],
+  },
+];
+---
+<Base lang={lang} ancho="completo" titulo={o.titulo} descripcion={descripcion} schema={schema}>
+
+  <p class="migas">
+    <a href={r_('/')}>{t('comun.inicio')}</a> / <a href={r_('/suplementos-que-funcionan/')}>{t('funciona.miga')}</a> / {o.nombre}
+  </p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {t('para.antetitulo')} <time datetime={REVISADO}>{fechaLarga(REVISADO)}</time>
+    </p>
+    <h1 class="aparece d1">{o.h1}</h1>
+    <p class="respuesta aparece d2">
+      <b>{t('portada.respuesta_corta')}</b> {o.nucleo.length > 0 && (
+        <>{t('para.resp_nucleo', y(o.nucleo.map((x) => x.cat.nombre.toLowerCase())))}{o.alMes != null && t('para.resp_mes', mes(o.alMes))}. </>
+      )}
+      {t('para.resp_lista', o.incluye.length, minus)}{o.descarta.length > 0 && t('para.resp_descarta', o.descarta.length)}.
+    </p>
+    <p class="entradilla aparece d2">{o.entrada}</p>
+  </section>
+
+  <Aviso lang={lang} />
+
+  {o.nucleo.length > 0 && (
+    <>
+      <h2 class="titulo-bloque">{t('para.basico')}</h2>
+      <div class="destacados aparece d2">
+        {o.nucleo.map((x) => (
+          <div class="bloque destacado-bloque">
+            <span class="rotulo-destacado">{nivelEvidencia(x.nivel, lang).etiqueta}</span>
+            <h3><a href={r_(`/guia/${x.slug}/`)}>{x.cat.nombre}</a></h3>
+            <p class="linea-destacado">
+              <span class="cifra">{mes(x.alMes)}</span>
+              <span class="sutil">{t('para.al_mes')}</span>
+            </p>
+            <p>{x.dosis}</p>
+            {x.barato && (
+              <p class="sutil">
+                {t('para.mas_barato_dosis')} <a href={`/producto/${x.barato.slug}/`}>{nom(x.barato)}</a>
+                {' '}{t('para.de_tienda')} {x.tiendaBarato}, {precioReferencia(x.barato, lang).valor}/{precioReferencia(x.barato, lang).unidad}.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      {o.alMes != null && (
+        <p class="nota">
+          <strong>{t('para.total_t', mes(o.alMes))}</strong>{t('para.total', y(o.conPrecio.map((x) => x.cat.nombre.toLowerCase())))}
+        </p>
+      )}
+    </>
+  )}
+
+  <section class="seccion" id="con-evidencia">
+    <div class="cabecera-seccion">
+      <h2>{t('para.h2_incluye', o.incluye.length)}</h2>
+      <p class="apunte">{t('para.apunte_incluye')}</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{t('para.caption_incluye', minus)}</caption>
+          <thead>
+            <tr>
+              <th>{t('funciona.col_suplemento')}</th>
+              <th>{t('para.col_evidencia')}</th>
+              <th>{t('funciona.col_medido')}</th>
+              <th class="num">{t('funciona.col_mes')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {o.incluye.map((x) => (
+              <tr>
+                <td class="principal marca">
+                  <a href={r_(`/guia/${x.slug}/`)}>{x.cat.nombre}</a>
+                  {x.dosis && <span class="explica">{x.dosis}</span>}
+                </td>
+                <td data-et={t('para.col_evidencia')}>
+                  {nivelEvidencia(x.nivel, lang).etiqueta}
+                  <span class="explica">
+                    <a href={r_(`/${x.slug}/`)}>{t('para.comparados', x.productos)}</a>
+                    {x.mejor && t('para.mejor_nota', nom(x.mejor), tiendaDe(x.mejor))}
+                  </span>
+                </td>
+                <td data-et={t('funciona.col_medido')}>
+                  {x.efecto ? <>{x.efecto.que}: <strong>{x.efecto.cifra}</strong></> : '—'}
+                  {x.fuente && <span class="explica">{x.fuente.cita}</span>}
+                </td>
+                <td class="num" data-et={t('funciona.col_mes')}>
+                  {x.alMes != null
+                    ? <span class="destacado">{mes(x.alMes)}</span>
+                    : <span class="sutil">{t('funciona.sin_dosis')}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {o.descarta.length > 0 && (
+    <section class="seccion" id="no-hacen-falta">
+      <div class="cabecera-seccion">
+        <h2>{t('para.h2_descarta', o.descarta.length)}</h2>
+        <p class="apunte">{t('para.apunte_descarta')}</p>
+      </div>
+      <p class="sutil">{baja.explica}</p>
+      <div class="tabla-marco">
+        <div class="tabla-scroll">
+          <table class="apilable">
+            <caption>{t('para.caption_descarta', minus)}</caption>
+            <thead>
+              <tr>
+                <th>{t('funciona.col_suplemento')}</th>
+                <th>{t('funciona.col_medido')}</th>
+                <th class="num">{t('funciona.col_mes')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {o.descarta.map((x) => (
+                <tr>
+                  <td class="principal marca">
+                    <a href={r_(`/guia/${x.slug}/`)}>{x.cat.nombre}</a>
+                    <span class="explica">{x.resumen?.split('. ')[0]}.</span>
+                  </td>
+                  <td data-et={t('funciona.col_medido')}>
+                    {x.efecto ? <>{x.efecto.que}: <strong>{x.efecto.cifra}</strong></> : '—'}
+                    {x.fuente && <span class="explica">{x.fuente.cita}</span>}
+                  </td>
+                  <td class="num" data-et={t('funciona.col_mes')}>
+                    {x.alMes != null ? mes(x.alMes) : <span class="sutil">{t('funciona.sin_dosis')}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="nota"><strong>{t('para.nota_baja_t')}</strong>{t('para.nota_baja')}</p>
+    </section>
+  )}
+
+  <Faq lang={lang} faqs={faqs} titulo={t('para.faq_titulo', minus)} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('para.otros')}</h2>
+      <p class="apunte">{t('para.apunte_otros')}</p>
+    </div>
+    <div class="lista-categorias">
+      {OBJETIVOS_RESUELTOS.filter((x) => x.slug !== o.slug).map((x) => (
+        <a class="fila-categoria" href={r_(`/para/${x.slug}/`)}>
+          <span class="nombre">{t(`objetivo.${x.slug}.nombre`)}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{t('funciona.n_suplementos', x.incluye.length)}</span>
+        </a>
+      ))}
+      <a class="fila-categoria" href={r_('/suplementos-que-funcionan/')}>
+        <span class="nombre">{t('para.todos')}</span>
+        <span class="guia" aria-hidden="true"></span>
+        <span class="cuenta">{t('para.n_guias', Object.keys(EVIDENCIA).length)}</span>
+      </a>
+    </div>
+  </section>
+</Base>

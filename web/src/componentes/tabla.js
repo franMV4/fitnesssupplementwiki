@@ -44,6 +44,11 @@ export function montarTabla(raiz) {
   const productos = [...cuerpo.rows].map(producto);
   const TOPE = Number(raiz.dataset.tope);
   const total = Number(raiz.dataset.total);
+  // Los textos que escribe este script, ya traducidos, puestos por TablaProductos.astro
+  // en un data- del contenedor. Este modulo no puede recibir props (no es una isla) y
+  // meter el diccionario entero en su bundle serian 30 KB para quince frases. Los
+  // huecos van como %s / %v / %n porque lo que viaja es una cadena, no una funcion.
+  const TXT = JSON.parse(raiz.dataset.txt ?? '{}');
 
   const q = (sel) => raiz.querySelector(sel);
   const campos = {
@@ -106,7 +111,7 @@ export function montarTabla(raiz) {
 
     tabla.classList.toggle('recortada', !todo && visibles.length > TOPE);
     tabla.querySelector('caption').textContent =
-      `Productos ordenados por ${ORDENES[f.orden].etiqueta.toLowerCase()}`;
+      TXT.caption.replace('%s', (TXT.ordenes?.[f.orden] ?? ORDENES[f.orden].etiqueta).toLowerCase());
     for (const boton of raiz.querySelectorAll('.orden')) {
       const activo = boton.dataset.orden === f.orden;
       boton.classList.toggle('activo', activo);
@@ -119,8 +124,8 @@ export function montarTabla(raiz) {
     vacio.hidden = visibles.length > 0;
     pie.hidden = visibles.length === 0;
     pie.innerHTML = visibles.length === total
-      ? `<b>${total}</b> productos en esta tabla`
-      : `<b>${visibles.length}</b> de ${total} productos con los filtros puestos`;
+      ? `<b>${total}</b> ${TXT.pie}`
+      : `<b>${visibles.length}</b> ${TXT.pieFiltrado.replace('%v', visibles.length).replace('%n', total)}`;
 
     const filtrando = f.busqueda || f.tienda || f.precioMax || nivelMin > 1 || sello;
     if (limpiar) limpiar.hidden = !filtrando;
@@ -131,18 +136,18 @@ export function montarTabla(raiz) {
       const dentro = elegidos.some((e) => e.s === p.slug);
       const boton = p.tr.querySelector('.marcar:not(.mi-lista)');
       boton.setAttribute('aria-pressed', String(dentro));
-      boton.textContent = dentro ? 'en tu comparativa' : 'comparar';
+      boton.textContent = dentro ? TXT.enComparativa : TXT.comparar;
 
       const guardado = enLista(mios, p.slug);
       const suyo = p.tr.querySelector('.mi-lista');
       suyo.setAttribute('aria-pressed', String(guardado));
-      suyo.textContent = guardado ? 'en tu lista' : 'mi lista';
+      suyo.textContent = guardado ? TXT.enMiLista : TXT.miLista;
     }
     barra.hidden = elegidos.length === 0;
     barra.querySelector('[data-cuenta]').textContent = elegidos.length;
     barra.querySelector('[data-etiqueta]').textContent =
-      (elegidos.length === 1 ? 'producto guardado' : 'productos guardados')
-      + (elegidos.length >= TOPE_SELECCION ? ` (el tope son ${TOPE_SELECCION})` : '');
+      (elegidos.length === 1 ? TXT.guardado : TXT.guardados)
+      + (elegidos.length >= TOPE_SELECCION ? TXT.tope.replace('%s', TOPE_SELECCION) : '');
   }
 
   const recuenta = () => { todo = false; pinta(); };
@@ -249,13 +254,13 @@ export function montarTabla(raiz) {
         p.lectores = media;
         const marca = document.createElement('span');
         marca.className = 'opinion lectores';
-        marca.title = `${cuantas} ${cuantas === 1 ? 'opinion' : 'opiniones'} de lectores de esta web`;
-        marca.textContent = ` · ${media.toFixed(1).replace('.', ',')}★ ${cuantas} aqui`;
+        marca.title = (cuantas === 1 ? TXT.opinion : TXT.opiniones).replace(/^\d+/, cuantas);
+        marca.textContent = ` · ${media.toFixed(1).replace('.', ',')}★ ${cuantas} ${TXT.aqui}`;
         // Delante de los botones de guardar, que son lo ultimo de la celda del nombre.
         p.tr.querySelector('.celda-producto').insertBefore(marca, p.tr.querySelector('.marcar'));
       }
       // El orden solo aparece cuando hay con que ordenar (ver ORDENES.lectores).
-      campos.orden.add(new Option(ORDENES.lectores.etiqueta, 'lectores'));
+      campos.orden.add(new Option(TXT.ordenes?.lectores ?? ORDENES.lectores.etiqueta, 'lectores'));
     })
     .catch(() => {});
 }

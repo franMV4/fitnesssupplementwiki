@@ -1,23 +1,37 @@
 ---
-import Base from '../layouts/Base.astro';
-import datos from '../datos/dataset.json';
-import Faq from '../componentes/Faq.astro';
-import Buscador from '../componentes/Buscador.jsx';
-import ControlPeso from '../componentes/ControlPeso.jsx';
-import Ponderador from '../componentes/Ponderador.jsx';
-import { abs } from '../sitio.js';
-import { NIVEL, puntos } from '../datos/util.js';
-import { anio, fechaLarga, resumen } from '../datos/seo.js';
-import { COMPARATIVAS, MEJORES } from '../datos/landings.js';
-import { MARCAS } from '../datos/marcas.js';
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import Faq from '../../componentes/Faq.astro';
+import Buscador from '../../componentes/Buscador.jsx';
+import ControlPeso from '../../componentes/ControlPeso.jsx';
+import Ponderador from '../../componentes/Ponderador.jsx';
+import { abs } from '../../sitio.js';
+import { NIVEL, puntos } from '../../datos/util.js';
+import { anio, resumen } from '../../datos/seo.js';
+import { COMPARATIVAS, MEJORES } from '../../datos/landings.js';
+import { MARCAS } from '../../datos/marcas.js';
+import { categoriasEn, enIdioma } from '../../datos/categorias-i18n.js';
+import { LANG, fechaLargaEn, num, porIdioma, ruta, textos, txtBuscador, txtPeso,
+         txtPonderador } from '../../i18n.js';
 
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+// Enlace interno: el camino se escribe siempre en espanol y sale con el prefijo que toque.
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+
+// Los nombres de categoria, traducidos. El slug (y por tanto la URL, el dataset y el
+// filtro de productos) sigue siendo el mismo: solo cambia como se lee.
+const CATS = categoriasEn(datos.categorias, lang);
 const porCategoria = (slug) => datos.productos.filter((p) => p.categoria === slug);
 const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
 const conSello = datos.productos.filter((p) => p.sellos.length > 0);
 
 // Una fila por categoria con todo lo que la portada necesita: la horquilla de precios
 // y el lider. Se calcula una vez y la usan la tabla ponderable y el JSON-LD.
-const portada = datos.categorias.map((c) => {
+const portada = CATS.map((c) => {
   const ps = porCategoria(c.slug);
   const r = resumen(c, ps);
   const min = r.barato?.precio_referencia ?? null;
@@ -93,10 +107,12 @@ const TOP_CATS = new Set(filasPeso.slice().sort((a, b) => b.productos - a.produc
   .slice(0, 8).map((f) => f.slug));
 const estrella = [
   ...MEJORES.filter((l) => l.indexable && TOP_CATS.has(l.cat.slug) && !l.tienda)
-    .map((l) => ({ href: `/mejores/${l.slug}/`, texto: l.h1.split(':')[0], n: l.productos.length })),
-  ...datos.categorias.filter((c) => TOP_CATS.has(c.slug))
+    .map((l) => ({ href: r(`/mejores/${l.slug}/`), texto: l.h1.split(':')[0], n: l.productos.length })),
+  ...CATS.filter((c) => TOP_CATS.has(c.slug))
     .map((c) => COMPARATIVAS.find((l) => l.cat.slug === c.slug)).filter(Boolean)
-    .map((l) => ({ href: `/comparativa/${l.slug}/`, texto: `${l.na} o ${l.nb} en ${l.cat.termino}`,
+    .map((l) => ({ href: r(`/comparativa/${l.slug}/`),
+                   texto: t('portada.comparativa_vs', l.na, l.nb,
+                                  enIdioma(l.cat, lang).termino),
                    n: l.productos.length })),
 ];
 const marcasPortada = MARCAS.filter((m) => m.indexable).slice(0, 24);
@@ -109,69 +125,38 @@ const restoCategorias = portada.filter((c) => !enDestacadas.has(c.slug)).sort(po
 // pena"); cada categoria responde a la suya. Las dos con la misma frase generada.
 // El unico parrafo de la portada: es la respuesta que copia un modelo y el fragmento
 // que ensena Google, asi que lleva los recuentos, el metodo y la fecha, y nada mas.
-const respuesta =
-  `Compara ${datos.productos.length} suplementos de ${tiendas} tiendas espanolas en ` +
-  `${datos.categorias.length} categorias por precio por kilo (o por capsula) y por lo ` +
-  `comprobable que es su certificacion, del 1 al 4. El orden lo manda una nota de 0 a 100, ` +
-  `mitad precio y mitad calidad verificable, que no mira los enlaces de afiliado. ` +
-  `Precios del ${fechaLarga(datos.generado)}.`;
+const respuesta = t('portada.respuesta', num(lang, datos.productos.length), tiendas,
+                    datos.categorias.length, fechaLarga(datos.generado));
 
 const faqs = [
-  {
-    p: '¿Como se decide que suplemento es mejor en esta web?',
-    r: `Con una nota de 0 a 100: ${datos.config.peso_coste * 100} % precio frente al mas barato ` +
-       `de su categoria y ${datos.config.peso_calidad * 100} % calidad verificable (nivel de ` +
-       `certificacion, forma quimica del activo y, donde la tienda publica las dosis, si la ` +
-       `formula llega a la dosis efectiva). Cada producto ensena su desglose linea a linea.`,
-  },
-  {
-    p: '¿Por que se compara por precio por kilo y no por envase?',
-    r: 'Porque dos botes al mismo precio pueden costar el doble uno que otro segun lo que ' +
-       'traigan dentro. Cada categoria se compara en la unidad en la que se vende: por kilo los ' +
-       'polvos, por capsula las perlas y los comprimidos, y las dos unidades nunca se mezclan ' +
-       'en la misma tabla.',
-  },
-  {
-    p: '¿Los enlaces de afiliado cambian el orden de los productos?',
-    r: 'No. El score se calcula antes y sin leer el fichero de afiliados, y hay una prueba ' +
-       'automatica que falla si el ranking cambia al aplicarlos. Los productos sin programa de ' +
-       'afiliado aparecen exactamente igual.',
-  },
-  {
-    p: '¿Cada cuanto se actualizan los precios?',
-    r: `Se vuelven a recoger de las tiendas en cada actualizacion; los de esta version son del ` +
-       `${fechaLarga(datos.generado)}. El precio bueno siempre es el de la tienda: aqui sirve ` +
-       `para comparar, no para pagar.`,
-  },
-  {
-    p: '¿Que significa el nivel de verificacion 4?',
-    r: 'Que el sello lo respalda alguien que no es la marca: o se ha comprobado en la fuente ' +
-       'que lo emite (codigo QS de Creapure, lote en Informed Sport), o el producto lleva en el ' +
-       'nombre una marca que exige un tercero detras, como Creapure o IFOS. Un sello suelto en ' +
-       'la etiqueta se queda en el nivel 2.',
-  },
+  { p: t('portada.faq1.p'),
+    r: t('portada.faq1.r', datos.config.peso_coste * 100, datos.config.peso_calidad * 100) },
+  { p: t('portada.faq2.p'), r: t('portada.faq2.r') },
+  { p: t('portada.faq3.p'), r: t('portada.faq3.r') },
+  { p: t('portada.faq4.p'), r: t('portada.faq4.r', fechaLarga(datos.generado)) },
+  { p: t('portada.faq5.p'), r: t('portada.faq5.r') },
 ];
 
 const schema = [
   {
     '@type': 'WebPage',
-    '@id': abs('/'),
-    url: abs('/'),
-    name: 'Comparador de suplementos deportivos: precio por kilo y certificacion',
-    inLanguage: 'es-ES',
+    '@id': abs(r('/')),
+    url: abs(r('/')),
+    name: t('portada.schema.pagina'),
+    inLanguage: LANG[lang],
     dateModified: datos.generado,
     isPartOf: { '@id': abs('/#sitio') },
     publisher: { '@id': abs('/#editor') },
   },
   {
     '@type': 'ItemList',
-    name: 'Comparativas de suplementos',
+    name: t('portada.schema.lista'),
     numberOfItems: datos.categorias.length,
-    itemListElement: datos.categorias.map((c, i) => ({
+    itemListElement: CATS.map((c, i) => ({
       '@type': 'ListItem',
       position: i + 1,
       name: c.nombre,
-      url: abs(`/${c.slug}`),
+      url: abs(r(`/${c.slug}`)),
     })),
   },
   {
@@ -181,13 +166,11 @@ const schema = [
     // licencia y autor. Es lo que separa una fuente citable de una pagina mas.
     '@type': 'Dataset',
     '@id': abs('/#dataset'),
-    name: 'Precios y certificaciones de suplementos deportivos en Espana',
-    description:
-      `${datos.productos.length} productos de ${tiendas} tiendas espanolas en ` +
-      `${datos.categorias.length} categorias, con el precio por unidad de venta ` +
-      `(kilo o capsula) y el nivel de verificacion de sus certificaciones, del 1 al 4.`,
-    url: abs('/'),
-    inLanguage: 'es-ES',
+    name: t('portada.schema.dataset'),
+    description: t('portada.schema.dataset_desc', datos.productos.length, tiendas,
+                   datos.categorias.length),
+    url: abs(r('/')),
+    inLanguage: LANG[lang],
     // La licencia, en la URL canonica de Creative Commons: es la que un agregador de
     // datos abiertos reconoce sin leer nada. Las condiciones en cristiano, en /legal.
     license: 'https://creativecommons.org/licenses/by/4.0/',
@@ -199,17 +182,11 @@ const schema = [
     // Abierto por la derecha: se vuelve a recoger en cada pasada del robot.
     temporalCoverage: `${datos.generado}/..`,
     spatialCoverage: { '@type': 'Place', name: 'Espana' },
-    variableMeasured: [
-      'Precio del envase en euros',
-      'Precio por kilo',
-      'Precio por capsula',
-      'Nivel de verificacion de la certificacion (1 a 4)',
-      'Score de 0 a 100 (50 % precio, 50 % calidad verificable)',
-    ],
+    variableMeasured: t('portada.schema.variables'),
     distribution: [
-      { '@type': 'DataDownload', name: 'Catalogo completo',
+      { '@type': 'DataDownload', name: t('portada.schema.catalogo'),
         encodingFormat: 'application/json', contentUrl: abs('/datos/catalogo.json') },
-      ...datos.categorias.map((c) => ({
+      ...CATS.map((c) => ({
         '@type': 'DataDownload', name: c.nombre,
         encodingFormat: 'application/json', contentUrl: abs(`/datos/${c.slug}.json`),
       })),
@@ -217,9 +194,10 @@ const schema = [
   },
 ];
 ---
-<Base ancho="completo"
-      titulo={`Comparador de precios de suplementos ${anio(datos.generado)}: ${datos.productos.length.toLocaleString('es-ES')} productos`}
-      descripcion={`Compara el precio real por kilo de ${datos.productos.length.toLocaleString('es-ES')} suplementos en ${tiendas} tiendas españolas (HSN, Myprotein, Prozis...): proteína, creatina y ${datos.categorias.length - 2} categorías más, con certificación. Precios del ${fechaLarga(datos.generado)}.`}
+<Base lang={lang} ancho="completo"
+      titulo={t('portada.titulo', anio(datos.generado), num(lang, datos.productos.length))}
+      descripcion={t('portada.descripcion', num(lang, datos.productos.length), tiendas,
+                     datos.categorias.length - 2, fechaLarga(datos.generado))}
       schema={schema}>
 
   <section class="portada">
@@ -231,13 +209,13 @@ const schema = [
     {/* El H1 dice que es esto y con que se compara: son las palabras con las que se
         busca. La frase de marca no se tira, baja a antetitulo, donde hace de gancho sin
         ocupar el sitio de la consulta. */}
-    <p class="lema-portada aparece d1">Lo que cuesta de verdad, y quien responde de lo que vende</p>
-    <h1 class="aparece d1">Comparador de suplementos deportivos: precio por kilo y certificacion verificada</h1>
+    <p class="lema-portada aparece d1">{t('portada.lema')}</p>
+    <h1 class="aparece d1">{t('portada.h1')}</h1>
 
     {/* Entradilla y "respuesta corta" eran dos parrafos que decian lo mismo con otras
         palabras, uno encima del buscador y otro debajo. Van juntos, en uno, y encima:
         debajo del campo solo queda lo que se toca. */}
-    <p class="respuesta aparece d2"><b>La respuesta corta.</b> {respuesta}</p>
+    <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>
 
     {/* Lo unico que se puede tocar aqui arriba, asi que se hidrata al cargar y no en el
         primer hueco libre: con client:idle las primeras teclas de quien escribe rapido
@@ -245,29 +223,27 @@ const schema = [
         La capa lleva z-index porque la lamina de resultados tiene que taparlo todo:
         cada bloque animado de mas abajo abre su propia capa de pintado. */}
     <div class="capa-buscador aparece d2">
-      <Buscador client:load categorias={datos.categorias} total={datos.productos.length} />
-      <ControlPeso client:idle />
+      <Buscador lang={lang} client:load categorias={CATS}
+                total={datos.productos.length} txt={txtBuscador(lang)} />
+      <ControlPeso client:idle txt={txtPeso(lang)} />
     </div>
   </section>
 
   <section class="seccion">
     <div class="cabecera-seccion">
-      <h2>Lo mejor de las {EN_PORTADA} categorias mas surtidas</h2>
-      <p class="apunte">Las otras {restoCategorias.length}, en el indice de abajo</p>
+      <h2>{t('portada.h2_destacadas', EN_PORTADA)}</h2>
+      <p class="apunte">{t('portada.apunte_destacadas', restoCategorias.length)}</p>
     </div>
 
     {/* La tabla se reordena moviendo el peso del score. Es la metodologia funcionando
         delante del lector: convence mas que jurar que es neutral. */}
-    <Ponderador client:visible filas={destacadas} />
+    <Ponderador lang={lang} client:visible filas={destacadas} txt={txtPonderador(lang)} />
 
     <p class="nota">
-      <strong>El orden lo manda el score.</strong> Ni la afiliacion ni ningun acuerdo comercial
-      mueven un producto de sitio; hay una prueba automatica que lo comprueba en cada
-      actualizacion de datos.
+      <strong>{t('portada.nota_orden')}</strong> {t('portada.nota_orden_cuerpo')}
       {conSello.length > 0 && (
-        <> {conSello.length} {conSello.length === 1 ? 'producto lleva sello' : 'productos llevan sello'} de
-        esta web, y un sello certifica un criterio editorial publico, nunca un efecto sobre tu
-        cuerpo. <a href="/metodologia/#sellos">Criterio de los sellos</a>.</>
+        <>{t('portada.nota_sellos', conSello.length)}
+        <a href={r('/metodologia/#sellos')}>{t('portada.criterio_sellos')}</a>.</>
       )}
     </p>
   </section>
@@ -278,23 +254,23 @@ const schema = [
       falta para decidir si se entra. Los cincuenta enlaces siguen en la portada. */}
   <section class="seccion" id="categorias">
     <div class="cabecera-seccion">
-      <h2>Las otras {restoCategorias.length} categorias</h2>
-      <p class="apunte">Mismo metodo, misma tabla</p>
+      <h2>{t('portada.h2_otras', restoCategorias.length)}</h2>
+      <p class="apunte">{t('portada.apunte_otras')}</p>
     </div>
     {/* Cajas y no filas: cuarenta renglones seguidos en tres columnas se leian como un
         listin de telefonos. Cada categoria es una pieza con su borde, su aire y su
         precio de salida, que es el dato con el que se decide si se entra. */}
     <div class="rejilla-categorias">
       {restoCategorias.map((c) => (
-        <a class="caja-categoria" href={`/${c.slug}/`}>
+        <a class="caja-categoria" href={r(`/${c.slug}/`)}>
           <span class="nombre">{c.nombre}</span>
           {c.min != null && (
-            <span class="desde-caja">desde <b>{c.min.toFixed(c.dec)} €</b>/{c.unidad}</span>
+            <span class="desde-caja">{t('comun.desde')} <b>{c.min.toFixed(c.dec)} €</b>/{c.unidad}</span>
           )}
           {/* El recuento de tiendas va en su propio span porque en movil la caja mide
               170 px y la linea entera son dos renglones: alli se esconde. */}
-          <span class="pie-caja">{c.productos} productos<span class="tiendas-caja">
-            {' '}· {c.r.tiendas} {c.r.tiendas === 1 ? 'tienda' : 'tiendas'}</span></span>
+          <span class="pie-caja">{t('comun.productos', c.productos)}<span class="tiendas-caja">
+            {' '}· {t('comun.tiendas', c.r.tiendas)}</span></span>
         </a>
       ))}
     </div>
@@ -302,15 +278,15 @@ const schema = [
 
   <section class="seccion" id="comparativas">
     <div class="cabecera-seccion">
-      <h2>Comparativas mas buscadas</h2>
-      <p class="apunte">La tabla ya filtrada para una compra concreta</p>
+      <h2>{t('portada.h2_comparativas')}</h2>
+      <p class="apunte">{t('portada.apunte_comparativas')}</p>
     </div>
     <div class="lista-categorias compacta">
       {estrella.map((e) => (
         <a class="fila-categoria" href={e.href}>
           <span class="nombre">{e.texto}</span>
           <span class="guia" aria-hidden="true"></span>
-          <span class="cuenta">{e.n} prod.</span>
+          <span class="cuenta">{e.n} {t('comun.prod_corto')}</span>
         </a>
       ))}
     </div>
@@ -318,15 +294,15 @@ const schema = [
 
   <section class="seccion" id="marcas">
     <div class="cabecera-seccion">
-      <h2>Precios por marca</h2>
-      <p class="apunte"><a href="/marcas/">Las {MARCAS.length} marcas →</a></p>
+      <h2>{t('portada.h2_marcas')}</h2>
+      <p class="apunte"><a href={r('/marcas/')}>{t('portada.todas_marcas', MARCAS.length)} →</a></p>
     </div>
     <div class="lista-categorias compacta">
       {marcasPortada.map((m) => (
-        <a class="fila-categoria" href={`/marca/${m.slug}/`}>
+        <a class="fila-categoria" href={r(`/marca/${m.slug}/`)}>
           <span class="nombre">{m.nombre}</span>
           <span class="guia" aria-hidden="true"></span>
-          <span class="cuenta">{m.productos.length} prod.</span>
+          <span class="cuenta">{m.productos.length} {t('comun.prod_corto')}</span>
         </a>
       ))}
     </div>
@@ -334,41 +310,34 @@ const schema = [
 
   <section class="seccion negativo">
     <div class="cabecera-seccion">
-      <h2>Como se lee la puntuacion</h2>
-      <p class="apunte">Tres numeros, ninguna estrella</p>
+      <h2>{t('portada.h2_puntuacion')}</h2>
+      <p class="apunte">{t('portada.apunte_puntuacion')}</p>
     </div>
     <div class="rejilla">
       <div class="bloque">
         <span class="indice-bloque">01</span>
-        <h3>Euros por kilo o por capsula</h3>
-        <p>
-          Cada categoria se compara en la unidad en la que se vende: por kilo los polvos, por
-          capsula las perlas y los comprimidos. Nunca se mezclan las dos en la misma tabla, y el
-          precio es el que paga hoy el comprador, no el tachado.
-        </p>
+        <h3>{t('portada.bloque1.h3')}</h3>
+        <p>{t('portada.bloque1.p')}</p>
       </div>
       <div class="bloque">
         <span class="indice-bloque">02</span>
-        <h3>Nivel de verificacion</h3>
-        <p>Del 1 al 4. Solo el 4 significa comprobado contra la fuente que emite el sello.</p>
+        <h3>{t('portada.bloque2.h3')}</h3>
+        <p>{t('portada.bloque2.p')}</p>
         {[4, 3, 2, 1].map((n) => (
-          <div class={`nivel ${NIVEL[n].clase}`}>
+          <div class={`nivel ${NIVEL[lang][n].clase}`}>
             <span class="puntos">{puntos(n).map((on) => <i class={on ? 'on' : ''} />)}</span>
-            {NIVEL[n].etiqueta}
+            {NIVEL[lang][n].etiqueta}
           </div>
         ))}
       </div>
       <div class="bloque">
         <span class="indice-bloque">03</span>
-        <h3>Score de 0 a 100</h3>
-        <p>
-          Mitad precio frente al mas barato de su categoria, mitad calidad. Cada producto lleva
-          su desglose linea a linea: puedes ver exactamente por que puntua lo que puntua.
-        </p>
-        <a href="/metodologia/" class="enlace-accion">Leer la metodologia →</a>
+        <h3>{t('portada.bloque3.h3')}</h3>
+        <p>{t('portada.bloque3.p')}</p>
+        <a href={r('/metodologia/')} class="enlace-accion">{t('comun.leer_metodologia')} →</a>
       </div>
     </div>
   </section>
 
-  <Faq faqs={faqs} titulo="Preguntas sobre este comparador" />
+  <Faq lang={lang} faqs={faqs} titulo={t('portada.faq_titulo')} />
 </Base>

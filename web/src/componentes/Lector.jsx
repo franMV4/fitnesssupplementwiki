@@ -14,17 +14,36 @@ import { comoSeLee } from '../datos/util.js';
 
 const estrellas = (n) => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
 
-export default function Lector() {
+const T = {
+  es: { falta: 'Falta el lector en la direccion.', noCarga: 'No se ha podido cargar este lector.',
+        cargando: 'Cargando…', desde: (f) => `Lector desde el ${f}`, ninguna: 'Todavia no ha escrito ninguna opinion.',
+        escritas: (n) => (n === 1 ? 'opinion escrita' : 'opiniones escritas'), media: (m) => `con una media de ${m} sobre 5.`,
+        de5: (n) => `${n} de 5`, foto: 'Foto de la resena',
+        utiles: (n) => (n === 1 ? 'persona la ha encontrado util' : 'personas la han encontrado util') },
+  en: { falta: 'The reader is missing from the address.', noCarga: 'This reader could not be loaded.',
+        cargando: 'Loading…', desde: (f) => `Reader since ${f}`, ninguna: 'Has not written any reviews yet.',
+        escritas: (n) => (n === 1 ? 'review written' : 'reviews written'), media: (m) => `with an average of ${m} out of 5.`,
+        de5: (n) => `${n} out of 5`, foto: 'Review photo',
+        utiles: (n) => (n === 1 ? 'person found it helpful' : 'people found it helpful') },
+  fr: { falta: 'Le lecteur manque dans l’adresse.', noCarga: 'Impossible de charger ce lecteur.',
+        cargando: 'Chargement…', desde: (f) => `Lecteur depuis le ${f}`, ninguna: 'N’a encore écrit aucun avis.',
+        escritas: (n) => (n === 1 ? 'avis écrit' : 'avis écrits'), media: (m) => `avec une moyenne de ${m} sur 5.`,
+        de5: (n) => `${n} sur 5`, foto: 'Photo de l’avis',
+        utiles: (n) => (n === 1 ? 'personne l’a trouvé utile' : 'personnes l’ont trouvé utile') },
+};
+
+export default function Lector({ lang = 'es' }) {
+  const t = T[lang] ?? T.es;
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('id');
-    if (!id) return setError('Falta el lector en la direccion.');
+    if (!id) return setError(t.falta);
     fetch(`/api/lector?id=${encodeURIComponent(id)}`)
       .then(async (r) => {
         const d = await r.json().catch(() => null);
-        if (!r.ok || !d) throw new Error(d?.error ?? 'No se ha podido cargar este lector.');
+        if (!r.ok || !d) throw new Error(d?.error ?? t.noCarga);
         return d;
       })
       .then(setDatos)
@@ -32,19 +51,19 @@ export default function Lector() {
   }, []);
 
   if (error) return <p className="vacio">{error}</p>;
-  if (!datos) return <p className="sutil">Cargando…</p>;
+  if (!datos) return <p className="sutil">{t.cargando}</p>;
 
   return (
     <>
       <section className="cabecera-pagina">
-        <p className="antetitulo">Lector desde el {datos.lector.desde}</p>
+        <p className="antetitulo">{t.desde(datos.lector.desde)}</p>
         <h1>{datos.lector.nombre}</h1>
         <p className="entradilla">
           {datos.total === 0
-            ? 'Todavia no ha escrito ninguna opinion.'
+            ? t.ninguna
             : <>
-                {datos.total} {datos.total === 1 ? 'opinion escrita' : 'opiniones escritas'},
-                con una media de {datos.media.toFixed(1).replace('.', ',')} sobre 5.
+                {datos.total} {t.escritas(datos.total)},{' '}
+                {t.media(lang === 'en' ? datos.media.toFixed(1) : datos.media.toFixed(1).replace('.', ','))}
               </>}
         </p>
       </section>
@@ -53,20 +72,20 @@ export default function Lector() {
         {datos.resenas.map((r) => (
           <li className="resena" key={r.id}>
             <p className="cabecera-resena">
-              <span className="astros" title={`${r.puntuacion} de 5`}>{estrellas(r.puntuacion)}</span>
+              <span className="astros" title={t.de5(r.puntuacion)}>{estrellas(r.puntuacion)}</span>
               <a className="quien-resena" href={`/producto/${r.producto}/`}>{comoSeLee(r.producto)}</a>
               <time className="mono sutil" dateTime={r.creado.replace(' ', 'T')}>{r.creado.slice(0, 10)}</time>
             </p>
             {r.texto && <p className="texto-resena">{r.texto}</p>}
             {r.foto && (
               <a href={`/api/foto/${r.foto}`} target="_blank" rel="noopener">
-                <img className="foto-resena" src={`/api/foto/${r.foto}`} alt="Foto de la resena" loading="lazy" />
+                <img className="foto-resena" src={`/api/foto/${r.foto}`} alt={t.foto} loading="lazy" />
               </a>
             )}
             {r.utiles > 0 && (
               <p className="pie-resena">
                 <span className="sutil">
-                  {r.utiles} {r.utiles === 1 ? 'persona la ha' : 'personas la han'} encontrado util
+                  {r.utiles} {t.utiles(r.utiles)}
                 </span>
               </p>
             )}

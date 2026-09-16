@@ -1,0 +1,156 @@
+---
+import Base from '../../layouts/Base.astro';
+import Aviso from '../../componentes/Aviso.astro';
+import Faq from '../../componentes/Faq.astro';
+import datos from '../../datos/dataset.json';
+import { RANKING, VERSUS_TIENDAS } from '../../datos/tiendas.js';
+import { abs } from '../../sitio.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+
+// "Que tienda de suplementos es mas barata": la consulta que va antes de elegir producto y
+// la que ninguna pagina del sitio contestaba, porque no se puede sumar un kilo de proteina
+// con una capsula de omega 3. Lo que si se puede es medir la POSICION de cada tienda
+// dentro de cada categoria y quedarse con la mediana de esas posiciones. Ver datos/tiendas.js.
+const canonica = abs(r('/tiendas'));
+const conIndice = RANKING.filter((x) => x.indice != null);
+const sinIndice = RANKING.filter((x) => x.indice == null);
+const barata = conIndice[0];
+const cara = conIndice[conIndice.length - 1];
+const pct = (n) => (n > 0 ? `+${n} %` : `${n} %`);
+
+const faqs = [
+  {
+    p: t('tiendas.faq1.p'),
+    r: barata
+      ? t('tiendas.faq1.r', barata.nombre, Math.abs(barata.indice), barata.comparables.length,
+          cara.nombre, Math.abs(cara.indice))
+      : t('tiendas.faq1.r_sin'),
+  },
+  { p: t('tiendas.faq2.p'), r: t('tiendas.faq2.r') },
+  { p: t('tiendas.faq3.p'), r: t('tiendas.faq3.r') },
+];
+
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: t('tiendas.h1'),
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: [{ '@id': abs('/#sitio') }, { '@id': abs('/#dataset') }],
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r('/')) },
+      { '@type': 'ListItem', position: 2, name: t('tiendas.miga'), item: canonica },
+    ],
+  },
+];
+---
+<Base lang={lang} ancho="completo" schema={schema}
+      titulo={t('tiendas.titulo', conIndice.length)}
+      descripcion={t('tiendas.descripcion', conIndice.length, fechaLarga(datos.generado))}>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('tiendas.miga')}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo aparece">
+      {t('tiendas.antetitulo')} · {t('cat.datos_del')}{' '}
+      <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
+    </p>
+    <h1 class="aparece d1">{t('tiendas.h1')}</h1>
+    {barata && (
+      <p class="respuesta aparece d2">
+        <b>{t('portada.respuesta_corta')}</b> {t('tiendas.respuesta', barata.nombre, conIndice.length,
+          Math.abs(barata.indice), barata.productos, barata.comparables.length, cara.nombre,
+          Math.abs(cara.indice))}
+      </p>
+    )}
+    <p class="entradilla aparece d2">{t('tiendas.entradilla')}</p>
+  </section>
+
+  <Aviso lang={lang} />
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('tiendas.h2_tabla', conIndice.length)}</h2>
+      <p class="apunte">{t('tiendas.apunte_tabla')}</p>
+    </div>
+    <div class="tabla-marco">
+      <div class="tabla-scroll">
+        <table class="apilable">
+          <caption>{t('tiendas.caption', fechaLarga(datos.generado))}</caption>
+          <thead>
+            <tr>
+              <th>{t('tabla.tienda')}</th>
+              <th class="num">{t('tiendas.col_indice')}</th>
+              <th class="num">{t('tiendas.col_categorias')}</th>
+              <th class="num">{t('tiendas.col_productos')}</th>
+              <th class="num">{t('tiendas.col_analisis')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {conIndice.map((x) => (
+              <tr>
+                <td class="principal marca">
+                  {x.nombre}
+                  <span class="explica">
+                    {x.marcas === 1 ? t('tiendas.solo_marca') : t('tiendas.marcas', x.marcas)}
+                    {x.aditivos != null && t('tiendas.aditivos', x.aditivos)}
+                  </span>
+                </td>
+                <td class="num" data-et={t('tiendas.col_indice')}>
+                  <span class={x.indice < 0 ? 'destacado' : ''}>{pct(x.indice)}</span>
+                  <span class="explica">
+                    {x.indice < 0 ? t('tiendas.debajo') : x.indice > 0 ? t('tiendas.encima') : t('tiendas.clavada')}
+                  </span>
+                </td>
+                <td class="num" data-et={t('tiendas.col_categorias')}>
+                  {x.comparables.length}
+                  <span class="explica">{t('tiendas.baratas_caras', x.baratas, x.caras)}</span>
+                </td>
+                <td class="num" data-et={t('tiendas.col_productos')}>{x.productos}</td>
+                <td class="num" data-et={t('tiendas.col_analisis')}>
+                  {x.verificados}
+                  <span class="explica">{t('tiendas.en_nivel4', x.nivel4)}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">
+      <strong>{t('tiendas.nota_t')}</strong>{t('tiendas.nota')}
+      {sinIndice.length > 0 && t('tiendas.fuera', sinIndice.map((x) => x.nombre).join(', '))}
+    </p>
+  </section>
+
+  <section class="seccion">
+    <div class="cabecera-seccion">
+      <h2>{t('tiendas.h2_versus', VERSUS_TIENDAS.length)}</h2>
+      <p class="apunte">{t('tiendas.apunte_versus')}</p>
+    </div>
+    <div class="lista-categorias">
+      {VERSUS_TIENDAS.map((v) => (
+        <a class="fila-categoria" href={r(`/tiendas/${v.slug}/`)}>
+          <span class="nombre">{v.a.nombre} {t('tiendas.o')} {v.b.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{t('tiendas.n_categorias', v.comunes.length)}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <Faq lang={lang} faqs={faqs} titulo={t('tiendas.faq_titulo')} />
+</Base>

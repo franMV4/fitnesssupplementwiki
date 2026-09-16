@@ -4,6 +4,14 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import { SITIO } from './src/sitio.js';
 import { restaurarTildesHTML } from './src/tildes.js';
+import { IDIOMAS, POR_DEFECTO } from './src/i18n.js';
+
+// Las carpetas de los otros idiomas. El restaurador de tildes NO entra aqui: en /en/
+// "version" y "tension" son palabras inglesas, y en /fr/ lo son francesas. Pasarles el
+// mapa del espanol las convertiria en "versión" y "tensión" dentro de una frase en otro
+// idioma, que es peor que no acentuar nada. El ingles y el frances se escriben ya con sus
+// acentos puestos en src/datos/textos.js, asi que no necesitan este paso.
+const OTROS_IDIOMAS = IDIOMAS.filter((l) => l !== POR_DEFECTO);
 
 // Ultimo paso del build: pasar el restaurador de tildes por cada .html ya generado.
 // Se hace aqui, sobre el HTML final, y no en las plantillas, porque el texto sin tilde
@@ -16,9 +24,10 @@ const restaurarTildes = () => ({
     'astro:build:done': async ({ dir, logger }) => {
       const raiz = fileURLToPath(dir);
       let n = 0;
-      const recorre = async (d) => {
+      const recorre = async (d, raizDelSitio = false) => {
         for (const e of await readdir(d, { withFileTypes: true })) {
           const ruta = `${d}/${e.name}`;
+          if (raizDelSitio && e.isDirectory() && OTROS_IDIOMAS.includes(e.name)) continue;
           if (e.isDirectory()) await recorre(ruta);
           else if (e.name.endsWith('.html')) {
             const html = await readFile(ruta, 'utf-8');
@@ -27,7 +36,7 @@ const restaurarTildes = () => ({
           }
         }
       };
-      await recorre(raiz);
+      await recorre(raiz, true);
       logger.info(`tildes restauradas en ${n} paginas`);
     },
   },

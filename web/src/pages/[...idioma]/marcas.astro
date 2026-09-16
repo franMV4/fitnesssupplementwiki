@@ -1,0 +1,63 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { MARCAS } from '../../datos/marcas.js';
+import { anio } from '../../datos/seo.js';
+import { abs } from '../../sitio.js';
+import { LANG, fechaLargaEn, num, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+
+// El indice de /marca/*: el unico sitio desde el que se llega a las 98 sin pasar por una
+// ficha. Sin el, las paginas de marca solo tendrian enlaces desde fichas con noindex.
+const canonica = abs(r('/marcas'));
+const schema = [
+  {
+    '@type': 'CollectionPage',
+    '@id': canonica,
+    url: canonica,
+    name: t('marcas.schema'),
+    inLanguage: LANG[lang],
+    dateModified: datos.generado,
+    isPartOf: { '@id': abs('/#sitio') },
+    publisher: { '@id': abs('/#editor') },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('comun.inicio'), item: abs(r('/')) },
+      { '@type': 'ListItem', position: 2, name: t('marcas.miga'), item: canonica },
+    ],
+  },
+];
+---
+<Base lang={lang} ancho="completo" schema={schema}
+      titulo={t('marcas.titulo', anio(datos.generado), MARCAS.length)}
+      descripcion={t('marcas.descripcion', MARCAS.length, fechaLarga(datos.generado))}>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {t('marcas.miga')}</p>
+
+  <section class="cabecera-pagina">
+    <h1 class="aparece d1">{t('marcas.h1', MARCAS.length)}</h1>
+    <p class="respuesta aparece d2">
+      <b>{t('portada.respuesta_corta')}</b> {t('marcas.respuesta', fechaLarga(datos.generado))}
+    </p>
+  </section>
+
+  <section class="seccion">
+    <div class="lista-categorias compacta">
+      {MARCAS.map((m) => (
+        <a class="fila-categoria" href={r(`/marca/${m.slug}/`)}>
+          <span class="nombre">{m.nombre}</span>
+          <span class="guia" aria-hidden="true"></span>
+          <span class="cuenta">{m.productos.length} {t('comun.prod_corto')}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Base>

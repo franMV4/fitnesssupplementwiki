@@ -1,0 +1,127 @@
+// La frase de cabecera de cada categoria (datos/breve.js) en ingles y frances.
+//
+// Igual que el espanol, no afirma nada que no diga ya la guia: es el mismo recorte,
+// traducido. Las cifras y las dosis se copian tal cual. Una categoria sin frase aqui sale
+// con la espanola.
+
+import { BREVE } from './breve.js';
+
+export const BREVE_I18N = {
+  en: {
+    'acido-hialuronico': 'A molecule found in skin and joints. Taken by mouth there are small trials with results on wrinkles and knee pain, many of them tied to manufacturers.',
+    arginina: 'Sold to raise nitric oxide and bring more blood to the muscle. In practice it delivers little: the effect shows up in untrained people, not in well-trained ones.',
+    ashwagandha: 'A plant with trials finding less perceived stress and cortisol versus placebo. Almost all use standardised extracts, not powdered root.',
+    bcaa: 'Three of the nine essential amino acids. On their own they do not build muscle, and if you already hit your daily protein they add nothing.',
+    'beta-alanina': 'Raises muscle carnosine, which buffers acidity in maximal efforts of one to four minutes. The effect comes after weeks of taking it, not from the dose before training.',
+    cafeina: 'Delays the feeling of fatigue and improves performance from day one. Dosed by body weight: 3-6 mg per kilo, up to 400 mg a day.',
+    calcio: 'The bone mineral. If your diet is reasonable, supplementing it raises bone density very little: food first, and the tub only if food falls short.',
+    carbohidratos: 'Sugar that is easy to drink to sustain performance in sessions over an hour. Between maltodextrin, dextrose and the pricey versions the practical difference is small.',
+    carnitina: 'Carries fat into the mitochondria, but taking more does not burn more fat: a healthy person already has plenty. Limited evidence for fat loss and performance.',
+    caseina: 'The slow milk protein: it releases amino acids over hours. Its evidence-backed use is a serving before bed.',
+    citrulina: 'Raises nitric oxide better than arginine. At 6-8 g of citrulline malate it gives a few extra reps in sets to failure; a small effect and not always consistent.',
+    cla: 'A fatty acid that did well in animals. In people, about 0.09 kg less fat per week at best, with safety doubts in some profiles.',
+    'coenzima-q10': 'Part of the cell’s energy production. Its solid evidence is limited to heart failure; in healthy people who train it does not improve performance.',
+    colageno: 'It is not protein for muscle: it lacks essential amino acids. Where there is a signal is in tendon, ligament and cartilage.',
+    colina: 'A nutrient most people cover with diet. Its alpha-GPC form is sold for strength and focus, with only partial results.',
+    'complejo-b': 'Vitamins involved in producing energy, but they do not provide it. Correcting a deficiency improves performance; adding more on top of normal status does not.',
+    creatina: 'Fills the muscle’s energy store for the first seconds of a maximal effort: more strength and more work per set. It is the sports supplement with the most evidence.',
+    curcuma: 'Its active compound, curcumin, is poorly absorbed, which is why it comes with piperine. It eases joint pain in short, small trials: promising, not conclusive.',
+    eaa: 'The nine essential amino acids, the ones that switch on muscle building. Better than BCAA, but a whey already contains them all and costs less per serving.',
+    espirulina: 'An alga sold as a superfood, with barely one small trial on performance. Its B12 does not work as B12, and batch control matters a lot.',
+    'ganador-peso': 'Food in powder form to add calories. It has no active ingredient of its own: you are buying convenience, and the same surplus can be made in the kitchen.',
+    glucosamina: 'The classic joint supplement. The largest independent trial, with almost 1,600 patients, found no difference versus placebo.',
+    glutamina: 'The body makes it and diet provides plenty. In a healthy person it changes nothing measurable in performance or body composition.',
+    hierro: 'Carries oxygen in the blood, and a deficiency sinks performance. Do not take it just in case: get a blood test first.',
+    hmb: 'A leucine derivative sold to protect muscle. It may make sense for people who do not train or are losing muscle; in trained athletes it shows no effect.',
+    maca: 'An Andean plant sold as an energiser and for libido. There are few, small studies: it cannot be said to work, and for performance there is nothing.',
+    magnesio: 'A mineral involved in muscle, the nervous system and tiredness. What counts is the actual magnesium in each salt, which varies a lot between forms.',
+    melatonina: 'The hormone that tells the body it is night: it brings sleep forward, it does not knock you out. 1 mg is enough; a higher dose is not a bigger effect.',
+    multivitaminico: 'Corrects deficiencies, but does not improve the performance of someone who eats well. To find out whether you lack something, a blood test beats a tub.',
+    omega3: 'What counts is EPA+DHA, not the mg of oil in the tub: 250 mg a day of the two. The oil oxidises, so here the quality certification matters a lot.',
+    potasio: 'Raising intake lowers blood pressure in people with hypertension. It is a health mineral, not a gym one: the idea that it prevents cramps has little basis.',
+    preentreno: 'What almost always works is the caffeine. The other actives have known effective doses that many tubs do not reach.',
+    probioticos: 'The effect belongs to each specific strain at a specific dose, on digestion and respiratory infections. A tub that does not name the strain can promise nothing.',
+    'proteina-aislada': 'The same whey protein as regular whey, filtered more times: more protein per kilo and almost no lactose or fat. In the muscle it does the same.',
+    'proteina-vegana': 'Does the same job as whey if you take a bit more (about 30 g instead of 20) or mix two plant sources. What matters is total daily protein.',
+    'proteina-whey': 'Helps you reach your daily protein, which is what builds muscle. The benefit stops growing around 1.6 g per kilo a day: it is convenient food, not a drug.',
+    quemagrasas: 'A blend, not an ingredient: only caffeine and green tea have supporting data. There is a real risk of products adulterated with drugs.',
+    selenio: 'Needed for the thyroid and antioxidant enzymes, in very small amounts: 55 micrograms a day. The margin before overdoing it is narrow.',
+    taurina: 'An amino acid of muscle and heart, not a stimulant. It improves endurance performance somewhat; more dose or more weeks do not improve the result.',
+    'te-verde': 'The extract is sold for fat loss with weak and contradictory evidence. Above 800 mg of EGCG a day, rises in liver enzymes have been seen.',
+    teanina: 'A green tea amino acid that lowers stress somewhat and improves sleep. With caffeine it improves attention and takes the edge off.',
+    tribulus: 'Sold to raise testosterone and the trials do not confirm it: no more testosterone, strength or lean mass versus placebo.',
+    triptofano: 'A precursor of serotonin and melatonin. For sleep there is a small, specific effect; for depression the evidence is very poor.',
+    'vitamina-b12': 'The one vitamin a 100 % plant diet does not reliably provide. Deficiency takes years to show and can leave neurological damage: on a vegan diet it is part of the diet.',
+    'vitamina-c': 'Needed for collagen, immunity and iron absorption. Taking it daily does not prevent colds; it only shortens them a little.',
+    'vitamina-d': 'Made by the skin in sunlight, which is why people who spend the day indoors lack it. Involved in bones, muscles and immunity. Watch the units: micrograms or IU.',
+    'vitamina-e': 'A necessary antioxidant whose deficiency is rare on a normal diet. The key is not to overdo it: at high doses it is linked to higher mortality.',
+    'vitamina-k2': 'Needed for clotting and bone: in its best trial it reduced part of the loss in bone density. It has no sports evidence and interacts with anticoagulants.',
+    zinc: 'Involved in immunity and in maintaining normal testosterone levels, which is not raising them. If you already get enough, adding more changes nothing.',
+    zma: 'Zinc, magnesium and vitamin B6 together. In trained athletes no change was seen in testosterone or progress: useful only if you lack one of them.',
+  },
+  fr: {
+    'acido-hialuronico': 'Une molécule de la peau et des articulations. Par voie orale, il existe de petits essais avec des résultats sur les rides et la douleur au genou, beaucoup liés aux fabricants.',
+    arginina: 'Vendue pour augmenter le monoxyde d’azote et amener plus de sang au muscle. En pratique elle rend peu : l’effet apparaît chez les peu entraînés, pas chez les très entraînés.',
+    ashwagandha: 'Une plante dont les essais trouvent moins de stress perçu et de cortisol face au placebo. Presque tous utilisent des extraits standardisés, pas de la racine en poudre.',
+    bcaa: 'Trois des neuf acides aminés essentiels. Seuls, ils ne construisent pas de muscle, et si vous atteignez déjà votre protéine du jour ils n’ajoutent rien.',
+    'beta-alanina': 'Augmente la carnosine musculaire, qui tamponne l’acidité dans les efforts maximaux d’une à quatre minutes. L’effet arrive après des semaines de prise, pas avec la dose d’avant l’entraînement.',
+    cafeina: 'Retarde la sensation de fatigue et améliore la performance dès le premier jour. Elle se dose selon le poids : 3-6 mg par kilo, jusqu’à 400 mg par jour.',
+    calcio: 'Le minéral de l’os. Si l’alimentation est correcte, en supplémenter augmente peu la densité osseuse : d’abord l’assiette, et le pot seulement si l’assiette ne suffit pas.',
+    carbohidratos: 'Du sucre facile à boire pour tenir la performance dans les séances de plus d’une heure. Entre maltodextrine, dextrose et versions chères, la différence pratique est faible.',
+    carnitina: 'Transporte les graisses vers la mitochondrie, mais en prendre plus ne brûle pas plus de gras : une personne en bonne santé en a déjà assez. Preuves limitées sur le gras et la performance.',
+    caseina: 'La protéine lente du lait : elle libère des acides aminés pendant des heures. Son usage étayé est la prise avant le coucher.',
+    citrulina: 'Augmente le monoxyde d’azote mieux que l’arginine. À 6-8 g de citrulline malate, elle donne quelques répétitions de plus dans les séries à l’échec ; effet faible et pas toujours constant.',
+    cla: 'Un acide gras qui a donné de bons résultats chez l’animal. Chez l’humain, environ 0,09 kg de gras en moins par semaine au mieux, avec des doutes de sécurité pour certains profils.',
+    'coenzima-q10': 'Une pièce de la production d’énergie de la cellule. Ses preuves solides se limitent à l’insuffisance cardiaque ; chez les personnes saines qui s’entraînent, elle n’améliore pas la performance.',
+    colageno: 'Ce n’est pas une protéine pour le muscle : il lui manque des acides aminés essentiels. Là où il y a un signal, c’est pour les tendons, ligaments et cartilages.',
+    colina: 'Un nutriment que la plupart couvrent par l’alimentation. Sa forme alpha-GPC est vendue pour la force et la concentration, avec des résultats seulement partiels.',
+    'complejo-b': 'Des vitamines qui participent à la production d’énergie, mais n’en apportent pas. Corriger une carence améliore la performance ; en ajouter sur un statut normal, non.',
+    creatina: 'Remplit la réserve d’énergie du muscle pour les premières secondes d’un effort maximal : plus de force et plus de travail par série. C’est le complément sportif le plus étayé.',
+    curcuma: 'Son actif, la curcumine, s’absorbe mal, c’est pourquoi il est associé à la pipérine. Il soulage la douleur articulaire dans des essais courts et petits : prometteur, pas concluant.',
+    eaa: 'Les neuf acides aminés essentiels, ceux qui activent la synthèse musculaire. Mieux que les BCAA, mais une whey les contient déjà tous et coûte moins cher par prise.',
+    espirulina: 'Une algue vendue comme superaliment, avec à peine un petit essai sur la performance. Sa B12 ne fonctionne pas comme de la B12 et le contrôle du lot compte beaucoup.',
+    'ganador-peso': 'De la nourriture en poudre pour ajouter des calories. Pas d’actif propre : vous achetez du pratique, et le même surplus s’obtient en cuisine.',
+    glucosamina: 'Le complément articulaire classique. Le plus grand essai indépendant, avec près de 1 600 patients, n’a trouvé aucune différence face au placebo.',
+    glutamina: 'Le corps la fabrique et l’alimentation en apporte largement. Chez une personne en bonne santé, elle ne change rien de mesurable en performance ou en composition corporelle.',
+    hierro: 'Transporte l’oxygène dans le sang, et une carence plombe la performance. À ne pas prendre au cas où : d’abord une prise de sang.',
+    hmb: 'Un dérivé de la leucine vendu pour protéger le muscle. Il peut avoir du sens chez qui ne s’entraîne pas ou perd du muscle ; chez les sportifs entraînés, il ne montre pas d’effet.',
+    maca: 'Une plante andine vendue comme énergisant et pour la libido. Peu d’études, et petites : on ne peut pas dire qu’elle fonctionne, et pour la performance il n’y a rien.',
+    magnesio: 'Minéral impliqué dans le muscle, le système nerveux et la fatigue. Ce qui compte, c’est le magnésium réel de chaque sel, qui varie beaucoup selon la forme.',
+    melatonina: 'L’hormone qui dit au corps qu’il fait nuit : elle avance le sommeil, elle ne vous assomme pas. 1 mg suffit ; plus de dose, ce n’est pas plus d’effet.',
+    multivitaminico: 'Corrige les carences, mais n’améliore pas la performance de qui mange bien. Pour savoir s’il vous manque quelque chose, une prise de sang vaut mieux qu’un pot.',
+    omega3: 'Ce qui compte, c’est l’EPA+DHA, pas les mg d’huile du pot : 250 mg par jour des deux. L’huile s’oxyde, donc ici le label de qualité compte beaucoup.',
+    potasio: 'En augmenter l’apport baisse la tension chez les hypertendus. C’est un minéral de santé, pas de salle de sport : l’idée qu’il évite les crampes a peu de fondement.',
+    preentreno: 'Ce qui marche presque toujours, c’est la caféine. Les autres actifs ont des doses efficaces connues que beaucoup de pots n’atteignent pas.',
+    probioticos: 'L’effet est propre à chaque souche à une dose précise, sur la digestion et les infections respiratoires. Un pot qui ne nomme pas la souche ne peut rien promettre.',
+    'proteina-aislada': 'La même protéine de lactosérum que la whey, filtrée plus de fois : plus de protéine au kilo et presque sans lactose ni graisse. Dans le muscle, elle fait la même chose.',
+    'proteina-vegana': 'Fait le même travail que la whey si vous en prenez un peu plus (environ 30 g au lieu de 20) ou mélangez deux sources végétales. Ce qui compte, c’est la protéine totale du jour.',
+    'proteina-whey': 'Vous aide à atteindre votre protéine du jour, qui est ce qui construit le muscle. Le bénéfice cesse de croître vers 1,6 g par kilo par jour : c’est de la nourriture pratique, pas un médicament.',
+    quemagrasas: 'Un mélange, pas un ingrédient : seules la caféine et le thé vert ont des données favorables. Il existe un risque réel de produits adultérés avec des médicaments.',
+    selenio: 'Nécessaire à la thyroïde et aux enzymes antioxydantes, en très petites quantités : 55 microgrammes par jour. La marge avant l’excès est étroite.',
+    taurina: 'Un acide aminé du muscle et du cœur, pas un stimulant. Elle améliore un peu la performance d’endurance ; plus de dose ou plus de semaines n’améliorent pas le résultat.',
+    'te-verde': 'L’extrait est vendu pour perdre du gras avec des preuves faibles et contradictoires. Au-delà de 800 mg d’EGCG par jour, on a observé des hausses des enzymes du foie.',
+    teanina: 'Un acide aminé du thé vert qui baisse un peu le stress et améliore le sommeil. Avec la caféine, il améliore l’attention et en adoucit les effets.',
+    tribulus: 'Vendu pour augmenter la testostérone, et les essais ne le confirment pas : ni plus de testostérone, ni plus de force, ni plus de masse maigre face au placebo.',
+    triptofano: 'Précurseur de la sérotonine et de la mélatonine. Pour le sommeil, il y a un effet faible et précis ; pour la dépression, les preuves sont très pauvres.',
+    'vitamina-b12': 'La seule vitamine qu’une alimentation 100 % végétale n’apporte pas de façon fiable. La carence met des années à apparaître et peut laisser des séquelles neurologiques : chez les végans, elle fait partie de l’alimentation.',
+    'vitamina-c': 'Nécessaire au collagène, aux défenses et à l’absorption du fer. En prendre tous les jours n’évite pas les rhumes ; cela les raccourcit seulement un peu.',
+    'vitamina-d': 'La peau la fabrique au soleil, c’est pourquoi elle manque à qui passe la journée à l’intérieur. Rôle dans les os, les muscles et les défenses. Attention aux unités : microgrammes ou UI.',
+    'vitamina-e': 'Un antioxydant nécessaire dont la carence est rare avec une alimentation normale. L’important est de ne pas en abuser : à forte dose, elle est associée à une mortalité plus élevée.',
+    'vitamina-k2': 'Nécessaire à la coagulation et à l’os : dans son meilleur essai, elle a réduit une partie de la baisse de densité osseuse. Aucune preuve sportive, et elle interagit avec les anticoagulants.',
+    zinc: 'Participe aux défenses et au maintien d’un taux normal de testostérone, ce qui n’est pas l’augmenter. Si vous en prenez déjà assez, en ajouter ne change rien.',
+    zma: 'Zinc, magnésium et vitamine B6 ensemble. Chez les sportifs entraînés, aucun changement de testostérone ni de progression : utile seulement s’il vous manque l’un d’eux.',
+  },
+};
+
+/** La frase de cabecera de una categoria en el idioma que toque, con el espanol debajo. */
+export const breve = (slug, lang = 'es') => BREVE_I18N[lang]?.[slug] ?? BREVE[slug];
+
+// Autocomprobacion: node src/datos/breve-i18n.js
+if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('breve-i18n.js')) {
+  for (const l of ['en', 'fr']) {
+    const faltan = Object.keys(BREVE).filter((k) => !BREVE_I18N[l][k]);
+    const sobran = Object.keys(BREVE_I18N[l]).filter((k) => !BREVE[k]);
+    if (faltan.length || sobran.length) throw new Error(`${l}: faltan ${faltan} / sobran ${sobran}`);
+  }
+  console.log(`breve-i18n.js OK (${Object.keys(BREVE).length} categorias x 2 idiomas)`);
+}

@@ -1,26 +1,57 @@
 // Helpers compartidos por las paginas .astro y la isla React.
 
 import datos from './dataset.json' with { type: 'json' };
+import { auFr } from '../frances.js';
 
 /** Como se reparte el score, en prosa y desde la config que de verdad puntua.
  *
  * Seis paginas mencionan el reparto en su texto. Escrito a mano en cada una, el dia que
  * cambian los pesos cinco se quedan mintiendo; escrito aqui, cambian las seis solas.
  */
-export const reparto = (unidad) => {
+export const reparto = (unidad, lang = 'es') => {
   const c = datos.config;
   const pct = (n) => `${Math.round(n * 100)} %`;
+  if (lang === 'en') {
+    return `${pct(c.peso_coste)} price${unidad ? ` per ${unidad}` : ''} against the `
+      + `cheapest in the category, ${pct(c.peso_calidad)} verifiable quality `
+      + `(certification, purity and additives), ${pct(c.peso_requisitos)} the category's `
+      + `own requirements and ${pct(c.peso_valoracion)} the buyers' rating at the store`;
+  }
+  if (lang === 'fr') {
+    return `${pct(c.peso_coste)} le prix${unidad ? ` ${auFr(unidad)}` : ''} face au moins `
+      + `cher de la catégorie, ${pct(c.peso_calidad)} la qualité vérifiable `
+      + `(certification, pureté et additifs), ${pct(c.peso_requisitos)} les exigences de `
+      + `la catégorie et ${pct(c.peso_valoracion)} la note des acheteurs en boutique`;
+  }
   return `${pct(c.peso_coste)} precio${unidad ? ` por ${unidad}` : ''} frente al mas ` +
     `barato de la categoria, ${pct(c.peso_calidad)} calidad verificable (certificacion, ` +
     `pureza y aditivos), ${pct(c.peso_requisitos)} los requisitos de la categoria y ` +
     `${pct(c.peso_valoracion)} la nota de los compradores en la tienda`;
 };
 
+// Los cuatro niveles de verificacion, en los tres idiomas. La CLASE no cambia nunca: es
+// el color del indicador y vive en el CSS, que no sabe de idiomas. Se indexa
+// NIVEL[idioma][n] y no NIVEL[n], a proposito: asi una pagina que se olvide del idioma
+// falla al construir en vez de publicar "Verificado" dentro de una frase en frances.
 export const NIVEL = {
-  4: { etiqueta: 'Verificado', clase: 'n4' },
-  3: { etiqueta: 'Analisis de marca', clase: 'n3' },
-  2: { etiqueta: 'Declarado', clase: 'n2' },
-  1: { etiqueta: 'Sin certificar', clase: 'n1' },
+  es: {
+    4: { etiqueta: 'Verificado', clase: 'n4' },
+    3: { etiqueta: 'Analisis de marca', clase: 'n3' },
+    2: { etiqueta: 'Declarado', clase: 'n2' },
+    1: { etiqueta: 'Sin certificar', clase: 'n1' },
+  },
+  en: {
+    4: { etiqueta: 'Verified', clase: 'n4' },
+    3: { etiqueta: 'Brand lab report', clase: 'n3' },
+    2: { etiqueta: 'Claimed', clase: 'n2' },
+    1: { etiqueta: 'Uncertified', clase: 'n1' },
+  },
+  fr: {
+    4: { etiqueta: 'Vérifié', clase: 'n4' },
+    3: { etiqueta: 'Analyse de la marque', clase: 'n3' },
+    2: { etiqueta: 'Déclaré', clase: 'n2' },
+    1: { etiqueta: 'Non certifié', clase: 'n1' },
+  },
 };
 
 // Los cuatro puntos del indicador de nivel: [true, true, false, false] para el 2.
@@ -28,19 +59,29 @@ export const puntos = (n) => [1, 2, 3, 4].map((i) => i <= n);
 
 // Espacio DURO entre numero y simbolo (U+00A0): "8,95 €" no se parte en dos lineas,
 // que es como se escribe una cifra de dinero en espanol (PLAN-ESTETICA F1.5).
-export const eur = (n, dec = 2) =>
-  n == null ? '—' : n.toFixed(dec).replace('.', ',') + ' €';
+export const eur = (n, dec = 2, lang = 'es') => {
+  if (n == null) return '—';
+  // El frances escribe el dinero igual que el espanol (coma decimal y simbolo
+  // detras); el ingles pone el simbolo delante y el punto decimal, y "8,95 €" alli
+  // se lee como una errata, que en una web de precios es lo ultimo que puede pasar.
+  if (lang === 'en') return '€' + n.toFixed(dec);
+  return n.toFixed(dec).replace('.', ',') + ' €';
+};
 
 // El precio con el que se compara y se puntua. La unidad la manda la categoria (polvo
 // por kilo, perlas por capsula) y viaja siempre pegada al numero: "0,07 €" no dice nada
 // si no sabes si es por kilo o por capsula.
-export const UNIDAD = { kg: 'kg', capsula: 'capsula' };
+export const UNIDAD = {
+  es: { kg: 'kg', capsula: 'capsula' },
+  en: { kg: 'kg', capsula: 'capsule' },
+  fr: { kg: 'kg', capsula: 'gélule' },
+};
 
-export const precioReferencia = (p) =>
+export const precioReferencia = (p, lang = 'es') =>
   p.precio_referencia == null
     ? { valor: '—', unidad: '' }
-    : { valor: eur(p.precio_referencia, p.unidad_precio === 'kg' ? 2 : 3),
-        unidad: UNIDAD[p.unidad_precio] ?? p.unidad_precio };
+    : { valor: eur(p.precio_referencia, p.unidad_precio === 'kg' ? 2 : 3, lang),
+        unidad: UNIDAD[lang][p.unidad_precio] ?? p.unidad_precio };
 
 export const nombreIngrediente = (s) =>
   s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
@@ -178,6 +219,21 @@ export const apuntarVisto = (visto) => {
 // ordenes que se comprueban con node:test en dos milisegundos, y son justo la clase de
 // logica que se rompe en silencio (un filtro que deja de filtrar no da error: da una
 // tabla que parece bien y miente).
+// El nombre de cada orden, aparte del comparador: lo que se traduce es el rotulo, y la
+// funcion que ordena es la misma en los tres idiomas. Separarlos evita tres copias de la
+// misma comparacion, que es justo la clase de duplicado que se desincroniza.
+export const ETIQUETA_ORDEN = {
+  score: { es: 'Score (recomendado)', en: 'Score (recommended)', fr: 'Score (recommandé)' },
+  kg: { es: 'Precio por kilo o capsula', en: 'Price per kilo or capsule',
+        fr: 'Prix au kilo ou à la gélule' },
+  precio: { es: 'Precio del envase', en: 'Pack price', fr: "Prix de l'emballage" },
+  lectores: { es: 'Nota de los lectores', en: "Readers' rating", fr: 'Note des lecteurs' },
+};
+
+/** El rotulo de un orden en un idioma, con el espanol de respaldo. */
+export const nombreOrden = (clave, lang = 'es') =>
+  ETIQUETA_ORDEN[clave]?.[lang] ?? ETIQUETA_ORDEN[clave]?.es ?? clave;
+
 export const ORDENES = {
   score: { etiqueta: 'Score (recomendado)',
            cmp: (a, b) => (b.score_final ?? -1) - (a.score_final ?? -1) },

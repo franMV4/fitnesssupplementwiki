@@ -1,0 +1,121 @@
+---
+import Base from '../../layouts/Base.astro';
+import datos from '../../datos/dataset.json';
+import { SITIO, abs } from '../../sitio.js';
+import { legal } from '../../datos/legal.js';
+import { LANG, fechaLargaEn, porIdioma, ruta, textos } from '../../i18n.js';
+
+export const getStaticPaths = () => porIdioma();
+
+const { lang } = Astro.props;
+// El aviso legal tiene su propio diccionario (datos/legal.js): son veinte parrafos largos
+// y dentro de textos.js tapaban las doscientas claves cortas del resto de la web.
+const g = legal(lang);
+const t = textos(lang);
+const r = (camino) => ruta(lang, camino);
+const fechaLarga = (iso) => fechaLargaEn(lang, iso);
+
+// Aviso legal, privacidad, cookies y afiliacion en una sola pagina: son cuatro textos
+// cortos y repartirlos en cuatro URLs solo hace mas dificil encontrarlos.
+// El titular sale de sitio.js. Si esta vacio, la pagina lo dice en alto a proposito:
+// mejor un hueco visible que un nombre inventado en un texto legal.
+const titular = SITIO.titular || g('titular_pendiente');
+const tiendas = new Set(datos.productos.map((p) => p.tienda)).size;
+// Las otras comparativas que se publican en JSON bajo la misma licencia: se cuentan, no
+// se escribe el numero a mano (ponia "29 hermanos" con 50 categorias en el dataset).
+const hermanos = datos.categorias.length - 1;
+const canonica = abs(r('/legal'));
+const schema = [{
+  '@type': 'WebPage',
+  '@id': canonica,
+  url: canonica,
+  name: g('titulo'),
+  inLanguage: LANG[lang],
+  dateModified: datos.generado,
+  isPartOf: { '@id': abs('/#sitio') },
+  publisher: { '@id': abs('/#editor') },
+}];
+---
+<Base lang={lang} titulo={g('titulo')} descripcion={g('descripcion')} schema={schema}>
+
+  <p class="migas"><a href={r('/')}>{t('comun.inicio')}</a> / {g('miga')}</p>
+
+  <section class="cabecera-pagina">
+    <p class="antetitulo">{g('antetitulo')}</p>
+    <h1>{g('h1')}</h1>
+    <p class="entradilla">{g('entradilla', SITIO.nombre)}</p>
+  </section>
+
+  <div class="prosa">
+    <h2 id="titular">{g('h2_titular')}</h2>
+    <p>{g('titular_intro')}</p>
+    <ul>
+      <li><strong>{g('li_titular')}</strong> {titular}</li>
+      <li><strong>{g('li_correo')}</strong> <a href={`mailto:${SITIO.contacto}`}>{SITIO.contacto}</a></li>
+      <li><strong>{g('li_web')}</strong> {SITIO.url}</li>
+      <li><strong>{g('li_actividad')}</strong>{g('actividad')}</li>
+    </ul>
+
+    <h2 id="privacidad">{g('h2_privacidad')}</h2>
+    <p>
+      {g('privacidad_p1a')}<strong>{g('privacidad_negrita')}</strong>{g('privacidad_p1b')}
+    </p>
+    <ul>
+      <li><strong>{g('li_cuenta_t')}</strong>{g('li_cuenta')}</li>
+      <li><strong>{g('li_correo_t')}</strong>{g('li_correo_c')}</li>
+    </ul>
+    <p>{g('privacidad_derechos')}</p>
+    <p>{g('privacidad_servidor')}</p>
+
+    <h2 id="cookies">{g('h2_cookies')}</h2>
+    <p><strong>{g('cookies_negrita')}</strong>{g('cookies_p1')}</p>
+    <ul>
+      <li><strong>{g('li_sesion_t')}</strong>{g('li_sesion')}</li>
+      <li>
+        <strong>{g('li_local_t')}</strong>{g('li_local_a')}<a href={r('/comparar/')}>{g('li_local_enlace')}</a>{g('li_local_b')}
+        {g('li_idioma')}
+      </li>
+    </ul>
+    <p>
+      {SITIO.analitica ? g('analitica_si') : g('analitica_no')}{g('cookies_cola')}
+    </p>
+
+    <h2 id="afiliacion">{g('h2_afiliacion')}</h2>
+    {datos.hay_afiliados ? (
+      <p>{g('afil_con_a')}<strong>{g('afil_con_negrita')}</strong>{g('afil_con_b')}</p>
+    ) : (
+      <p><strong>{g('afil_sin_negrita')}</strong>{g('afil_sin')}</p>
+    )}
+    <p>
+      <strong>{g('afil_regla_negrita')}</strong>{g('afil_regla')}
+      <a href={r('/metodologia/#afiliacion')}>{t('quienes.la_metodologia')}</a>.
+    </p>
+    <p>{g('afil_relacion', tiendas)}</p>
+
+    <h2 id="informacion">{g('h2_informacion')}</h2>
+    <p>
+      {g('info_a')}<time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>{g('info_b')}
+      <strong>{g('info_negrita')}</strong>{g('info_c')}
+    </p>
+    <p>
+      <strong>{g('info_medico_negrita')}</strong>{g('info_medico')}
+      <em>{g('info_por_ingrediente')}</em>{g('info_medico_cola')}
+    </p>
+
+    <h2 id="propiedad">{g('h2_propiedad')}</h2>
+    <p>{g('propiedad_p1')}</p>
+    <p id="licencia-datos">
+      <strong>{g('datos_negrita')}</strong>{g('datos_a')}
+      <a href="/datos/creatina.json">/datos/creatina.json</a>{g('datos_hermanos', hermanos)}
+      <a href="/datos/catalogo.json">{g('datos_catalogo')}</a>{g('datos_b')}
+      <a href="https://creativecommons.org/licenses/by/4.0/" rel="license nofollow">{g('datos_licencia')}</a>{g('datos_c')}
+    </p>
+    <p class="nota">
+      {g('datos_cita')}<time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>, CC BY 4.0.
+    </p>
+    <p>{g('datos_cola')}</p>
+
+    <h2 id="legislacion">{g('h2_legislacion')}</h2>
+    <p>{g('legislacion')}</p>
+  </div>
+</Base>

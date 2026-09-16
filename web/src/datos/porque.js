@@ -13,7 +13,8 @@
 // ponytail: un modulo de calculo y ningun campo nuevo en el scraper. Los ocho factores
 // salen de columnas que ya se recogian y que ninguna pagina estaba leyendo.
 
-import { UNIDAD, eur, nombreIngrediente } from './util.js';
+import { UNIDAD, eur } from './util.js';
+import { copia, ingrediente } from './landings-i18n.js';
 
 const conDato = (xs) => xs.filter((x) => x != null && !Number.isNaN(x));
 
@@ -27,28 +28,23 @@ const pct = (n, total) => (total ? Math.round((100 * n) / total) : 0);
 /** Cuanto mas caro es b que a, en porcentaje. null si falta alguno o si a es cero. */
 export const sobrecoste = (a, b) => (a && b ? Math.round(((b / a) - 1) * 100) : null);
 
-const coma = (n, dec = 1) => n.toFixed(dec).replace(/[.,]0$/, '').replace('.', ',');
+const coma = (n, dec = 1, lang = 'es') => copia(lang).decimal(n, dec);
 
 /** Dosis en la unidad que se lee: 3 g, 250 mg. */
-export const mg = (v) => (v == null ? '—' : v >= 1000 ? `${coma(v / 1000)} g` : `${Math.round(v)} mg`);
+export const mg = (v, lang = 'es') =>
+  (v == null ? '—' : v >= 1000 ? `${coma(v / 1000, 1, lang)} g` : `${Math.round(v)} mg`);
 
 /** Tamano del envase: 2,5 kg, 300 g. */
-export const formato = (g) =>
-  (g == null ? '—' : g >= 1000 ? `${coma(g / 1000)} kg` : `${Math.round(g)} g`);
+export const formato = (g, lang = 'es') =>
+  (g == null ? '—' : g >= 1000 ? `${coma(g / 1000, 1, lang)} kg` : `${Math.round(g)} g`);
 
-const ADITIVOS = {
-  edulcorante_artificial: 'edulcorantes artificiales',
-  colorante: 'colorantes',
-  aroma_artificial: 'aromas artificiales',
-  relleno: 'rellenos',
-};
 
 /* --- Los ingredientes cara a cara ------------------------------------------------
    Que activo lleva cada catalogo, a que dosis por servicio y cuantos llegan a la dosis
    que tiene evidencia detras. En una categoria simple (creatina) es una fila y dice si el
    polvo barato esta aguado; en una formula (preentreno) son ocho y ahi se ve entero el
    truco de la etiqueta: el mismo nombre en el bote y la mitad de citrulina dentro. */
-export function ingredientesCaraACara(ladoA, ladoB, tope = 8) {
+export function ingredientesCaraACara(ladoA, ladoB, tope = 8, lang = 'es') {
   const todos = [...ladoA.productos, ...ladoB.productos];
   const claves = [...new Set(todos.flatMap((p) => (p.ingredientes ?? []).map((i) => i.ingrediente)))];
 
@@ -80,7 +76,7 @@ export function ingredientesCaraACara(ladoA, ladoB, tope = 8) {
       const b = lado(ladoB.productos, clave);
       return {
         clave,
-        nombre: nombreIngrediente(clave),
+        nombre: ingrediente(clave, lang),
         min: a.min ?? b.min,
         a,
         b,
@@ -99,10 +95,11 @@ export function ingredientesCaraACara(ladoA, ladoB, tope = 8) {
    numero de cada lado y una frase que dice que significa esa diferencia para quien paga.
    El orden es el de importancia: primero lo que cambia el precio real por dosis, luego lo
    que cambia el precio de la etiqueta, y al final lo que cambia el riesgo. */
-export function porQuePrecio(cat, ladoA, ladoB) {
-  const unidad = UNIDAD[cat.unidad_precio] ?? 'kg';
-  const dec = unidad === 'kg' ? 2 : 3;
-  const precio = (n) => (n == null ? '—' : `${eur(n, dec)}/${unidad}`);
+export function porQuePrecio(cat, ladoA, ladoB, lang = 'es') {
+  const T = copia(lang);
+  const unidad = UNIDAD[lang][cat.unidad_precio] ?? 'kg';
+  const dec = cat.unidad_precio === 'capsula' ? 3 : 2;
+  const precio = (n) => (n == null ? '—' : `${eur(n, dec, lang)}/${unidad}`);
   const A = ladoA.productos;
   const B = ladoB.productos;
   const f = [];
@@ -119,19 +116,15 @@ export function porQuePrecio(cat, ladoA, ladoB) {
   const dosisB = mediana(B.map((p) => p.coste_por_dosis_efectiva));
   if (dosDatos(dosisA, dosisB)) {
     const vuelta = dosDatos(refA, refB) && (refA < refB) !== (dosisA < dosisB);
+    const gD = dosisA < dosisB ? ladoA.nombre : ladoB.nombre;
     f.push({
       id: 'dosis',
-      titulo: 'Coste de una dosis efectiva',
-      a: eur(dosisA, 3),
-      b: eur(dosisB, 3),
+      titulo: T.pq_dosis_t,
+      a: eur(dosisA, 3, lang),
+      b: eur(dosisB, 3, lang),
       texto: vuelta
-        ? `Aqui se da la vuelta la comparacion: ${refA < refB ? ladoA.nombre : ladoB.nombre} ` +
-          `gana por ${unidad} y ${dosisA < dosisB ? ladoA.nombre : ladoB.nombre} gana por dosis. ` +
-          `El precio por ${unidad} mide polvo o capsulas; este mide lo que hay que tomarse para ` +
-          `que el ingrediente haga lo que dice el estudio, que es lo que se acaba pagando.`
-        : `El precio por ${unidad} y el precio por dosis apuntan a la misma tienda, asi que la ` +
-          `diferencia de la etiqueta no la borra la dosis: ` +
-          `${dosisA < dosisB ? ladoA.nombre : ladoB.nombre} sale mas barata de las dos maneras.`,
+        ? T.pq_dosis_vuelta(refA < refB ? ladoA.nombre : ladoB.nombre, unidad, gD)
+        : T.pq_dosis_igual(unidad, gD),
     });
   }
 
@@ -158,17 +151,13 @@ export function porQuePrecio(cat, ladoA, ladoB) {
       && dosDatos(purA, purB) && Math.round(purA * 100) !== Math.round(purB * 100)) {
     const alto = purA > purB ? ladoA : ladoB;
     const bajo = purA > purB ? ladoB : ladoA;
-    const dAlto = Math.round(Math.max(purA, purB) * 100);
-    const dBajo = Math.round(Math.min(purA, purB) * 100);
     f.push({
       id: 'pureza',
-      titulo: 'Activo por cada 100 g',
+      titulo: T.pq_pureza_t,
       a: `${Math.round(purA * 100)} g`,
       b: `${Math.round(purB * 100)} g`,
-      texto: `${alto.nombre} pone ${dAlto} g de activo por cada 100 g de producto y ` +
-             `${bajo.nombre}, ${dBajo} g. Los ${dAlto - dBajo} g de diferencia son aroma, ` +
-             `edulcorante y espesante, y en un bote se pagan al mismo precio que el activo: por ` +
-             `eso un kilo mas barato puede salir mas caro en cuanto se mide por dosis.`,
+      texto: T.pq_pureza(alto.nombre, Math.round(Math.max(purA, purB) * 100),
+                         bajo.nombre, Math.round(Math.min(purA, purB) * 100)),
     });
   }
 
@@ -181,14 +170,10 @@ export function porQuePrecio(cat, ladoA, ladoB) {
     const grande = tamA > tamB ? ladoA : ladoB;
     f.push({
       id: 'formato',
-      titulo: capsulas ? 'Capsulas por envase (mediana)' : 'Tamano del envase (mediana)',
-      a: capsulas ? `${Math.round(tamA)} caps.` : formato(tamA),
-      b: capsulas ? `${Math.round(tamB)} caps.` : formato(tamB),
-      texto: `${grande.nombre} vende envases mas grandes, y el envase grande reparte el mismo ` +
-             `bote, la misma etiqueta y el mismo porte entre mas ` +
-             `${capsulas ? 'capsulas' : 'kilos'}. Parte de la diferencia de precio por ` +
-             `${unidad} es esto y no una rebaja: comparar el formato pequeno de una con el ` +
-             `grande de la otra infla la brecha.`,
+      titulo: T.pq_formato_t(capsulas),
+      a: capsulas ? `${Math.round(tamA)} ${T.caps}` : formato(tamA, lang),
+      b: capsulas ? `${Math.round(tamB)} ${T.caps}` : formato(tamB, lang),
+      texto: T.pq_formato(grande.nombre, capsulas, unidad),
     });
   }
 
@@ -214,14 +199,11 @@ export function porQuePrecio(cat, ladoA, ladoB) {
     const reventa = dA.pct > dB.pct ? { d: dB, l: ladoB } : { d: dA, l: ladoA };
     f.push({
       id: 'catalogo',
-      titulo: 'Marcas distintas en el catalogo',
+      titulo: T.pq_catalogo_t,
       a: `${dA.marcas} (${dA.pct} % ${dA.marca})`,
       b: `${dB.marcas} (${dB.pct} % ${dB.marca})`,
-      texto: `${propia.l.nombre} vende sobre todo una marca, ${propia.d.marca}: ` +
-             `${propia.d.pct} % de su catalogo en esta categoria. ${reventa.l.nombre} reparte el ` +
-             `suyo entre ${reventa.d.marcas} marcas. Quien vende su propia marca se salta el ` +
-             `margen del fabricante y puede bajar el precio sin tocar la formula; quien revende ` +
-             `paga ese margen y lo repercute, y a cambio tiene marcas que la otra no vende.`,
+      texto: T.pq_catalogo(propia.l.nombre, propia.d.marca, propia.d.pct, reventa.l.nombre,
+                           reventa.d.marcas),
     });
   }
 
@@ -232,15 +214,13 @@ export function porQuePrecio(cat, ladoA, ladoB) {
   const adB = pct(conAd(B), B.length);
   if (A.length && B.length && Math.abs(adA - adB) >= 15) {
     const lista = [...new Set([...A, ...B].flatMap((p) => p.aditivos ?? []))]
-      .map((a) => ADITIVOS[a] ?? a.replace(/_/g, ' '));
+      .map((a) => T.aditivo[a] ?? a.replace(/_/g, ' '));
     f.push({
       id: 'aditivos',
-      titulo: 'Productos con aditivos declarados',
+      titulo: T.pq_aditivos_t,
       a: `${adA} %`,
       b: `${adB} %`,
-      texto: `Lo que declaran las fichas de las dos: ${lista.join(', ')}. Un aditivo no es un ` +
-             `fraude, pero ocupa gramos que no son activo y es mas barato que el activo: donde ` +
-             `hay mas aditivo declarado, el precio por ${unidad} baja sin que el producto sea mejor.`,
+      texto: T.pq_aditivos(lista.join(', '), unidad),
     });
   }
 
@@ -253,13 +233,10 @@ export function porQuePrecio(cat, ladoA, ladoB) {
     const mas = pct(vA, A.length) > pct(vB, B.length) ? ladoA : ladoB;
     f.push({
       id: 'verificacion',
-      titulo: 'Con analisis publicado (nivel 3 o 4)',
-      a: `${vA} de ${A.length}`,
-      b: `${vB} de ${B.length}`,
-      texto: `${mas.nombre} publica analisis en mas fichas. Analizar un lote en un laboratorio ` +
-             `cuesta dinero y se repercute en el precio: parte de lo que se paga de mas es la ` +
-             `comprobacion de que dentro hay lo que dice la etiqueta. Es el unico trozo del ` +
-             `sobreprecio que se puede leer en un PDF.`,
+      titulo: T.pq_verif_t,
+      a: T.pq_de(vA, A.length),
+      b: T.pq_de(vB, B.length),
+      texto: T.pq_verif(mas.nombre),
     });
   }
 
@@ -274,15 +251,13 @@ export function porQuePrecio(cat, ladoA, ladoB) {
   const fA = formas(A);
   const fB = formas(B);
   if (fA.length && fB.length && (fA[0][0] !== fB[0][0] || fA.length !== fB.length)) {
-    const enumera = (xs) => xs.map(([n, k]) => `${nombreIngrediente(n)} (${k})`).join(', ');
+    const enumera = (xs) => xs.map(([n, k]) => `${ingrediente(n, lang)} (${k})`).join(', ');
     f.push({
       id: 'forma',
-      titulo: 'Forma quimica del activo',
-      a: fA.map(([n, k]) => `${nombreIngrediente(n)} ${k}`).join(' · '),
-      b: fB.map(([n, k]) => `${nombreIngrediente(n)} ${k}`).join(' · '),
-      texto: `${ladoA.nombre}: ${enumera(fA)}. ${ladoB.nombre}: ${enumera(fB)}. La forma cambia ` +
-             `el coste de fabricacion y la evidencia que hay detras, asi que dos botes del mismo ` +
-             `ingrediente a distinto precio pueden no ser el mismo producto.`,
+      titulo: T.pq_forma_t,
+      a: fA.map(([n, k]) => `${ingrediente(n, lang)} ${k}`).join(' · '),
+      b: fB.map(([n, k]) => `${ingrediente(n, lang)} ${k}`).join(' · '),
+      texto: T.pq_forma(ladoA.nombre, enumera(fA), ladoB.nombre, enumera(fB)),
     });
   }
 
@@ -295,13 +270,10 @@ export function porQuePrecio(cat, ladoA, ladoB) {
     const opB = B.reduce((n, p) => n + (p.n_valoraciones ?? 0), 0);
     f.push({
       id: 'valoracion',
-      titulo: 'Nota mediana en la tienda',
-      a: `${coma(notaA)}/5`,
-      b: `${coma(notaB)}/5`,
-      texto: `Sobre ${opA.toLocaleString('es-ES')} opiniones en ${ladoA.nombre} y ` +
-             `${opB.toLocaleString('es-ES')} en ${ladoB.nombre}. Son notas de la propia tienda, ` +
-             `que es juez y parte: valen para detectar un producto que llega mal o que sabe a ` +
-             `rayos, no para decidir que formula es mejor.`,
+      titulo: T.pq_nota_t,
+      a: `${T.decimal(notaA)}/5`,
+      b: `${T.decimal(notaB)}/5`,
+      texto: T.pq_nota(T.miles(opA), ladoA.nombre, T.miles(opB), ladoB.nombre),
     });
   }
 
@@ -314,16 +286,10 @@ export function porQuePrecio(cat, ladoA, ladoB) {
     .map((x) => x.titulo.toLowerCase());
   const intro = !dosDatos(refA, refB) ? null
     : !d
-      ? `Las dos medianas se quedan en ${precio(refA)}, asi que el precio no desempata: lo que ` +
-        `cambia entre ${ladoA.nombre} y ${ladoB.nombre} esta en las filas de abajo.`
-      : `${cara.nombre} cuesta un ${d} % mas por ${unidad} que ${barata.nombre} ` +
-        `(${precio(Math.max(refA, refB))} frente a ${precio(Math.min(refA, refB))}, medianas de ` +
-        `los dos catalogos). ` +
-        (causas.length
-          ? `Esa diferencia no cae del cielo. Estos son los datos que la explican, con el ` +
-            `numero de cada tienda al lado: ${causas.join(', ')}.`
-          : `Con lo que declaran las dos fichas no hay diferencias de composicion ni de formato ` +
-            `que lo expliquen: aqui la brecha es politica de precios de la tienda.`);
+      ? T.pq_intro_empate(precio(refA), ladoA.nombre, ladoB.nombre)
+      : T.pq_intro(cara.nombre, d, unidad, barata.nombre, precio(Math.max(refA, refB)),
+                   precio(Math.min(refA, refB)))
+        + (causas.length ? T.pq_intro_causas(causas.join(', ')) : T.pq_intro_politica);
 
   return { intro, factores: f, unidad };
 }
