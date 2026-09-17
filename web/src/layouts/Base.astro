@@ -137,10 +137,14 @@ const enFunciona = aqui === '/suplementos-que-funcionan' || aqui.startsWith('/pa
            queda atrapada y no hay manera de salir hacia atras.
         3. `location.replace` y no `location.href`: la version que el visitante no queria
            no deja entrada en el historial.
+      Y a los robots no se les redirige nunca: Googlebot renderiza en en-US y sin
+      storage, asi que cada pagina espanola le parecia una redireccion a /en/ y la sacaba
+      del indice. Ellos descubren las versiones por el hreflang.
       El idioma del navegador se lee por su raiz ("en-GB" -> "en"). Lo que no este entre
       los tres se queda en espanol, que es el idioma del mercado que se compara. */}
   {alternativas && (
     <script is:inline set:html={`(()=>{try{
+if(/bot|crawl|spider|slurp|lighthouse|inspect/i.test(navigator.userAgent))return;
 var A=${JSON.stringify(alternativas)},D=${JSON.stringify(idioma)};
 var g=localStorage.getItem('idioma');
 if(!g){
@@ -328,18 +332,21 @@ location.replace(A[g]+location.search+location.hash);
               JavaScript y los sigue un rastreador; el script de abajo solo anota la
               eleccion para que la autodeteccion no la pise en la pagina siguiente. */}
           {alternativas && (
-            <div class="idiomas" role="group" aria-label={t('chrome.elegir_idioma')}>
-              <span class="glifo-panel" aria-hidden="true">&#127760;</span>
-              {/* Se pinta el codigo ("ES") y no el nombre ("Espanol"): tres nombres
-                  completos no caben en la barra de pestanas al lado del tema, y el
-                  codigo de dos letras lo entiende todo el mundo. El nombre entero va en
-                  el `title` y en el `aria-label`, que es donde lo lee quien lo necesita. */}
-              {IDIOMAS.map((l) => (
-                <a href={alternativas[l]} hreflang={LANG[l]} lang={LANG[l]} data-idioma={l}
-                   title={NOMBRE_IDIOMA[l]} aria-label={NOMBRE_IDIOMA[l]}
-                   aria-current={l === idioma ? 'true' : undefined}>{l.toUpperCase()}</a>
-              ))}
-            </div>
+            <details class="idiomas">
+              {/* Mini desplegable nativo: el resumen ensena solo el idioma actual y la
+                  lista sale al pulsar. Los <a> siguen en el HTML aunque esten cerrados,
+                  asi que el rastreador los sigue igual. */}
+              <summary aria-label={t('chrome.elegir_idioma')}>
+                <span class="glifo-panel" aria-hidden="true">&#127760;</span>{idioma.toUpperCase()}
+              </summary>
+              <div class="lista-idiomas">
+                {IDIOMAS.map((l) => (
+                  <a href={alternativas[l]} hreflang={LANG[l]} lang={LANG[l]} data-idioma={l}
+                     title={NOMBRE_IDIOMA[l]}
+                     aria-current={l === idioma ? 'true' : undefined}>{l.toUpperCase()} <span class="nombre-idioma">{NOMBRE_IDIOMA[l]}</span></a>
+                ))}
+              </div>
+            </details>
           )}
           <button class="tema" type="button" aria-label={t('chrome.tema')}>
             <span class="luna" aria-hidden="true">&#9789;</span><span class="sol" aria-hidden="true">&#9788;</span>

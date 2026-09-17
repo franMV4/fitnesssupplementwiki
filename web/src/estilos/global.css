@@ -469,17 +469,31 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
    se pinta igual que el: filete a la izquierda, versales y el mismo alto. Tres codigos
    de dos letras y no tres nombres, porque "Espanol English Francais" no cabe en la barra
    junto a Metodologia y Comparar sin romper la linea. */
-.idiomas {
-  display: inline-flex; align-items: center; gap: .1rem;
-  border-left: 1px solid var(--regla); padding-inline: .5rem;
+/* Mini desplegable con <details>, como el de categorias: sin JS para abrir. */
+.idiomas { position: relative; display: flex; border-left: 1px solid var(--regla); }
+.idiomas > summary {
+  display: inline-flex; align-items: center; gap: .3rem; list-style: none; cursor: pointer;
+  padding: 0 .7rem; color: var(--tinta-2);
+  font-size: .66rem; font-weight: 700; letter-spacing: .09em;
+  transition: background .16s ease, color .16s ease;
 }
-.idiomas > .glifo-panel { display: none; }
+.idiomas > summary::-webkit-details-marker { display: none; }
+.idiomas > summary::after { content: "\25BE"; font-size: .8em; opacity: .6; }
+.idiomas > summary:hover, .idiomas[open] > summary { background: var(--tinta); color: var(--papel); }
+.idiomas .glifo-panel { display: none; }
+.lista-idiomas {
+  position: absolute; top: 100%; right: 0; z-index: 20; min-width: 9rem;
+  display: flex; flex-direction: column;
+  background: var(--papel); border: 1px solid var(--tinta);
+  box-shadow: 0 6px 0 rgba(20, 18, 16, .10);
+}
 .idiomas a {
-  padding: .2rem .38rem; border-radius: 2px;
+  padding: .5rem .75rem;
   color: var(--tinta-2); text-decoration: none;
   font-size: .66rem; font-weight: 700; letter-spacing: .09em;
   transition: background .16s ease, color .16s ease;
 }
+.idiomas .nombre-idioma { font-weight: 400; letter-spacing: 0; margin-left: .4rem; }
 .idiomas a:hover { background: var(--tinta); color: var(--papel); }
 /* El idioma en el que estas: el mismo naranja con el que la web marca un dato propio.
    No se desactiva el enlace (sigue siendo su canonical) pero deja de invitar al clic. */
@@ -1655,15 +1669,17 @@ th[aria-sort="ascending"] button.orden::after { content: " \2193"; color: var(--
      a la izquierda igual que el engranaje de administracion, y los tres codigos
      separados como botones de verdad (44 px, que es un dedo). */
   .pie-panel > .idiomas {
-    display: flex; align-items: center; gap: var(--e2);
-    width: 100%; min-height: 52px; box-sizing: border-box;
-    padding: 0 var(--e4); border-left: 0; border-bottom: 1px solid var(--regla);
+    display: block; width: 100%; border-left: 0; border-bottom: 1px solid var(--regla);
   }
-  .pie-panel > .idiomas > .glifo-panel { display: inline; }
+  .pie-panel > .idiomas > summary {
+    display: flex; gap: var(--e2); min-height: 52px; padding: 0 var(--e4); font-size: .78rem;
+  }
+  .pie-panel > .idiomas .glifo-panel { display: inline; }
+  /* En el panel la lista cae debajo, en flujo: no hay nada encima que tapar. */
+  .pie-panel .lista-idiomas { position: static; border: 0; box-shadow: none; }
   .pie-panel > .idiomas a {
-    min-width: 44px; min-height: 36px;
-    display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid var(--regla); font-size: .78rem;
+    min-height: 44px; display: flex; align-items: center;
+    padding: 0 var(--e4); font-size: .78rem; border-top: 1px solid var(--regla);
   }
   /* En el panel el tema se lee, no se adivina: el simbolo se queda de icono y el
      nombre va al lado. */
