@@ -29,7 +29,9 @@ export const LANG = { es: 'es-ES', en: 'en', fr: 'fr' };
 /** Lo que va en og:locale. Facebook y compania quieren el guion bajo y el pais. */
 export const OG_LOCALE = { es: 'es_ES', en: 'en_US', fr: 'fr_FR' };
 /** El idioma escrito en su propio idioma: asi se rotula un selector de idioma. */
-export const NOMBRE_IDIOMA = { es: 'Espanol', en: 'English', fr: 'Francais' };
+// ponytail: los unicos literales con tilde del codigo. Este rotulo se pinta tambien en
+// /en/ y /fr/, donde el restaurador de tildes no entra, asi que no hay otro sitio.
+export const NOMBRE_IDIOMA = { es: 'Español', en: 'English', fr: 'Français' };
 /** Para Intl: separadores de miles y formato de numero. */
 export const INTL = { es: 'es-ES', en: 'en-GB', fr: 'fr-FR' };
 

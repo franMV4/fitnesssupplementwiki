@@ -2377,16 +2377,15 @@ export const TEXTOS = {
   'tvs.titulo': {
     es: (a, b) => `${a} vs ${b}: que tienda de suplementos sale mas barata`,
     en: (a, b) => `${a} vs ${b}: which supplement store is cheaper`,
-    fr: (a, b) => `${a} vs ${b} : quelle boutique de compléments est la moins chère`,
+    fr: (a, b) => `${a} vs ${b} : quelle boutique est la moins chère`,
   },
   'tvs.descripcion': {
-    es: (a, b, n, f) => `${a} o ${b}: las dos tiendas comparadas en las ${n} categorias que venden las dos, con `
-      + `la mediana de cada una, su indice de precio y cuantos productos publican analisis. Datos del ${f}.`,
+    es: (a, b, n, f) => `${a} o ${b}: comparadas en las ${n} categorias que venden las dos, con su mediana, `
+      + `su indice de precio y cuantos productos publican analisis. Datos del ${f}.`,
     en: (a, b, n, f) => `${a} or ${b}: both stores compared across the ${n} categories they both sell, with each `
       + `one’s median, its price index and how many products publish a lab report. Data from ${f}.`,
-    fr: (a, b, n, f) => `${a} ou ${b} : les deux boutiques comparées sur les ${n} catégories qu’elles vendent `
-      + `toutes les deux, avec la médiane de chacune, son indice de prix et le nombre de produits avec analyse. `
-      + `Données du ${f}.`,
+    fr: (a, b, n, f) => `${a} ou ${b} : comparées sur les ${n} catégories communes, avec la médiane et l’indice `
+      + `de prix de chacune et le nombre de produits avec analyse. Données du ${f}.`,
   },
   'tvs.debajo': { es: 'por debajo', en: 'below', fr: 'en dessous' },
   'tvs.encima': { es: 'por encima', en: 'above', fr: 'au-dessus' },

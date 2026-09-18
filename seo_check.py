@@ -39,6 +39,9 @@ SIN_TILDE = ["categoria", "categorias", "certificacion", "verificacion", "protei
              "proteinas", "capsula", "capsulas", "analisis", "metodologia", "pagina",
              "informacion", "espanol", "espanola", "espanolas"]
 RE_SIN_TILDE = re.compile(r"\b(" + "|".join(SIN_TILDE) + r")\b", re.I)
+# Primer segmento de URL de los idiomas que no son el espanol (mirror de IDIOMAS en
+# web/src/i18n.js): el espanol vive en la raiz y no tiene prefijo.
+OTROS_IDIOMAS = ("en", "fr")
 RE_SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.S | re.I)
 RE_TAG = re.compile(r"<[^>]+>")
 
@@ -199,9 +202,14 @@ def main():
         # de restaurar tildes del build no toco esta pagina. Ver web/src/tildes.js.
         # Se mira solo el texto: fuera <script> (JSON-LD con URLs) y <style>, y luego se
         # quitan las etiquetas para no leer slugs de los atributos (proteina-vegana).
+        # Solo en las paginas en espanol: el restaurador de tildes NO entra en /en/ ni /fr/
+        # a proposito (ver web/astro.config.mjs), asi que ahi estas palabras salen sin tilde
+        # por diseno (nombres de producto y unidades que vienen del dataset en espanol).
+        # Mirarlo ahi no mide si el paso corrio, mide copy sin traducir: otro problema.
         visible = RE_SCRIPT_STYLE.sub(" ", texto)
         visible = RE_TAG.sub(" ", visible)
-        for palabra in RE_SIN_TILDE.findall(visible):
+        for palabra in ([] if url[1:].split("/")[0] in OTROS_IDIOMAS
+                       else RE_SIN_TILDE.findall(visible)):
             fallos.append(f"{url}: texto sin tilde '{palabra.lower()}' "
                           f"(el paso de tildes no se aplico)")
             break  # con una por pagina basta para localizar el problema

@@ -132,8 +132,8 @@ const TXT = {
 
     // --- descripciones ---
     desc_mejores: (matiz, n, c, u, desde, f) => `${matiz} ${n} productos de ${c.termino} `
-      + `comparados por precio por ${u} (desde ${desde}) y por el nivel de verificacion de su `
-      + `certificacion. Datos del ${f}.`,
+      + `comparados por precio por ${u} (desde ${desde}) y por su nivel de verificacion. `
+      + `Datos del ${f}.`,
     desc_vs: (a, b, c, na, nb, u, ma, mb, f) => `${a} o ${b} en ${c.termino}: ${na} y ${nb} `
       + `productos comparados por precio por ${u} (medianas ${ma} y ${mb}) y por certificacion. `
       + `Datos del ${f}.`,
@@ -479,8 +479,7 @@ const TXT = {
     rc_n4: (n4a, a, n4b, b) => `${n4a} produits de ${a} et ${n4b} de ${b} atteignent le niveau 4 de vérification.`,
 
     desc_mejores: (matiz, n, c, u, desde, f) => `${matiz} ${n} produits ${deFr(c.termino)} comparés au `
-      + `prix ${auFr(u)} (dès ${desde}) et selon le niveau de vérification de leur certification. `
-      + `Données du ${f}.`,
+      + `prix ${auFr(u)} (dès ${desde}) et selon leur niveau de vérification. Données du ${f}.`,
     desc_vs: (a, b, c, na, nb, u, ma, mb, f) => `${a} ou ${b} en ${c.termino} : ${na} et ${nb} `
       + `produits comparés au prix ${auFr(u)} (médianes ${ma} et ${mb}) et par certification. `
       + `Données du ${f}.`,

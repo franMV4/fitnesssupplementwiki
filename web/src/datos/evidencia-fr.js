@@ -237,7 +237,7 @@ export const EVIDENCIA_FR = {
   colageno: {
     h1: 'À quoi sert le collagène et quand le prendre',
     titulo: 'Collagène : à quoi il sert, combien en prendre et ce que disent les preuves',
-    descripcion: 'Le collagène ne sert pas au muscle : il lui manque des acides aminés essentiels. Là où il y a un signal, c’est pour les tendons et les articulations, avec 10-15 g et de la vitamine C une heure avant l’entraînement.',
+    descripcion: 'Le collagène ne sert pas au muscle : il lui manque des acides aminés essentiels. Là où il y a un signal, c’est pour les tendons et les articulations, avec 10-15 g et de la vitamine C avant l’entraînement.',
     resumen: 'La première chose à savoir sur le collagène, c’est ce qu’il n’est pas : une protéine pour le muscle. Il lui manque des acides aminés essentiels, il n’a pas de tryptophane et très peu de leucine, il ne compte donc pas dans vos protéines du jour même si l’étiquette affiche 90 % de protéines. Là où il y a un signal, c’est dans le tissu conjonctif : tendon, ligament et cartilage. Et là, le moment de la prise compte vraiment, ce qui est rare pour un complément.',
     efectos: [
       { que: 'Synthèse de collagène (marqueur PINP dans le sang)', cifra: 'x2', detalle: 'Quinze grammes de gélatine avec de la vitamine C, une heure avant une activité brève, ont doublé le marqueur de synthèse de collagène par rapport au témoin. C’est un marqueur sanguin, pas un tendon mesuré : le signal est prometteur, ce n’est pas une preuve de résultat clinique.' },
@@ -706,7 +706,7 @@ export const EVIDENCIA_FR = {
   },
   hierro: {
     h1: 'À quoi sert le fer et qui en a vraiment besoin',
-    titulo: 'Fer : à quoi il sert, combien en prendre et pourquoi il faut faire une prise de sang',
+    titulo: 'Fer : à quoi il sert, combien en prendre et pourquoi faire une prise de sang',
     descripcion: 'Le fer est le seul complément de ce site qu’il ne faut pas prendre à l’aveugle : il aide beaucoup en cas de carence et il est superflu sinon. Quoi vérifier et avec quels chiffres.',
     resumen: 'Le fer transporte l’oxygène dans le sang, et sa carence est l’une des rares qui plombent vraiment la performance. C’est aussi le complément qui se prête le moins à une prise au cas où : le corps n’a pas de moyen simple d’éliminer l’excédent, et sans carence il n’apporte rien. C’est la catégorie de ce site où le conseil n’est pas de comparer les prix, mais de faire d’abord une prise de sang.',
     efectos: [
@@ -824,7 +824,7 @@ export const EVIDENCIA_FR = {
   },
   'vitamina-b12': {
     h1: 'À quoi sert la vitamine B12 et qui doit en prendre',
-    titulo: 'Vitamine B12 : à quoi elle sert et pourquoi elle est indispensable chez les végans',
+    titulo: 'Vitamine B12 : à quoi elle sert et pourquoi les végans en ont besoin',
     descripcion: 'La B12 ne se trouve que dans les aliments d’origine animale. Ce que dit la réglementation européenne, combien en prendre selon le format et pourquoi, chez les végans, le complément n’est pas facultatif.',
     resumen: 'La B12 est la seule vitamine qu’on ne peut pas obtenir de façon fiable avec une alimentation 100 % végétale : elle se trouve dans les aliments d’origine animale et les produits enrichis. La carence met des années à apparaître car le foie garde des réserves, et quand elle apparaît, elle peut laisser des séquelles neurologiques. C’est pourquoi elle fait exception à la règle de ce site « vérifiez d’abord s’il vous en manque » : chez les végans, le complément fait partie de l’alimentation, ce n’est pas un extra.',
     efectos: [
@@ -1020,7 +1020,7 @@ export const EVIDENCIA_FR = {
   },
   probioticos: {
     h1: 'À quoi servent les probiotiques et comment les choisir',
-    titulo: 'Probiotiques : à quoi ils servent et pourquoi c’est la souche qui compte, pas les UFC',
+    titulo: 'Probiotiques : à quoi ils servent et pourquoi la souche compte plus que les UFC',
     descripcion: 'L’effet d’un probiotique dépend de la souche précise, pas du genre ni des milliards d’UFC. Ce que dit la prise de position de l’ISSN et comment lire l’étiquette.',
     resumen: 'Les probiotiques sont le complément où raisonner par catégories marche le moins bien : l’effet n’appartient pas « aux probiotiques », ni même à une espèce, mais à une souche précise étudiée à une dose précise. La prise de position de l’ISSN rapporte des effets sur la digestion, la santé intestinale et la fréquence des infections respiratoires chez les sportifs, toujours liés à des souches identifiées. Un pot qui ne nomme pas la souche ne peut rien promettre.',
     efectos: [
