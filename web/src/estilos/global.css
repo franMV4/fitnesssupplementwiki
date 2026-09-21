@@ -503,12 +503,21 @@ nav.principal > a.comparar:hover { background: var(--tinta); color: var(--papel)
 /* El pie del panel (administracion + tema) vive dentro del <nav> para que en movil
    caiga al fondo del panel lateral. En escritorio no es un bloque: es el ultimo hueco
    de la barra de pestanas, asi que se deshace como contenedor y deja pasar a sus hijos.
-   El enlace de administracion no sale nunca en la barra de escritorio: ahi no hay sitio
-   y su casa es el panel. */
+   En la barra de escritorio el enlace de administracion es solo el engranaje, vecino
+   del tema y con su mismo corte: el texto no cabe, y el `title` dice que es. */
 .pie-panel { display: flex; align-items: stretch; }
 /* Titulo del panel lateral: en escritorio no hay panel, hay una barra de pestanas. */
 .cabeza-panel { display: none; }
 .pie-panel .enlace-admin { display: none; }
+@media (min-width: 78rem) {
+  .pie-panel .enlace-admin:not([hidden]) {
+    display: flex; align-items: center; justify-content: center; min-width: 3.4rem;
+    border-left: 1px solid var(--regla); color: var(--senal-txt); text-decoration: none;
+    font-size: 1.25rem; line-height: 1;
+  }
+  .pie-panel .enlace-admin:hover { background: var(--tinta); color: var(--papel); }
+  .pie-panel .enlace-admin .texto-admin { display: none; }
+}
 .tema .texto-tema { display: none; }
 /* El sol y la luna son glifos de texto: crecen con font-size y nada mas. */
 .tema .sol, .tema .luna { font-size: 1.5rem; }
@@ -2185,6 +2194,7 @@ body > * { position: relative; z-index: 1; }
   font-size: clamp(1.5rem, 2.3vw, 2.05rem); line-height: 1;
   text-transform: uppercase; letter-spacing: .01em;
 }
+.ponderador .cabecera-cat a .nombre-cat { text-decoration: underline; }
 .ponderador .cabecera-cat a i { width: 8px; height: 1em; background: var(--tinta); flex: none; }
 .ponderador .cabecera-cat a .flecha {
   font-size: .55em; color: var(--tinta-3);

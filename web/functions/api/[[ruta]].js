@@ -142,6 +142,7 @@ export async function onRequest({ request, env, params }) {
     if (ruta === 'alertas' && metodo === 'GET') return await misAlertas(request, env);
     if (ruta === 'alerta' && metodo === 'POST') return await alerta(request, env);
     if (ruta === 'salida' && metodo === 'POST') return await salida(request, env);
+    if (ruta === 'evento' && metodo === 'POST') return await evento(request, env);
     // El repaso de precios no lo llama un navegador: lo llama el robot de GitHub Actions
     // despues de cada pasada del scraper, con su clave en la cabecera.
     if (ruta === 'alertas/revisar' && metodo === 'POST') return await revisar(request, env);
@@ -713,7 +714,26 @@ async function panel(que, metodo, request, env) {
   if (que === 'resena' && metodo === 'POST') return await admResena(request, env);
   if (que === 'ediciones' && metodo === 'GET') return await admEdiciones(request, env);
   if (que === 'edicion' && metodo === 'POST') return await admEdicion(request, env, usuario);
+  if (que === 'estadisticas' && metodo === 'GET') return await admEstadisticas(request, env);
   return error('Ruta no encontrada.', 404);
+}
+
+// Totales de los dos contadores en los ultimos N dias. Agrupa en SQL: la tabla crece
+// una fila por dia/clave y el panel solo necesita los rankings y la serie diaria.
+async function admEstadisticas(request, env) {
+  const dias = Math.min(365, Math.max(1, Number(new URL(request.url).searchParams.get('dias')) || 30));
+  const desde = new Date(Date.now() - (dias - 1) * 86400000).toISOString().slice(0, 10);
+  const q = (sql) => env.DB.prepare(sql).bind(desde).all().then((r) => r.results);
+  const [tiendas, categorias, porDia, eventos] = await Promise.all([
+    q(`SELECT tienda, SUM(n) AS n, SUM(CASE WHEN afiliado = 1 THEN n ELSE 0 END) AS afiliado
+         FROM salidas WHERE dia >= ? GROUP BY tienda ORDER BY n DESC`),
+    q(`SELECT categoria, SUM(n) AS n FROM salidas WHERE dia >= ?
+        GROUP BY categoria ORDER BY n DESC LIMIT 30`),
+    q(`SELECT dia, SUM(n) AS n FROM salidas WHERE dia >= ? GROUP BY dia ORDER BY dia`),
+    q(`SELECT tipo, clave, SUM(n) AS n FROM eventos WHERE dia >= ?
+        GROUP BY tipo, clave ORDER BY n DESC LIMIT 200`),
+  ]);
+  return json({ dias, desde, tiendas, categorias, por_dia: porDia, eventos });
 }
 
 // El patron del LIKE se construye aqui y el texto viaja por bind: concatenar el termino
@@ -903,6 +923,28 @@ async function salida(request, env) {
   return new Response(null, { status: 204 });
 }
 
+// --- clics dentro de la web -----------------------------------------------------------
+// El mismo contador que `salida`, para lo que no sale de la web: abrir una ficha, pulsar
+// "comparar" o "mi lista". Los tipos van en lista cerrada: uno libre dejaria a cualquiera
+// inventarse filas.
+const EVENTOS = new Set(['ficha', 'comparar', 'mi-lista']);
+const CLAVE_OK = /^[a-z0-9-]{1,120}$/;
+
+async function evento(request, env) {
+  const d = await request.json().catch(() => null);
+  const tipo = String(d?.tipo ?? '');
+  const clave = String(d?.clave ?? '');
+  if (!EVENTOS.has(tipo) || !CLAVE_OK.test(clave)) return error('Evento no valido.', 400);
+  const dia = new Date().toISOString().slice(0, 10);
+  try {
+    await env.DB.prepare(
+      `INSERT INTO eventos (dia, tipo, clave) VALUES (?, ?, ?)
+       ON CONFLICT (dia, tipo, clave) DO UPDATE SET n = n + 1`,
+    ).bind(dia, tipo, clave).run();
+  } catch { /* un contador roto no rompe la navegacion */ }
+  return new Response(null, { status: 204 });
+}
+
 
 const LIMITES = {
   entrar: [20, 15],       // probar claves: lo que mas importa frenar
@@ -918,6 +960,7 @@ const LIMITES = {
   // Salir a una tienda es un clic normal leyendo un ranking, y se hacen varios seguidos
   // comparando. El tope frena a quien quiera inflar el contador, no a quien compra.
   salida: [120, 10],
+  evento: [300, 10],      // navegar es muchos clics; el tope es para robots
 };
 
 // Una de cada cincuenta peticiones limitadas barre los tramos viejos. Un cron para esto

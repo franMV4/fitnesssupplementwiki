@@ -266,3 +266,30 @@ test('si la base de datos falla, el clic sale igual hacia la tienda', async () =
   // Fallar cerrado aqui seria perder la venta por no poder anotar el clic.
   assert.equal((await pedirSalida({ tienda: 'hsn', categoria: 'creatina' }, rota)).status, 204);
 });
+
+// --- clics dentro de la web ------------------------------------------------------------
+// Mismo contrato que /api/salida: solo tipos de una lista cerrada y un total por dia.
+const pedirEvento = (cuerpo, db = d1Falsa()) => api.onRequest({
+  request: new Request('https://x/api/evento', {
+    method: 'POST', body: JSON.stringify(cuerpo), headers: { 'content-type': 'application/json' },
+  }),
+  env: { DB: db, SECRETO: 'x' },
+  params: { ruta: ['evento'] },
+});
+
+test('abrir una ficha se cuenta como total por dia, sin quien', async () => {
+  const db = d1Falsa();
+  const r = await pedirEvento({ tipo: 'ficha', clave: 'creatina-hsn-500g', ip: '1.2.3.4' }, db);
+  assert.equal(r.status, 204);
+  const escrito = db.borrados.at(-1);
+  assert.match(escrito.sql, /INSERT INTO eventos/);
+  assert.deepEqual(escrito.args.slice(1), ['ficha', 'creatina-hsn-500g']);   // args[0] es el dia
+});
+
+test('un tipo que no esta en la lista no entra en el contador', async () => {
+  for (const malo of [{ tipo: 'otro', clave: 'creatina' },
+                      { tipo: 'ficha', clave: "x'; DROP TABLE" },
+                      { tipo: 'ficha' }, {}]) {
+    assert.equal((await pedirEvento(malo)).status, 400, JSON.stringify(malo));
+  }
+});

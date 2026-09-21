@@ -741,6 +741,13 @@ pestaña**: en vivo (D1) y en cola (tabla `ediciones` → pipeline). Un panel qu
   web sigue sin banner. Falla abierto: un contador roto no puede estropear la única cosa de
   esta web que da dinero. Los enlaces los marca `data-salida` y la categoría sale del
   `data-cat` que la fila ya tenía.
+- **Clics internos**: tabla `eventos` (D1) y `POST /api/evento`, mismo contrato que
+  `salidas` (total por día, sin IP ni cookie). Tipos en lista cerrada (`EVENTOS` en la
+  API): `ficha` (cualquier enlace a `/producto/<slug>/`, sin marcar) y los botones con
+  `data-evento` (`comparar`, `mi-lista`), que cuentan por la `data-cat` de la fila. Un
+  tipo nuevo = añadirlo a `EVENTOS` y poner `data-evento` en el botón. Se ven en la
+  pestaña **Estadisticas** de `/admin` (`GET /api/admin/estadisticas?dias=N`). Visitas y
+  referers NO van aquí: los da Cloudflare Web Analytics.
 - **El `lastmod` del sitemap es el día que cambió el precio, no el de la pasada**
   (`fechas_de_cambio` en `exportar.py`, campo `cambiado` en el dataset). Antes las 4.293
   URLs heredaban `datos.generado` y el sitemap decía que todo cambiaba a diario cuando de
@@ -762,7 +769,8 @@ pestaña**: en vivo (D1) y en cola (tabla `ediciones` → pipeline). Un panel qu
 - Alta en programas de afiliado → sustituir los `PEGA_AQUI` de `data/afiliados.json`.
   Solo HSN está activo (234 productos). Awin cubre de una vez Promofarma, DosFarma,
   Myprotein y Holland & Barrett: 1.356 productos.
-- Aplicar `web/schema.sql` a la D1 publicada para que exista la tabla `salidas`:
+- ~~Aplicar `web/schema.sql` a la D1 publicada~~: hecho el 2026-09-21 (`salidas` y
+  `eventos` existen). Tras tocar el esquema:
   `npx wrangler d1 execute suplementos --remote --file=./schema.sql`.
 - ~~Dominio real y contacto real en el UA de `scraper/core.py`~~: hechos. El dominio sale de
   `web/src/sitio.js` (el `astro.config.mjs` lo lee de ahí) y el UA lleva ya el correo real.

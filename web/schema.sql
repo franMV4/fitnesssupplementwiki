@@ -144,3 +144,15 @@ CREATE TABLE IF NOT EXISTS salidas (
   n         INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (dia, tienda, categoria, afiliado)
 );
+
+-- Clics DENTRO de la web: abrir una ficha, pulsar "comparar" o "mi lista". Mismo
+-- contrato que `salidas`: contador por dia, sin IP, usuario ni cookie. 'clave' es el
+-- slug del producto (ficha) o la categoria (botones); 'tipo' sale de una lista cerrada
+-- en la API, asi que no se puede llenar de basura desde fuera.
+CREATE TABLE IF NOT EXISTS eventos (
+  dia   TEXT NOT NULL,
+  tipo  TEXT NOT NULL,
+  clave TEXT NOT NULL,
+  n     INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (dia, tipo, clave)
+);

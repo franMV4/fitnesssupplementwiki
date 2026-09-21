@@ -323,8 +323,8 @@ location.replace(A[g]+location.search+location.hash);
             /api/yo dice que este visitante es admin: la pagina es estatica y va
             cacheada, asi que no puede saberlo al generarse. */}
         <div class="pie-panel">
-          <a class="enlace-admin" href="/admin/" hidden>
-            <span class="glifo-panel" aria-hidden="true">&#9881;</span>{t('chrome.admin')}
+          <a class="enlace-admin" href="/admin/" title={t('chrome.admin')} hidden>
+            <span class="glifo-panel" aria-hidden="true">&#9881;</span><span class="texto-admin">{t('chrome.admin')}</span>
           </a>
           {/* El selector de idioma. Solo sale donde hay a donde ir: ensenarlo en una ficha
               de producto (espanol y nada mas) seria prometer una version que no existe.
@@ -523,6 +523,21 @@ location.replace(A[g]+location.search+location.hash);
       navigator.sendBeacon('/api/salida', new Blob([JSON.stringify({
         tienda: a.dataset.salida, categoria, afiliado: a.dataset.afiliado === '1',
       })], { type: 'application/json' }));
+    });
+
+    // Lo mismo para los clics que no salen de la web: abrir una ficha (cualquier enlace a
+    // /producto/<slug>/, sin tener que marcarlo) y los botones con data-evento, que
+    // cuentan por categoria. Mismo contrato: total por dia, sin identificador.
+    document.addEventListener('click', (e) => {
+      if (!navigator.sendBeacon) return;
+      const ficha = e.target.closest?.('a[href*="/producto/"]');
+      const boton = e.target.closest?.('[data-evento]');
+      const slug = ficha?.getAttribute('href').match(/\/producto\/([a-z0-9-]+)/)?.[1];
+      const [tipo, clave] = slug ? ['ficha', slug]
+        : boton ? [boton.dataset.evento, boton.closest('[data-cat]')?.dataset.cat] : [];
+      if (!tipo || !clave) return;
+      navigator.sendBeacon('/api/evento', new Blob([JSON.stringify({ tipo, clave })],
+        { type: 'application/json' }));
     });
 
     document.addEventListener('keydown', (e) => {

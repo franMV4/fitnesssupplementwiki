@@ -76,7 +76,7 @@ export default function Ponderador({ filas = [], lang = 'es', txt = {} }) {
                     <td className="principal" colSpan={5}>
                       <a href={`/${f.slug}/`}>
                         <i aria-hidden="true" />
-                        {f.nombre}
+                        <span className="nombre-cat">{f.nombre}</span>
                         <span className="flecha" aria-hidden="true">&rarr;</span>
                       </a>
                       {f.cambia && <span className="marca-cambio">{txt.cambia}</span>}
