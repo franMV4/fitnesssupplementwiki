@@ -27,6 +27,15 @@ const nombresTiendas = m.tiendas.map((x) => TIENDAS[x] ?? x);
 const bloques = m.categorias.map((g) => ({ ...g, cat: enIdioma(g.cat, lang), r: resumen(g.cat, g.productos, lang) }));
 const principales = bloques.slice(0, 3).filter((b) => b.r.barato);
 
+// F4.4 · Los botes del mosaico de cabecera. Uno por producto con foto, sin repetir la
+// misma imagen (el mismo bote lo venden varias tiendas y el mosaico salia con ocho
+// copias del mismo envase), y como mucho diez, que es lo que reparte la rejilla en una
+// sola fila. Se cogen de las categorias mas surtidas de la marca hacia abajo, que es el
+// orden en el que ya vienen los bloques.
+const mosaico = [...new Set(
+  m.categorias.flatMap((g) => g.productos).map((o) => o.imagen).filter(Boolean),
+)].slice(0, 10);
+
 const titulo = titula(t('marca.titulo', m.nombre, anio(datos.generado), n), ...t('marca.titulo_sufijos'));
 
 const descripcion = corta(
@@ -98,6 +107,24 @@ const schema = [
       {t('marca.antetitulo')} · {t('cat.datos_del')} <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
     </p>
     <h1 class="aparece d1">{t('marca.h1', m.nombre, n)}</h1>
+
+    {/* F4.4 · La apertura propia de una marca: SUS BOTES. Esta pagina abria con un
+        parrafo de nombres de producto encadenados con barras ("Sin Sabor 1Kg | 4000 MG
+        de Beta-Alanina | No-GMO, Vegano..."), que es el sintoma D5 del plan -datos en
+        crudo pintados como si fueran texto- y ademas no dice nada que se vea.
+        Una marca se reconoce por sus envases. Van fundidos en el papel con el multiply
+        de F2.1, o sea impresos en la hoja y no pegados encima en cajas blancas.
+        Decorativos y `aria-hidden`: lo que dicen ya lo dice la tabla de abajo con
+        nombre, precio y enlace, asi que para un lector de pantalla son ruido. */}
+    {mosaico.length >= 4 && (
+      <p class="mosaico-marca aparece d2" aria-hidden="true">
+        {mosaico.map((src) => (
+          <img class="miniatura" src={src} alt="" referrerpolicy="no-referrer"
+               onerror="this.style.display='none'"
+               loading="lazy" decoding="async" width="64" height="64" />
+        ))}
+      </p>
+    )}
     <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>
   </section>
 

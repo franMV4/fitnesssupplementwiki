@@ -130,6 +130,12 @@ def imagenes():
     icono.save(PUBLICO / "apple-touch-icon.png")
 
     display = ImageFont.truetype(io.BytesIO(_ttf("Big+Shoulders+Display", 900)), 104)
+    # El mismo salto de peso que la cabecera de la web (F5.4 / D10): la marca se escribe
+    # igual en los dos sitios o son dos marcas. La ligera (700) lleva "Fitness" y la
+    # negra (900) "Supplement": la palabra se parte por el peso y por la mayuscula, no
+    # por un guion ni por un segundo color.
+    ligera = ImageFont.truetype(io.BytesIO(_ttf("Big+Shoulders+Display", 700)), 104)
+    mono = ImageFont.truetype(io.BytesIO(_ttf("IBM+Plex+Mono", 400)), 30)
     texto = ImageFont.truetype(io.BytesIO(_ttf("Archivo", 400)), 31)
     rotulo = ImageFont.truetype(io.BytesIO(_ttf("Archivo", 500)), 22)
 
@@ -137,8 +143,11 @@ def imagenes():
     d = ImageDraw.Draw(og)
     d.rectangle([0, 0, 1200, 22], fill=TINTA)
     _marca(d, 90, 96, 66, 15, 9)
-    d.text((90, 196), "FITNESSSUPPLEMENT", font=display, fill=TINTA)
-    d.text((90, 290), "WIKI", font=display, fill=SENAL)
+    d.text((90, 196), "Fitness", font=ligera, fill=TINTA_2)
+    x = 90 + d.textlength("Fitness", font=ligera)
+    d.text((x, 196), "Supplement", font=display, fill=TINTA)
+    # "wiki" en mono y sobre la linea base del rotulo grande, no colgando debajo.
+    d.text((90, 300), "wiki", font=mono, fill=SENAL)
     d.text((90, 410), "Suplementos comparados por precio por kilo", font=texto, fill=TINTA_2)
     d.text((90, 452), "y por lo comprobable que es su certificacion.", font=texto, fill=TINTA_2)
     d.rectangle([90, 528, 1110, 530], fill=TINTA)

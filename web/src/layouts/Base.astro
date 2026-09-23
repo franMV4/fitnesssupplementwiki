@@ -227,7 +227,12 @@ location.replace(A[g]+location.search+location.hash);
       </button>
       <a class="marca-sitio" href={r('/')}>
         <img class="glifo" src="/favicon.svg" alt="" width="22" height="22" />
-        FitnessSupplement<span class="fina">Wiki</span>
+        {/* F5.4 / D10: en versales, "FITNESSSUPPLEMENT" junta tres eses y se lee como un
+            muro. En caja mixta la segunda palabra empieza por mayuscula y el ojo la separa
+            solo; el cambio de peso (700 -> 900 de la condensada) remata el corte sin
+            meter un segundo color ni un guion. "wiki" baja a mono y a la MISMA linea
+            base, que es de donde flotaba. */}
+        <span class="marca-nombre">Fitness<b>Supplement</b></span><span class="fina">wiki</span>
       </a>
       {/* La navegacion real de una web de 50 categorias y 4.300 productos es escribir,
           no bajar por un menu. Hasta ahora el campo solo estaba en la portada: desde

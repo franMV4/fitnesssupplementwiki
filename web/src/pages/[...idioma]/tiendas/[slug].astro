@@ -117,6 +117,27 @@ const filas = [
       <time datetime={datos.generado}>{fechaLarga(datos.generado)}</time>
     </p>
     <h1 class="aparece d1">{h1}</h1>
+
+    {/* F4.4 · La apertura propia de un duelo de tiendas: el MARCADOR. El dato por el que
+        se entra aqui ("Amazon gana en 18 categorias, Bulevip en 3") venia dentro de la
+        respuesta corta, en prosa y a cuerpo de parrafo, entre otras cuatro cifras. En un
+        duelo el resultado va primero y se lee de un vistazo, como en cualquier marcador.
+        La prosa se queda debajo: sigue siendo lo que lee Google y lo que copia un modelo. */}
+    <p class="marcador aparece d2">
+      <span class="marcador-lado">
+        <b class="marcador-tienda">{a.nombre}</b>
+        <span class="cifra marcador-tantos">{v.ganaA}</span>
+      </span>
+      <span class="marcador-guion" aria-hidden="true">&ndash;</span>
+      <span class="marcador-lado">
+        <span class="cifra marcador-tantos">{v.ganaB}</span>
+        <b class="marcador-tienda">{b.nombre}</b>
+      </span>
+      <span class="marcador-pie">
+        {t('tvs.marcador_pie', v.comunes.length, empate)}
+      </span>
+    </p>
+
     <p class="respuesta aparece d2"><b>{t('portada.respuesta_corta')}</b> {respuesta}</p>
     <p class="entradilla aparece d2">{t('tvs.entradilla')}</p>
   </section>

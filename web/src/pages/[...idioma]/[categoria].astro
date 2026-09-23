@@ -100,6 +100,14 @@ const schema = [
 
   <p class="migas"><a href={r_('/')}>{t('comun.inicio')}</a> / {nombre}</p>
 
+  {/* F4.3: la cabecera se compone como una pagina de diario, con su columna de margen.
+      El carril va al margen del TITULAR y no al de la tabla a proposito: una comparativa
+      de siete columnas no puede ceder 16 rem de ancho, y la cabecera ya estaba limitada a
+      58 rem dentro de un envoltorio de 82, o sea que ese hueco ya estaba muerto.
+      El <aside> va DESPUES en el marcado y se coloca a la izquierda con la rejilla: asi
+      un lector de pantalla (y el movil) leen antetitulo, titular y datos antes que el pie
+      de imprenta, que es el orden en el que importan. */}
+  <div class="con-carril cabecera-con-margen">
   <section class="cabecera-pagina">
     <p class="antetitulo aparece">
       {consulta ? consulta.charAt(0).toUpperCase() + consulta.slice(1) : nombre} · {t('cat.datos_del')}{' '}
@@ -129,6 +137,17 @@ const schema = [
       </p>
     )}
   </section>
+
+  <aside class="carril">
+    <p>
+      {t('cat.margen.recogida')}{' '}
+      <b><time datetime={datos.generado}>{fechaLarga(datos.generado)}</time></b>
+    </p>
+    <p>{t('cat.margen.fuente', tiendas)}</p>
+    <p><a href={r_('/metodologia/#formula')}>{t('cat.margen.metodo')}</a></p>
+    <p><a href={`/datos/${cat.slug}.json`}>{t('cat.margen.json')}</a></p>
+  </aside>
+  </div>
 
   <Aviso lang={lang} />
 

@@ -88,6 +88,20 @@ const ranking = datos.productos
   .filter((o) => o.categoria === p.categoria)
   .sort((a, b) => (b.score_final ?? -1) - (a.score_final ?? -1));
 const puesto = ranking.findIndex((o) => o.id === p.id) + 1;
+
+// F4.2 · Los cuatro datos del tique de balda. El mas barato de la categoria por unidad
+// de venta (no por envase: filtrar por el precio del bote deja fuera justo los formatos
+// grandes, que son los baratos por kilo — la misma trampa que ya documenta AGENTS.md
+// para el filtro de la tabla).
+const refsCat = ranking.map((o) => o.precio_referencia).filter((n) => n != null);
+const refMasBarato = refsCat.length ? Math.min(...refsCat) : null;
+// La diferencia CONTRA el mas barato, en porcentaje. Es la cifra que NN/g pide enseñar
+// en vez de obligar a restar dos numeros de dos columnas distintas. Va firmada: negativa
+// si este bote ES el mas barato de su categoria, positiva si cuesta mas.
+const difPct = (refMasBarato && p.precio_referencia && refMasBarato > 0)
+  ? Math.round((p.precio_referencia / refMasBarato - 1) * 100)
+  : null;
+const esElMasBarato = difPct === 0;
 const formato = p.formato_gramos ? `${p.formato_gramos} g` : p.unidades ? `${p.unidades} capsulas` : 'formato no declarado';
 
 // Una categoria de repuesto por si el dataset se queda a medias: la ficha se sigue
@@ -247,14 +261,11 @@ const schema = [
           <dt>Score</dt>
           <dd>{p.score_final?.toFixed(0) ?? '—'}<small>/100</small></dd>
         </div>
-        <div>
-          <dt>Precio por {precioReferencia(p).unidad || 'unidad'}</dt>
-          <dd>{precioReferencia(p).valor}</dd>
-        </div>
-        <div>
-          <dt>Envase</dt>
-          <dd>{eur(p.precio_eur)}</dd>
-        </div>
+        {/* "Precio por kg" y "Envase" salian aqui, y desde F4.2 los dice el tique de
+            balda tres dedos a la derecha, en cifra de titular. Con los dos, el mismo
+            precio aparecia TRES veces en la misma pantalla: tique, esta tabla y la
+            respuesta corta. Esta lista vuelve a ser lo que dice su nombre, una ficha
+            tecnica: lo que el tique no cuenta. */}
         {p.coste_por_dosis_efectiva && (
           <div>
             <dt>Por dosis efectiva</dt>
@@ -329,6 +340,35 @@ const schema = [
         {p.marca} · puesto {puesto} de {ranking.length} en {categoria?.nombre.toLowerCase() ?? p.categoria}
       </p>
       <h1 class="aparece d2">{p.nombre}</h1>
+
+      {/* F4.2 · El tique de balda: la apertura propia de la ficha, la que la distingue
+          de un vistazo de la cabecera de categoria (que abre con la regla de precios).
+          Los cuatro datos que se vienen a mirar, juntos y en cifra grande, en vez de
+          repartidos entre un parrafo de prosa y una tabla de especificaciones del
+          lateral. La diferencia contra el mas barato se DICE, que es lo que pide NN/g:
+          hasta ahora habia que restar dos numeros de dos sitios distintos. */}
+      <div class="tique aparece d2">
+        <p class="tique-precio">
+          <b class="cifra">{eur(p.precio_eur)}</b>
+          <span class="tique-envase">el envase de {formato}</span>
+        </p>
+        {p.precio_referencia != null && (
+          <p class="tique-unidad">
+            <b class="cifra">{precioReferencia(p).valor}</b>
+            <span class="tique-por">por {precioReferencia(p).unidad}</span>
+          </p>
+        )}
+        <p class="tique-comparacion">
+          {difPct != null && (
+            esElMasBarato
+              ? <b class="tique-gana">el mas barato de {cat.nombre.toLowerCase()}</b>
+              : <b class="tique-pierde">{difPct > 0 ? '+' : ''}{difPct} % frente al mas barato</b>
+          )}
+          <span class="tique-puesto">
+            puesto <b>{puesto}</b> de {ranking.length}
+          </span>
+        </p>
+      </div>
 
       <p class="respuesta aparece d3">
         <b>La respuesta corta.</b> {veredicto}

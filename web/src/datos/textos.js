@@ -1175,6 +1175,35 @@ export const TEXTOS = {
   'cat.nota.enlace': {
     es: 'Como se calcula', en: 'How it is calculated', fr: 'Comment elle est calculée',
   },
+  // Notas al margen de la cabecera de categoria (F4.3 de PLAN-ESTETICA). Son el pie de
+  // imprenta de la pagina: de cuando son los precios, de donde salen y como se puntua.
+  'cat.margen.recogida': {
+    es: 'Precios recogidos el', en: 'Prices collected on', fr: 'Prix relevés le',
+  },
+  'cat.margen.fuente': {
+    es: (n) => `${n} tiendas espanolas`,
+    en: (n) => `${n} Spanish stores`,
+    fr: (n) => `${n} boutiques espagnoles`,
+  },
+  'cat.margen.metodo': {
+    es: 'Como se puntua', en: 'How it is scored', fr: 'Comment on note',
+  },
+  'cat.margen.json': {
+    es: 'Datos en crudo', en: 'Raw data', fr: 'Données brutes',
+  },
+  // Pie del marcador de un duelo de tiendas (F4.4). Dice sobre cuantas categorias se
+  // juega y cuantas quedan en tablas, que es lo que hace que el resultado se pueda leer.
+  'tvs.marcador_pie': {
+    es: (n, e) => e > 0
+      ? `en ${n} categorias que venden las dos · ${e} en tablas`
+      : `en ${n} categorias que venden las dos`,
+    en: (n, e) => e > 0
+      ? `across ${n} categories both of them sell · ${e} tied`
+      : `across ${n} categories both of them sell`,
+    fr: (n, e) => e > 0
+      ? `sur ${n} categories vendues par les deux · ${e} a egalite`
+      : `sur ${n} categories vendues par les deux`,
+  },
   'cat.faq_titulo': {
     es: (x) => `Preguntas sobre ${x}`,
     en: (x) => `Questions about ${x}`,
