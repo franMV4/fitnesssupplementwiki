@@ -105,23 +105,45 @@ run_scraper.py → verificar.py auto → limpiar_marcas + guardar_historico → 
 | `web/src/componentes/api.js` | `pedir()` (la unica forma de llamar a `/api` desde el navegador, con los fallos ya convertidos en mensajes) y `destino()`/`seguro()` para el `?volver=`. |
 | `web/src/datos/evidencia.js` | **Guías de evidencia por ingrediente** (efectos con cifra + DOI, dosis, cuándo sí y cuándo no). **Lo edita una persona, nunca el código**, igual que `dosis_referencia.json`. |
 
-## El front: sistema "Rotativa" (rediseñado el 2026-08-27)
+## El front: sistema "Rotativa" (2026-08-27, ampliado el 2026-09-23 con F4 y F5)
 
 Portada de diario de precios impresa a dos tintas, no landing SaaS. Sustituye al sistema
 "Boletin" (2026-08-21) sin tocar una sola clase: el rediseño entero es `global.css` mas
 cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (un fichero,
 18 secciones comentadas).
 
-- **Color**: papel `#efede6`, tinta `#141210`, y **tres tonos del mismo naranja** porque
-  ninguno vale para las tres cosas: `--senal` `#de3b0f` solo para grafismo (cuadrados, barras,
-  degradados, pulsador del mando; 3,78:1 basta para un grafismo), `--senal-txt` `#b2301c` para
-  texto pequeño y para los rellenos que llevan letra dentro (5,19:1), `--senal-neg` `#f5511f`
-  para el naranja **dentro** de una banda en negativo. Los dos ultimos se intercambian en modo
-  oscuro, y `--senal-sobre` es la letra que va encima del relleno. **No inventes un cuarto.**
-- **Niveles**: el 4 pasa a ser verde `#0e6b4b` (antes era tinta negra): en esta paleta la tinta
-  ya la gastan el titular y los filetes. n3 `#1f5c8c`, n2 `#8a5c0a`, n1 `#6b6558`.
-- **Tipografia**: Big Shoulders Display 800/900 para h1, h2 y **todas las cifras** (`.cifra`,
-  `.puesto`, numerales de `.bloque` y `.desglose`), siempre en versales. Archivo para texto,
+- **Color**: papel `#efede6`, tinta `#141210`, y **tonos del mismo naranja** porque ninguno
+  vale para todo: `--senal` `#de3b0f` solo para grafismo (cuadrados, barras, degradados,
+  pulsador del mando; 3,78:1 basta para un grafismo), `--senal-txt` `#b2301c` para texto
+  pequeño y para los rellenos que llevan letra dentro (5,19:1), `--senal-neg` `#b2301c` para
+  el naranja **dentro** de una banda en negativo y `--senal-piel` `#f7e4de` para el relleno
+  claro (la celda mas barata de una tabla). Todos se intercambian en modo oscuro, y
+  `--senal-sobre` es la letra que va encima del relleno. **No inventes otro.**
+- **Segunda tinta, el azul de imprenta**: `--prueba` `#1f5c8c` y sus tonos. El reparto es el
+  argumento de la web dicho en color: naranja = el dinero (precio, ganador, boton de tienda),
+  azul = la confianza (verificacion, analisis, fuente citada, metodologia).
+- **Niveles**: son **UNA escala de la tinta azul**, no cuatro etiquetas de colores distintos:
+  `--n4: var(--prueba)`, `--n3: var(--prueba-fuerte)`, n2 `#4e6a83`, n1 `#6b6558`. Mas azul =
+  mas comprobado, y el peso visual baja con el nivel. (Este documento decia "el 4 pasa a ser
+  verde `#0e6b4b`, n2 `#8a5c0a`": eso fue un estado intermedio que el CSS ya no tiene. Se
+  cambio porque cuatro colores sin relacion entre si para una sola pregunta -"cuanto se ha
+  comprobado esto"- gastaban dos tintas de pantalla y no se leian como escala.)
+- **VERSALES: tres niveles y dos excepciones, ni una mas** (F5.1, 2026-09-23). La jerarquia
+  la hacen **tamaño y peso; el color al final**. Llevan `text-transform: uppercase` solo:
+  `h1`, `h2`, las cabeceras de tabla (`thead th`, `.panel-tabla th`,
+  `table.comparativa th[scope="row"]`), el boton de imprenta (`.boton` y sus parientes de
+  `/entrar`) y `.sello`, que es la unica etiqueta de la web que **afirma** algo. Todo lo
+  demas -migas, antetitulos, chips, rotulos, pies, cifras con unidad, nombres de tienda,
+  `.enlace-accion`- va en caja normal.
+  Medido en `/creatina` a 1440x900: **580 palabras en versales -> 48**. El 82 % de las 580
+  salia de UN selector, `.marcar` ("comparar" / "mi lista"), repetido en las 237 filas: si
+  vuelve a dispararse la cuenta, busca primero algo que se repita por fila, no cuarenta
+  sitios distintos.
+  **Si quitas unas versales, quita tambien su tracking.** `--rotulo-esp` (.13em) es el
+  espaciado DE VERSALES: en caja alta las letras se tocan y hay que separarlas; sobre caja
+  baja hace lo contrario, desgrana la palabra. Para eso esta `--rotulo-esp-baja` (.012em).
+- **Tipografia**: Big Shoulders Display 700/800/900 para h1, h2 y **todas las cifras**
+  (`.cifra`, `.puesto`, numerales de `.bloque` y `.desglose`). Archivo para texto,
   interfaz y h3 (los h3 rotulan nombres de producto con cifras y parentesis: en condensada
   se leen peor). IBM Plex Mono para rotulos, migas, fechas y la formula.
 - **Forma**: filetes de 2-3px (6px en `.bloque`), `border-radius: 0` en todo, y la unica sombra
@@ -130,6 +152,14 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   sobre papel; en oscuro **no se invierten** (un bloque blanco en una pagina oscura deslumbra):
   son un escalon de superficie (`#231e17`) con filete. Los tokens `--neg*` lo resuelven en un
   sitio, no lo escribas a mano.
+- **El rotulo de la marca** (F5.4, 2026-09-23): `Fitness<b>Supplement</b>` + `wiki`. NO va
+  en versales: "FITNESSSUPPLEMENT" encadenaba tres eses que el ojo no sabe partir. La
+  palabra se corta sola por la mayuscula de "Supplement" y por el salto de peso de la
+  condensada (700 -> 900), sin un segundo color -prohibido en titulares- ni un guion que no
+  esta en el nombre. "wiki" va en mono, en caja baja y a la **misma linea base** (de ahi el
+  `align-items: baseline` de `.marca-sitio`; el glifo se centra aparte porque es un dibujo).
+  Se escribe igual en `Base.astro` y en `og.png` (`assets.py`) **o son dos marcas**: si
+  tocas uno, regenera el otro con `python assets.py imagenes`.
 - **Cabecera y panel lateral en movil (rediseno del 2026-08-31, decision del dueno)**: en
   la barra quedan **tres rayas, marca y perfil**, nada mas. El boton de tema se MUEVE
   dentro del `<nav>` (no se duplica): en escritorio sigue siendo el ultimo hueco de la
@@ -152,12 +182,56 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   (`CATEGORIAS` con tracking mide 90 px y las cuatro no caben en 357), y por debajo de 22rem
   la cabecera deja de ser pegajosa (dos filas de menu = 147 px de una pantalla de 700).
   Auditado a 320, 360 y 375 px en las once plantillas: cero desbordes.
-- **Movimiento**: solo dos, y ninguno con el scroll. `.aparece` (+`.d1`..`.d4`) escalona la
-  primera pantalla al cargar, y la tira de edicion desfila. El fundido por scroll con
-  `animation-timeline: view()` **se quito el 2026-08-27**: mareaba al bajar. No lo repongas.
+- **Movimiento (reescrito el 2026-09-23)**. Todo lo que se mueve es **tinta que llega o
+  tinta que mide**. Nada se mueve porque quede bonito moverse.
+  - **Ninguno con el scroll. Nunca.** El fundido con `animation-timeline: view()` se quito
+    el 2026-08-27 (mareaba al bajar) y un filete de avance con `animation-timeline:
+    scroll()` se quito el 2026-09-23. **No lo repongas**: si hace falta orientar a alguien
+    dentro de una tabla larga, se hace con un dato (el puesto en la fila), no con una barra.
+  - **El momento autoral es uno y esta en la portada**: el `h1` no se desvanece, se
+    IMPRIME (`@keyframes imprime` + `rodillo`), un recorte que cruza de izquierda a derecha
+    con un filete de senal por delante haciendo de rodillo. Arranca en `opacity: .4` y no en
+    0 **a proposito**: ese h1 es el elemento LCP de la pagina con mas autoridad del dominio.
+  - **Acompañamiento**: `.aparece` (+`.d1`..`.d4`) asienta las otras tres piezas de la
+    cabecera de portada. Fuera de la portada las clases estan pero no animan nada.
+  - **Tokens, no numeros a mano**: `--sale` (curva de llegada), `--tacto` (estados),
+    `--rodillo` (lo que hay que VER PASAR: `--sale` a mitad de su tiempo ya ha recorrido el
+    97 %, que es lo contrario de lo que quiere un barrido), y `--t-tacto` / `--t-estado` /
+    `--t-entra`.
+  - **Los estados se sienten de papel**: al pulsar, el boton se hunde un pixel hacia su
+    sombra y la tinta queda llena. En movil no hay hover: el `:active` es el UNICO acuse de
+    recibo entre el toque y la pagina siguiente.
+  - **El hover NO mueve la reticula.** Cuatro listas animaban `padding-left` y cada pasada
+    del raton rehacia el reparto de columnas. El gesto es el corondel de senal
+    (`box-shadow: inset 3px 0 0`), que es la misma marca que llevan la celda de alarma, la
+    fila activa del buscador y la categoria activa del menu.
+  - **`prefers-reduced-motion` reduce, no apaga.** Se van los desplazamientos; se quedan
+    color, superficie y filete, porque quien pide menos movimiento sigue necesitando saber
+    que ha pulsado algo. **No pongas `transform: none !important` en `*`**: el panel lateral
+    del movil se esconde con `translateX(-100%)` y se quedaria abierto encima de la pagina.
 - **Contraste**: el gris de rotulo del boceto (`#8a8478`) se queda en 3,17:1 sobre este papel.
   Los tokens estan ajustados para pasar AA (4,5:1 texto normal, 3:1 texto grande) en claro Y
   en oscuro. Si tocas un color, recomprueba los dos esquemas antes de darlo por bueno.
+- **CADA PLANTILLA ABRE CON SU PROPIA FIGURA** (F4.4, 2026-09-23). Son cuatro, todas en la
+  misma tinta y la misma condensada, pero con formas que no se confunden ni de reojo. Si
+  añades una plantilla nueva, dale la suya o reusa la que le toque; **no abras con un
+  parrafo de prosa**, que es de donde venimos.
+  - Categoria -> **la regla de precios** (`ReglaPrecios.astro`): horquilla, mediana y lider.
+  - Ficha -> **el tique de balda** (`.tique`): precio del envase, precio por unidad, la
+    diferencia contra el mas barato **dicha** ("+396 % frente al mas barato", que es lo que
+    pide NN/g: antes habia que restar dos numeros de dos sitios) y el puesto.
+  - Duelo de tiendas -> **el marcador** (`.marcador`): `18 – 3`. El guion es un filete de
+    26 px, no un caracter: a cuerpo de titular una raya de fuente sale fina y descentrada.
+  - Marca -> **el mosaico** (`.mosaico-marca`): sus diez envases fundidos en el papel con el
+    `multiply` de F2.1. Rejilla `auto-fit` con `max-height`, **una sola fila siempre**: en
+    flex el numero que cabe depende del ancho y el ultimo bote se quedaba huerfano abajo.
+  - Guia -> el carril con el indice y la fecha de revision, que ya lo tenia.
+- **Notas al margen** (F4.3): `.con-carril` + `.cabecera-con-margen` en la cabecera de
+  categoria. Va al margen del **TITULAR y no de la tabla**: una comparativa de siete columnas
+  no puede ceder 16 rem de ancho, y la cabecera ya estaba limitada a 58 rem dentro de un
+  envoltorio de 82, o sea que ese hueco ya estaba muerto. El `<aside>` va el **ultimo** en el
+  marcado y se coloca a la izquierda con la rejilla, para que un lector de pantalla y el
+  movil lean el titular y los datos antes que el pie de imprenta.
 - **Prohibido**: titular a dos colores, blob radial, `backdrop-filter`, tarjetas redondeadas
   que levitan, sombras difuminadas, y **naranja de senal como texto pequeño** (usa `--senal-txt`).
 - **Tres destacados** (`Destacados.astro`) encima de cada tabla: mejor calidad-precio,
@@ -169,11 +243,14 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   venta** (€/kg o €/capsula), no por envase; filtrar por el precio del bote deja fuera
   justo los formatos grandes, que son los baratos por kilo. Los chips "Solo Creapure" y
   "Solo IFOS" solo aparecen si esa tabla tiene esos sellos.
-- **Paginas de acceso (rediseno del 2026-08-28)**: `/entrar` y `/registro` son la misma
-  hoja partida en dos (seccion 20 de `global.css`): margen impreso a la izquierda
-  (rotulo, titular de cartel y tres lineas numeradas de para que sirve la cuenta) y la
-  ficha a la derecha, con el filete de 2px y la sombra dura. En movil se apilan titular,
-  ficha y sumario, en ese orden. Entrar y crear cuenta son **dos pestanas pegadas**
+- **Paginas de acceso**: `/entrar` y `/registro` son **una sola columna centrada**
+  (`.pagina-acceso > .acceso-solo`, seccion 20 de `global.css`): titular de cartel y debajo
+  la ficha, con el filete de 2px y la sombra dura.
+  (Aqui se describia el rediseno del 2026-08-28 como "la misma hoja partida en dos", con
+  margen impreso a la izquierda, tres lineas numeradas y un sumario. **Eso ya no existe**:
+  ni `.acceso-titular` ni `.sumario-acceso` estan en el marcado ni en el DOM. Comprobado el
+  2026-09-23. Si se quiere recuperar la hoja partida hay que volver a escribirla.)
+  Entrar y crear cuenta son **dos pestanas pegadas**
   (`.mando-acceso`) dentro de la ficha, no un enlace al final del formulario. El boton de
   Google **sale siempre**: sin `GOOGLE_ID`/`GOOGLE_SECRET` sale apagado y con la razon
   debajo, porque antes desaparecia y no se distinguia de un fallo. El lector lee
@@ -181,13 +258,22 @@ cuatro retoques de marcado. Todo el CSS sigue en `web/src/estilos/global.css` (u
   columna de D1 se siguen llamando `clave`.
 - **Medida de lectura**: `.prosa` estrecha *por elemento* (34rem en p/ul/h2), no en bloque, para
   que las tablas de `/metodologia` usen la columna entera.
+- **Trampas ya pagadas en movil (2026-09-23)**: (a) **la ficha tiene un orden de lectura
+  explicito** en la seccion 19 (`order: 1..8` sobre `.disposicion-ficha`, que se disuelve en
+  una columna con `display: contents`). Si añades un bloque a la ficha y no le das `order`,
+  cae en el 8 y aterriza **al final de la pagina**: el tique de balda cayo a 1.576 px, por
+  debajo de la foto, el boton y siete lineas de prosa. (b) **la primera fila de datos de una
+  categoria tiene que estar antes de los 812 px** a 375 de ancho (objetivo F3): el carril la
+  empujo a 836 al apilar tres separaciones seguidas (el `gap` de la rejilla, el margen de
+  abajo de la cabecera y el de arriba del carril). **Mide siempre despues de añadir algo
+  encima de la tabla.**
 - **Trampas ya pagadas**: (1) `table.apilable thead` se esconde con `left:-9999px`, no con
   `clip-path`, porque recortada seguia contando en el ancho del documento y el movil salia con
   scroll horizontal; (2) las rejillas usan `minmax(min(Xrem,100%),1fr)` o desbordan a 375px;
   (3) `thead th` pegajoso va con `top:0`, porque el scrollport es `.tabla-scroll`, no el viewport;
   (4) `.acceso-cabecera` **ya es** el icono de cuenta de la cabecera y va `position:absolute`:
-  reusar ese nombre en la rejilla de `/entrar` sacaba la columna del grid. La columna del
-  titular se llama `.acceso-titular`.
+  no reuses ese nombre en `/entrar` (cuando alli habia una rejilla, reusarlo sacaba la
+  columna del grid).
 
 ## Cuenta obligatoria para comparar, mi lista y avisos (2026-09-14, decision del dueno)
 
