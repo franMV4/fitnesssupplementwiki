@@ -172,6 +172,7 @@ const d1Falsa = () => {
         },
       };
     },
+    async batch(sentencias) { for (const s of sentencias) await s.run(); },
   };
 };
 
@@ -289,7 +290,18 @@ test('abrir una ficha se cuenta como total por dia, sin quien', async () => {
 test('un tipo que no esta en la lista no entra en el contador', async () => {
   for (const malo of [{ tipo: 'otro', clave: 'creatina' },
                       { tipo: 'ficha', clave: "x'; DROP TABLE" },
-                      { tipo: 'ficha' }, {}]) {
+                      { tipo: 'ficha' }, {}, [],
+                      [{ tipo: 'vista', clave: 'portada' }, { tipo: 'otro', clave: 'x' }],
+                      Array(6).fill({ tipo: 'vista', clave: 'portada' })]) {
     assert.equal((await pedirEvento(malo)).status, 400, JSON.stringify(malo));
   }
+});
+
+test('al cargar una pagina, vista, pantalla y origen van juntos en una peticion', async () => {
+  const db = d1Falsa();
+  const r = await pedirEvento([{ tipo: 'vista', clave: 'en/producto/creatina-hsn-500g' },
+    { tipo: 'dispositivo', clave: 'movil' }, { tipo: 'origen', clave: 'google.es' }], db);
+  assert.equal(r.status, 204);
+  assert.deepEqual(db.borrados.map((b) => b.args.slice(1)), [
+    ['vista', 'en/producto/creatina-hsn-500g'], ['dispositivo', 'movil'], ['origen', 'google.es']]);
 });

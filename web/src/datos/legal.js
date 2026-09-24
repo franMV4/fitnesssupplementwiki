@@ -221,14 +221,17 @@ export const LEGAL = {
   },
   analitica_si: {
     es: 'La medicion de visitas se hace con una analitica sin cookies que no identifica a '
-      + 'nadie. Ademas se cuentan los clics en algunos botones (abrir una ficha, comparar, '
-      + 'ir a la tienda) como totales por dia, sin IP, cuenta ni cookie.',
-    en: 'Visit measurement is done with cookieless analytics that identify nobody. Clicks on '
-      + 'some buttons (opening a product, compare, going to the store) are also counted as '
-      + 'daily totals, with no IP, account or cookie.',
+      + 'nadie. Ademas se cuentan, como totales por dia y sin IP, cuenta ni cookie, las '
+      + 'paginas que se abren, los botones que se pulsan, los clics hacia las tiendas, el '
+      + 'tipo de pantalla (movil, tableta u ordenador) y la web desde la que se llega.',
+    en: 'Visit measurement is done with cookieless analytics that identify nobody. We also '
+      + 'count, as daily totals with no IP, account or cookie, the pages opened, the buttons '
+      + 'pressed, the clicks to stores, the screen type (phone, tablet or computer) and the '
+      + 'website you arrive from.',
     fr: 'La mesure d’audience est faite avec un outil sans cookies qui n’identifie personne. '
-      + 'Les clics sur certains boutons (ouvrir une fiche, comparer, aller à la boutique) sont '
-      + 'aussi comptés en totaux par jour, sans IP, compte ni cookie.',
+      + 'Nous comptons aussi, en totaux par jour et sans IP, compte ni cookie, les pages '
+      + 'ouvertes, les boutons pressés, les clics vers les boutiques, le type d’écran '
+      + '(mobile, tablette ou ordinateur) et le site d’où vous arrivez.',
   },
   analitica_no: {
     es: 'Ahora mismo no hay ninguna herramienta de medicion de visitas instalada.',

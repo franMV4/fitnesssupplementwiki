@@ -829,11 +829,15 @@ pestaña**: en vivo (D1) y en cola (tabla `ediciones` → pipeline). Un panel qu
   `data-cat` que la fila ya tenía.
 - **Clics internos**: tabla `eventos` (D1) y `POST /api/evento`, mismo contrato que
   `salidas` (total por día, sin IP ni cookie). Tipos en lista cerrada (`EVENTOS` en la
-  API): `ficha` (cualquier enlace a `/producto/<slug>/`, sin marcar) y los botones con
-  `data-evento` (`comparar`, `mi-lista`), que cuentan por la `data-cat` de la fila. Un
-  tipo nuevo = añadirlo a `EVENTOS` y poner `data-evento` en el botón. Se ven en la
-  pestaña **Estadisticas** de `/admin` (`GET /api/admin/estadisticas?dias=N`). Visitas y
-  referers NO van aquí: los da Cloudflare Web Analytics.
+  API): `vista` (ruta de cada página cargada), `origen` (dominio del referrer o
+  `directo`), `dispositivo`, `boton` (cualquier `<button>`, por `data-evento` o el slug de
+  su texto/aria-label), `ficha` (cualquier enlace a `/producto/<slug>/`, sin marcar),
+  `salida-producto` y `comparar`/`mi-lista` por la `data-cat` de la fila. Al cargar la
+  página salen vista+dispositivo+origen en UN beacon (la API acepta listas de hasta 5).
+  `/admin` no se cuenta. Todo en `Base.astro`. Se ven en la pestaña **Estadisticas** de
+  `/admin` (`GET /api/admin/estadisticas?dias=N&dia=AAAA-MM-DD`): `dia` filtra todos
+  los totales; la serie diaria cubre siempre el periodo. Visitantes únicos NO hay (no
+  se guarda quién): eso lo da Cloudflare Web Analytics.
 - **El `lastmod` del sitemap es el día que cambió el precio, no el de la pasada**
   (`fechas_de_cambio` en `exportar.py`, campo `cambiado` en el dataset). Antes las 4.293
   URLs heredaban `datos.generado` y el sitemap decía que todo cambiaba a diario cuando de

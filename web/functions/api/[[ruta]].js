@@ -718,22 +718,28 @@ async function panel(que, metodo, request, env) {
   return error('Ruta no encontrada.', 404);
 }
 
-// Totales de los dos contadores en los ultimos N dias. Agrupa en SQL: la tabla crece
-// una fila por dia/clave y el panel solo necesita los rankings y la serie diaria.
+// Los dos contadores para el panel. `dia` filtra los totales a ese dia; la serie diaria
+// cubre siempre el periodo entero, para que la grafica siga sirviendo para elegir otro.
+// ponytail: sin LIMIT, el panel agrupa en el navegador (paginas por tipo, productos por
+// categoria y marca necesitan todas las filas). Techo: un año de miles de rutas son
+// decenas de miles de filas; el escalon es agrupar aqui por tipo de pagina.
 async function admEstadisticas(request, env) {
-  const dias = Math.min(365, Math.max(1, Number(new URL(request.url).searchParams.get('dias')) || 30));
+  const p = new URL(request.url).searchParams;
+  const dias = Math.min(365, Math.max(1, Number(p.get('dias')) || 30));
   const desde = new Date(Date.now() - (dias - 1) * 86400000).toISOString().slice(0, 10);
-  const q = (sql) => env.DB.prepare(sql).bind(desde).all().then((r) => r.results);
-  const [tiendas, categorias, porDia, eventos] = await Promise.all([
-    q(`SELECT tienda, SUM(n) AS n, SUM(CASE WHEN afiliado = 1 THEN n ELSE 0 END) AS afiliado
-         FROM salidas WHERE dia >= ? GROUP BY tienda ORDER BY n DESC`),
-    q(`SELECT categoria, SUM(n) AS n FROM salidas WHERE dia >= ?
-        GROUP BY categoria ORDER BY n DESC LIMIT 30`),
-    q(`SELECT dia, SUM(n) AS n FROM salidas WHERE dia >= ? GROUP BY dia ORDER BY dia`),
-    q(`SELECT tipo, clave, SUM(n) AS n FROM eventos WHERE dia >= ?
-        GROUP BY tipo, clave ORDER BY n DESC LIMIT 200`),
+  const dia = /^\d{4}-\d{2}-\d{2}$/.test(p.get('dia') ?? '') ? p.get('dia') : null;
+  const [a, b] = dia ? [dia, dia] : [desde, '9999-12-31'];
+  const q = (sql, ...args) => env.DB.prepare(sql).bind(...args).all().then((r) => r.results);
+  const [salidas, eventos, serie] = await Promise.all([
+    q(`SELECT tienda, categoria, afiliado, SUM(n) AS n FROM salidas
+        WHERE dia BETWEEN ? AND ? GROUP BY tienda, categoria, afiliado`, a, b),
+    q(`SELECT tipo, clave, SUM(n) AS n FROM eventos
+        WHERE dia BETWEEN ? AND ? GROUP BY tipo, clave ORDER BY n DESC`, a, b),
+    q(`SELECT dia, tipo, SUM(n) AS n FROM eventos WHERE dia >= ? GROUP BY dia, tipo
+       UNION ALL
+       SELECT dia, 'salida', SUM(n) FROM salidas WHERE dia >= ? GROUP BY dia`, desde, desde),
   ]);
-  return json({ dias, desde, tiendas, categorias, por_dia: porDia, eventos });
+  return json({ dias, desde, dia, salidas, eventos, serie });
 }
 
 // El patron del LIKE se construye aqui y el texto viaja por bind: concatenar el termino
@@ -924,23 +930,34 @@ async function salida(request, env) {
 }
 
 // --- clics dentro de la web -----------------------------------------------------------
-// El mismo contador que `salida`, para lo que no sale de la web: abrir una ficha, pulsar
-// "comparar" o "mi lista". Los tipos van en lista cerrada: uno libre dejaria a cualquiera
-// inventarse filas.
-const EVENTOS = new Set(['ficha', 'comparar', 'mi-lista']);
-const CLAVE_OK = /^[a-z0-9-]{1,120}$/;
+// El mismo contador que `salida`, para lo que no sale de la web:
+//   vista            ruta de la pagina cargada ("en/producto/x", "portada")
+//   origen           dominio desde el que se llega, o "directo"
+//   dispositivo      movil / tablet / escritorio
+//   boton            nombre del boton pulsado (su texto o su aria-label, en slug)
+//   ficha            slug del producto cuyo enlace se pulsa
+//   salida-producto  slug del producto desde el que se sale a la tienda
+//   comparar, mi-lista  categoria de la tabla en la que se pulsan
+// Los tipos van en lista cerrada: uno libre dejaria a cualquiera inventarse filas.
+const EVENTOS = new Set(['ficha', 'comparar', 'mi-lista', 'vista', 'origen', 'dispositivo',
+  'boton', 'salida-producto']);
+const CLAVE_OK = /^[a-z0-9][a-z0-9./_-]{0,119}$/;
 
+// Uno o una lista de hasta 5: al cargar una pagina salen juntos la vista, el dispositivo
+// y el origen, en una sola peticion y un solo viaje a D1.
 async function evento(request, env) {
   const d = await request.json().catch(() => null);
-  const tipo = String(d?.tipo ?? '');
-  const clave = String(d?.clave ?? '');
-  if (!EVENTOS.has(tipo) || !CLAVE_OK.test(clave)) return error('Evento no valido.', 400);
+  const lista = Array.isArray(d) ? d : [d];
+  const malo = (e) => !EVENTOS.has(String(e?.tipo)) || !CLAVE_OK.test(String(e?.clave ?? ''));
+  if (!lista.length || lista.length > 5 || lista.some(malo)) return error('Evento no valido.', 400);
   const dia = new Date().toISOString().slice(0, 10);
   try {
-    await env.DB.prepare(
+    const sql = env.DB.prepare(
       `INSERT INTO eventos (dia, tipo, clave) VALUES (?, ?, ?)
        ON CONFLICT (dia, tipo, clave) DO UPDATE SET n = n + 1`,
-    ).bind(dia, tipo, clave).run();
+    );
+    const filas = lista.map((e) => sql.bind(dia, e.tipo, e.clave));
+    await (filas.length === 1 ? filas[0].run() : env.DB.batch(filas));
   } catch { /* un contador roto no rompe la navegacion */ }
   return new Response(null, { status: 204 });
 }

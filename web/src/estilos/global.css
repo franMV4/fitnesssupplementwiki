@@ -3882,3 +3882,7 @@ td.num .explica { font-variant-numeric: normal; }
 .avisos-puestos ul { list-style: none; margin: 0; padding: 0; }
 .avisos-puestos li { padding: var(--e2) 0; border-top: 1px solid var(--regla); }
 .avisos-puestos li .enlace-accion { margin-left: var(--e3); }
+
+/* Estadisticas: las tablas cortas (tipo de pagina, marcas, origen, dispositivo) de dos
+   en dos, que una debajo de otra obligan a bajar media pantalla por cuatro filas. */
+.panel-pares { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr)); gap: 0 var(--e5); }

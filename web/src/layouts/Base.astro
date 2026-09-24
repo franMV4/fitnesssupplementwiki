@@ -518,11 +518,18 @@ location.replace(A[g]+location.search+location.hash);
     // clic ni un milisegundo. Si el navegador no lo trae, no se cuenta y ya: contar un
     // clic no vale entorpecer una compra.
     //
-    // Solo viaja tienda y categoria. Ni producto, ni URL, ni identificador: por eso esto
-    // no es seguimiento y la web sigue sin banner de cookies.
+    // Viaja tienda y categoria, y aparte (en /api/evento) el producto desde el que se
+    // sale. Son totales por dia sin identificador: por eso esto no es seguimiento y la
+    // web sigue sin banner de cookies.
+    const evento = (...lista) => navigator.sendBeacon?.('/api/evento',
+      new Blob([JSON.stringify(lista)], { type: 'application/json' }));
+    const deProducto = (a) => a?.getAttribute('href').match(/\/producto\/([a-z0-9-]+)/)?.[1];
     document.addEventListener('click', (e) => {
       const a = e.target.closest?.('a[data-salida]');
       if (!a || !navigator.sendBeacon) return;
+      const producto = location.pathname.match(/\/producto\/([a-z0-9-]+)/)?.[1]
+        ?? deProducto(a.closest('tr')?.querySelector('a[href*="/producto/"]'));
+      if (producto) evento({ tipo: 'salida-producto', clave: producto });
       const categoria = a.dataset.cat ?? a.closest('[data-cat]')?.dataset.cat;
       if (!categoria) return;
       navigator.sendBeacon('/api/salida', new Blob([JSON.stringify({
@@ -530,20 +537,40 @@ location.replace(A[g]+location.search+location.hash);
       })], { type: 'application/json' }));
     });
 
-    // Lo mismo para los clics que no salen de la web: abrir una ficha (cualquier enlace a
-    // /producto/<slug>/, sin tener que marcarlo) y los botones con data-evento, que
-    // cuentan por categoria. Mismo contrato: total por dia, sin identificador.
-    document.addEventListener('click', (e) => {
-      if (!navigator.sendBeacon) return;
-      const ficha = e.target.closest?.('a[href*="/producto/"]');
-      const boton = e.target.closest?.('[data-evento]');
-      const slug = ficha?.getAttribute('href').match(/\/producto\/([a-z0-9-]+)/)?.[1];
-      const [tipo, clave] = slug ? ['ficha', slug]
-        : boton ? [boton.dataset.evento, boton.closest('[data-cat]')?.dataset.cat] : [];
-      if (!tipo || !clave) return;
-      navigator.sendBeacon('/api/evento', new Blob([JSON.stringify({ tipo, clave })],
-        { type: 'application/json' }));
-    });
+    // Lo mismo para lo que pasa DENTRO de la web, con el mismo contrato (total por dia,
+    // sin identificador). Al cargar: la pagina, el tipo de pantalla y de que web se
+    // llega. Al pulsar: la ficha que se abre, el boton (por su texto) y "comparar" /
+    // "mi lista" por categoria. /admin no cuenta: serian las visitas del dueno.
+    if (!location.pathname.startsWith('/admin')) {
+      const slug = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+      const ruta = location.pathname.toLowerCase().replace(/[^a-z0-9./_-]+/g, '-')
+        .replace(/^[^a-z0-9]+|\/+$/g, '').slice(0, 120) || 'portada';
+      let origen = 'directo';
+      try {
+        const h = new URL(document.referrer).hostname.replace(/^www\./, '');
+        origen = h === location.hostname.replace(/^www\./, '') ? null : h.slice(0, 120);
+      } catch { /* sin referrer: se ha entrado escribiendo la direccion o desde un marcador */ }
+      evento({ tipo: 'vista', clave: ruta },
+        { tipo: 'dispositivo', clave: innerWidth < 768 ? 'movil'
+          : matchMedia('(pointer: coarse)').matches ? 'tablet' : 'escritorio' },
+        ...(origen ? [{ tipo: 'origen', clave: origen }] : []));
+
+      document.addEventListener('click', (e) => {
+        const lista = [];
+        const ficha = deProducto(e.target.closest?.('a[href*="/producto/"]'));
+        if (ficha) lista.push({ tipo: 'ficha', clave: ficha });
+        const boton = e.target.closest?.('button, [role="button"], [data-evento]');
+        if (boton) {
+          lista.push({ tipo: 'boton', clave: boton.dataset.evento
+            || slug(boton.getAttribute('aria-label') || boton.title || boton.textContent)
+            || slug(boton.className) || 'sin-nombre' });
+          const cat = boton.dataset.evento && boton.closest('[data-cat]')?.dataset.cat;
+          if (cat) lista.push({ tipo: boton.dataset.evento, clave: cat });
+        }
+        if (lista.length) evento(...lista);
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
